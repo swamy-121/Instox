@@ -46,6 +46,9 @@ beforeEach(async () => {
     await setDoc(doc(db, "plans/premium_monthly"), { name: "Premium monthly", priceMinor: 9900 });
     await setDoc(doc(db, "appConfig/public"), { key: "public", value: { product: "instox" } });
     await setDoc(doc(db, "appConfig/secret"), { key: "secret", value: { token: "nope" } });
+    await setDoc(doc(db, "paymentEvents/evt_1"), { providerEventId: "evt_1", payloadHash: "abc" });
+    await setDoc(doc(db, "referrals/alice"), { referredUid: "alice", code: "INXTEST" });
+    await setDoc(doc(db, "pushSubscriptions/sub_1"), { uid: "alice", endpoint: "https://push.example/secret" });
   });
 });
 
@@ -84,6 +87,10 @@ describe("firestore rules", () => {
     await assertFails(setDoc(doc(alice, "tipEvents/evt_1"), { tipId: "tip_premium", reason: "forged" }));
     await assertFails(setDoc(doc(alice, "adminAuditLogs/aud_1"), { action: "user.roles_updated" }));
     await assertFails(setDoc(doc(alice, "paymentOrders/ord_1"), { status: "paid_verified", amountMinor: 1 }));
+    await assertFails(getDoc(doc(alice, "paymentEvents/evt_1")));
+    await assertFails(getDoc(doc(alice, "referrals/alice")));
+    await assertFails(getDoc(doc(alice, "pushSubscriptions/sub_1")));
+    await assertFails(updateDoc(doc(alice, "users/alice"), { tipPush: true }));
   });
 
   it("allows public plan and public config reads only", async () => {

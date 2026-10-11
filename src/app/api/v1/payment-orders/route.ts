@@ -41,6 +41,7 @@ export async function POST(request: Request): Promise<Response> {
       planId: priced.plan.id,
     });
     const now = new Date().toISOString();
+    const status = checkout.session ? "checkout_pending" : "created";
     const order = {
       id: orderId,
       uid: actor.uid,
@@ -49,17 +50,26 @@ export async function POST(request: Request): Promise<Response> {
       providerOrderId: null,
       amountMinor: priced.amountMinor,
       currency: priced.currency,
-      status: "created",
+      status,
       idempotencyKey,
       createdAt: now,
       expiresAt: null,
       verifiedAt: null,
       failureCode: null,
-      placeholder: true,
+      placeholder: checkout.remote === false,
       entitlementGranted: false,
     };
     await db.runTransaction(async (tx) => {
       tx.set(db.collection("paymentOrders").doc(orderId), order);
+      tx.set(db.collection("subscriptions").doc(orderId), {
+        id: orderId,
+        uid: actor.uid,
+        planId: priced.plan.id,
+        status,
+        periodEnd: null,
+        createdAt: now,
+        updatedAt: now,
+      });
       tx.set(db.collection("idempotencyKeys").doc(`pay_${idempotencyKey}`), {
         orderId,
         action: "payment.create",
@@ -75,8 +85,8 @@ export async function POST(request: Request): Promise<Response> {
         amountMinor: order.amountMinor,
         currency: order.currency,
         status: order.status,
-        placeholder: true,
-        message: "Checkout is a stub. This does not activate premium.",
+        placeholder: order.placeholder,
+        message: checkout.message,
       },
       requestId,
       null,

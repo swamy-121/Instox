@@ -28,7 +28,8 @@
       "approved": false,
       "effectiveFrom": "2026-10-11T00:00:00.000Z",
       "taxTreatment": "unapproved",
-      "placeholder": true
+      "placeholder": true,
+      "accessDays": 30
     }
   ]
 }

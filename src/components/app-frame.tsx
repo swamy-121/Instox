@@ -14,6 +14,11 @@ const ADMIN_LINKS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/tips", label: "Tips" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/instruments", label: "Instruments" },
+  { href: "/admin/screener", label: "Screener" },
+  { href: "/admin/plans", label: "Plans" },
+  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/referrals", label: "Referrals" },
   { href: "/admin/audit", label: "Audit" },
 ];
 

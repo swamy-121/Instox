@@ -5,6 +5,7 @@ import { createId } from "@/lib/ids";
 import { recordAudit, writeAudit } from "@/server/audit/log";
 import { assertRoleChange, sanitizeRoles } from "@/server/authorization/roles";
 import { adminDb } from "@/server/db/admin";
+import { referralCodeFor } from "@/server/referrals/logic";
 import type { Role, UserProfile, UserStatus } from "@/types/domain";
 
 const CONSENT_VERSION = complianceConfig.consentVersion;
@@ -26,11 +27,16 @@ export async function bootstrapUser(token: DecodedIdToken): Promise<{ emailConfl
     emailConflict = existing.docs.some((doc) => doc.id !== token.uid);
   }
 
+  const code = referralCodeFor(token.uid);
   await db.runTransaction(async (tx) => {
     const userRef = db.collection("users").doc(token.uid);
     const roleRef = db.collection("userRoles").doc(token.uid);
+    const codeRef = db.collection("referralCodes").doc(code);
+    const accountRef = db.collection("referralAccounts").doc(token.uid);
     const userSnap = await tx.get(userRef);
     const roleSnap = await tx.get(roleRef);
+    const codeSnap = await tx.get(codeRef);
+    const accountSnap = await tx.get(accountRef);
 
     if (!userSnap.exists) {
       tx.set(userRef, {
@@ -47,6 +53,8 @@ export async function bootstrapUser(token: DecodedIdToken): Promise<{ emailConfl
         consentVersion: null,
         consentAt: null,
         providers: [provider],
+        tipPush: false,
+        marketingPush: false,
       });
     } else {
       const current = userSnap.data() ?? {};
@@ -70,6 +78,13 @@ export async function bootstrapUser(token: DecodedIdToken): Promise<{ emailConfl
         grantedAt: now,
         updatedAt: now,
       });
+    }
+
+    if (!codeSnap.exists) {
+      tx.set(codeRef, { uid: token.uid, code, createdAt: now });
+    }
+    if (!accountSnap.exists) {
+      tx.set(accountRef, { uid: token.uid, code, conversions: 0, createdAt: now, updatedAt: now });
     }
   });
 

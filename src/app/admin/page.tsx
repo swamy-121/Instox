@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { ErrorState, LoadingState } from "@/components/states";
 import { Chip, PageHeader } from "@/components/ui";
+import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
+import { canPublishTips } from "@/server/authorization/roles";
 import type { ProviderHealth } from "@/server/market-data/adapter";
 
 type Overview = {
@@ -63,16 +65,61 @@ function OverviewBody() {
           </section>
           <section className="card">
             <h2 className="text-base font-semibold text-ink">Payment exceptions</h2>
-            {data.paymentExceptions.length === 0 ? <p className="mt-2 text-sm leading-6 text-muted">None. Checkout is a stub and does not grant premium.</p> : null}
+            {data.paymentExceptions.length === 0 ? (
+              <p className="mt-2 text-sm leading-6 text-muted">None. Checkout does not collect money or grant premium in this build.</p>
+            ) : null}
           </section>
           <section className="card">
             <h2 className="text-base font-semibold text-ink">Failed jobs</h2>
             {data.failedJobs.length === 0 ? <p className="mt-2 text-sm leading-6 text-muted">No background jobs are configured.</p> : null}
           </section>
+          <AlertQueue />
           <p className="text-xs leading-5 text-muted">{data.note}</p>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function AlertQueue() {
+  const { state } = useAuth();
+  const [tipId, setTipId] = useState("tip_seed_free");
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (state.status !== "ready" || !canPublishTips(state.me.roles)) return null;
+
+  async function queue(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    const result = await apiFetch<{ notice?: string; campaign?: { counts?: Record<string, number> } }>("/api/v1/admin/notifications", {
+      method: "POST",
+      body: JSON.stringify({ tipId, kind: "transactional", reason }),
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setMessage(result.message);
+      return;
+    }
+    const counts = result.data.campaign?.counts;
+    setMessage(result.data.notice ?? `Queued. ${JSON.stringify(counts ?? {})}`);
+  }
+
+  return (
+    <form className="card space-y-4" onSubmit={(event) => void queue(event)}>
+      <h2 className="text-base font-semibold text-ink">Tip alerts</h2>
+      <p className="text-sm leading-6 text-muted">Queues a local alert plan. It does not include prices, and it does not send when VAPID keys are empty.</p>
+      <label className="block">
+        <span className="label" id="tip-id-label">Published tip id</span>
+        <input id="tipId" aria-labelledby="tip-id-label" className="field" value={tipId} onChange={(event) => setTipId(event.target.value)} />
+      </label>
+      <label className="block">
+        <span className="label" id="alert-reason-label">Reason</span>
+        <input id="alertReason" aria-labelledby="alert-reason-label" className="field" value={reason} onChange={(event) => setReason(event.target.value)} />
+      </label>
+      <button className="btn-secondary" type="submit" disabled={busy}>Queue alert</button>
+      {message ? <p className="text-sm" role="status">{message}</p> : null}
+    </form>
   );
 }
 

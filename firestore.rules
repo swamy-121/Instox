@@ -77,6 +77,42 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /instruments/{symbol} {
+      allow read, write: if false;
+    }
+
+    match /referrals/{id} {
+      allow read, write: if false;
+    }
+
+    match /referralCodes/{code} {
+      allow read, write: if false;
+    }
+
+    match /referralAccounts/{uid} {
+      allow read, write: if false;
+    }
+
+    match /rewardLedger/{id} {
+      allow read, write: if false;
+    }
+
+    match /pushSubscriptions/{id} {
+      allow read, write: if false;
+    }
+
+    match /notificationJobs/{id} {
+      allow read, write: if false;
+    }
+
+    match /notificationCampaigns/{id} {
+      allow read, write: if false;
+    }
+
+    match /subscriptions/{id} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

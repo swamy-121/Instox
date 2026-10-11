@@ -183,6 +183,7 @@ export type PlanConfig = {
   effectiveFrom: string;
   taxTreatment: string;
   placeholder: boolean;
+  accessDays?: number;
 };
 
 export type PaymentOrderStatus =

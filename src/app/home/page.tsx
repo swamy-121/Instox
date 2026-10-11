@@ -64,7 +64,12 @@ function HomeBody() {
             <h2 className="text-base font-semibold text-ink">Sample quotes</h2>
             <p className="mt-1 text-xs leading-5 text-muted">{sample?.notice ?? "These figures are sample data for layout. They are not market prices."}</p>
           </div>
-          <Chip>Sample</Chip>
+          <div className="flex shrink-0 items-center gap-3">
+            <Link href="/pulse" className="text-sm font-medium text-primary">
+              Pulse
+            </Link>
+            <Chip>Sample</Chip>
+          </div>
         </div>
         <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
           {sample?.quotes.map((quote) => (

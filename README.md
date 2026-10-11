@@ -59,21 +59,33 @@ CI runs lint, typecheck, unit tests, rules tests under `firebase emulators:exec`
 src/app            routes, layouts, and /api/v1 handlers
 src/components     shared UI
 src/features       auth provider and the tip form
-src/server         auth, roles, entitlements, tips, payments, market data
+src/server         auth, roles, entitlements, tips, payments, market data, indicators
 src/lib            validation, money, phone, API client
-config             plans, sample instruments, disclosure version
+config             plans, sample instruments, indicator flags, disclosure version
 tests/unit         domain tests
 tests/rules        Firestore security rules
-public/sw.js       service worker (static files and offline page only)
+public/sw.js       service worker (static files, offline page, and a push display handler)
 ```
 
 Firestore client access is narrow. Tips, roles, entitlements, payments, and audit rows are written by the server. The Admin SDK bypasses security rules, so the route handlers check identity and roles themselves.
 
+## Platform slice
+
+The screener, Pulse score, and 30-day insights read the sample candle set. Every screener and Pulse response says `Sample data` and `live: false`. Stale candles are skipped. ATR and SuperTrend stay off unless an admin saves the flag in ADM-07.
+
+Insights use manual close reasons. Unresolved tips are not wins. Cancelled tips stay out of the win-rate denominator.
+
+Referral codes can be stored and applied. `config/features.json` keeps rewards off, and a referral never grants premium while that flag is false.
+
+Web Push stores consent and a subscription. Alert text does not include entry, stop, targets, or rationale. With empty VAPID keys the delivery status is `skipped_unconfigured`.
+
+`PAYMENTS_PROVIDER` defaults to `stub`. Razorpay and Cashfree adapters exist for `PAYMENTS_MODE=test` only. Missing keys return 503 and do not create a remote order. A verified webhook still cannot grant premium while the plan in `config/plans.json` has `approved: false`.
+
+Admin screens ADM-06 through ADM-11 cover instruments, screener flags, users, plans and manual entitlements, orders and reconciliation, and referrals.
+
 ## Not built yet
 
-Screener, Pulse, insights, referrals, and the shop are out of this slice. The Screener and Insights tabs explain that, and they do not invent scan results.
-
-Plan price lives in `config/plans.json`. It is a placeholder. The stub payment provider never verifies a webhook and never grants an entitlement.
+Shop, advanced charts, the strategy builder, and richer backtesting are still out of this slice.
 
 The sample instrument list is not an exchange master.
 
@@ -82,12 +94,21 @@ The sample instrument list is not an exchange master.
 These still block a real launch. The product owner approved starting this build anyway. The decisions themselves are not closed.
 
 - DEC-001 Brand palette and logo. Resolved from the product splash. The wordmark uses ink `#0A2C30`, sky blue `#2FAAFC`, and underline `#3DAAB7` on white. Interface text stays on ink. Links use `#227CB8` so small text meets WCAG AA. The screenshot tagline `#D9DADA` is too light, so tagline text uses `#5A6E71`. Profit `#0F7A45` and loss `#B42318` are used only for gain and loss.
-- DEC-002 Plan price, tax, billing, cancellation, and refunds. Config only, marked unapproved.
+- DEC-002 Plan price, tax, billing, cancellation, and refunds. Config only, marked unapproved. Manual grants are audited and do not approve the price.
 - DEC-003 SEBI / legal operating model. Paid stock-specific tips should stay off until counsel writes that down. Penny-stock publish is disabled in config.
-- DEC-004 Market-data vendor and redistribution rights. Only the mock adapter is wired.
-- DEC-005 Payment provider, after business-category approval.
-- DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual.
-- DEC-007 Referral threshold and reward. Not built.
+- DEC-004 Market-data vendor and redistribution rights. The mock adapter and sample instrument master are wired. `MARKET_DATA_LICENSED` stays false.
+- DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off.
+- DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual. Insights read those reasons.
+- DEC-007 Referral threshold and reward. The ledger exists. Entitlement grants from referrals stay off.
 - DEC-008 Shop scope. Not built.
-- DEC-009 Email/SMS notification channels and consent. Not built. Web push is not requested on first visit.
+- DEC-009 Email/SMS notification channels. Web Push consent is built. VAPID keys are empty, so nothing is sent.
 - DEC-010 Named support and grievance contact. The about page says this is unassigned.
+
+## Credentials still required
+
+Leave these empty until a real account exists. Do not commit values.
+
+- Firebase admin client email and private key, for a non-emulator deploy.
+- Razorpay key id, key secret, and webhook secret.
+- Cashfree client id, client secret, and webhook secret.
+- VAPID public and private keys.
