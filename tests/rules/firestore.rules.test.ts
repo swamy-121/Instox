@@ -50,6 +50,8 @@ beforeEach(async () => {
     await setDoc(doc(db, "referrals/alice"), { referredUid: "alice", code: "INXTEST" });
     await setDoc(doc(db, "pushSubscriptions/sub_1"), { uid: "alice", endpoint: "https://push.example/secret" });
     await setDoc(doc(db, "fcmTokens/tok_1"), { uid: "alice", token: "fcm-secret-token" });
+    await setDoc(doc(db, "shopOrders/shop_1"), { uid: "alice", status: "held_unapproved", amountMinor: 49900 });
+    await setDoc(doc(db, "strategies/str_1"), { uid: "alice", name: "Draft", status: "draft" });
   });
 });
 
@@ -92,6 +94,8 @@ describe("firestore rules", () => {
     await assertFails(getDoc(doc(alice, "referrals/alice")));
     await assertFails(getDoc(doc(alice, "pushSubscriptions/sub_1")));
     await assertFails(getDoc(doc(alice, "fcmTokens/tok_1")));
+    await assertFails(getDoc(doc(alice, "shopOrders/shop_1")));
+    await assertFails(getDoc(doc(alice, "strategies/str_1")));
     await assertFails(updateDoc(doc(alice, "users/alice"), { tipPush: true }));
   });
 

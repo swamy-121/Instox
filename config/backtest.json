@@ -1,0 +1,7 @@
+{
+  "version": "backtest-v1",
+  "feeBps": 10,
+  "slippageBps": 5,
+  "emaPeriod": 20,
+  "note": "Hypothetical results on the sample candle set. Fees and slippage are configuration placeholders, not a broker schedule."
+}
