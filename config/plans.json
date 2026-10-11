@@ -1,0 +1,34 @@
+{
+  "termsVersion": "unapproved-placeholder",
+  "note": "Placeholder plans only. DEC-002 is still open. Do not treat these prices as approved.",
+  "plans": [
+    {
+      "id": "free",
+      "name": "Free",
+      "description": "Published free tips. No premium calls, targets, or rationale.",
+      "priceMinor": 0,
+      "currency": "INR",
+      "billingPeriod": "none",
+      "features": ["Free tips", "Account and profile"],
+      "active": true,
+      "approved": false,
+      "effectiveFrom": "2026-10-11T00:00:00.000Z",
+      "taxTreatment": "unapproved",
+      "placeholder": true
+    },
+    {
+      "id": "premium_monthly",
+      "name": "Premium monthly",
+      "description": "Premium tip access for a calendar month. Price, tax, and renewal terms are not approved.",
+      "priceMinor": 9900,
+      "currency": "INR",
+      "billingPeriod": "monthly",
+      "features": ["Premium tips", "Free tips"],
+      "active": true,
+      "approved": false,
+      "effectiveFrom": "2026-10-11T00:00:00.000Z",
+      "taxTreatment": "unapproved",
+      "placeholder": true
+    }
+  ]
+}

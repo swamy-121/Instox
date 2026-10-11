@@ -1,0 +1,84 @@
+rules_version = '2';
+
+// Client SDK access is narrow on purpose.
+// Tips, roles, entitlements, payments, and audit rows are written by the
+// Next.js server with the Admin SDK, which bypasses these rules.
+// Application code must authorize every privileged operation itself.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function profileFieldsOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'displayName',
+        'locale',
+        'timezone',
+        'photoURL',
+        'updatedAt'
+      ]);
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if false;
+      allow update: if isOwner(uid) && profileFieldsOnly();
+      allow delete: if false;
+    }
+
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /appConfig/{configKey} {
+      allow read: if configKey == 'public';
+      allow write: if false;
+    }
+
+    match /userRoles/{uid} {
+      allow read, write: if false;
+    }
+
+    match /userEntitlements/{uid} {
+      allow read, write: if false;
+    }
+
+    match /tips/{tipId} {
+      allow read, write: if false;
+    }
+
+    match /tipEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /paymentOrders/{orderId} {
+      allow read, write: if false;
+    }
+
+    match /paymentEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /deletionRequests/{requestId} {
+      allow read, write: if false;
+    }
+
+    match /idempotencyKeys/{keyId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
