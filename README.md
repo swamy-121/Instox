@@ -11,32 +11,24 @@ Use Node 22.
 ```bash
 cp .env.example .env.local
 npm install
+docker compose up -d
 ```
 
-Leave the secret fields empty. Local auth uses the Firebase emulator. The web config can stay blank when `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true`. The client falls back to the `demo-instox` project id.
-
-## Emulator
-
-Terminal 1:
+Put a long random string in `SESSION_SECRET`. `DATABASE_URL` in the example points at the Postgres container (`instox` / `instox` on port 5432). Leave payment keys, the APITxT key, and Firebase fields empty.
 
 ```bash
-npm run emulators
-```
-
-That starts Auth on 127.0.0.1:9099, Firestore on 127.0.0.1:8080, and the emulator UI on 127.0.0.1:4000.
-
-Terminal 2:
-
-```bash
+npm run db:migrate
 npm run seed
 npm run dev
 ```
 
-`npm run seed` reads `.env.local` when those emulator variables are not already exported. With both emulator hosts set, it writes to the emulator. With neither host set, it uses `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` for `FIREBASE_PROJECT_ID`. A second run overwrites the same document ids.
+Open http://localhost:3000/sign-in. There is no one-tap demo login. Seeded accounts sign in with a phone code. Phone sign-in sends a code through APITxT when `APITXT_AUTHKEY` is set in the environment or on the admin Integrations page. The product owner chose to send those texts without a DLT template, so the request does not include a template id, a PE id, or a sender. With no key, or when `SMS_PROVIDER=dev`, the code is written to the server log and no text is sent. The code is checked on this server and is not kept after sign-in.
 
-Open http://localhost:3000/sign-in. The emulator user buttons sign in as the seeded accounts (free, premium, editor, publisher, support, admin, super admin, disabled). Phone OTP and Google also run against the Auth emulator. The emulator prints the SMS code. It does not send a real text.
+`npm run seed` creates those phones: super admin `+919000000001`, admin `+919000000002`, publisher `+919000000003`, editor `+919000000004`, support `+919000000005`, free member `+919000000006`, premium member `+919000000007`, and a disabled account `+919000000008`. Enter the 10 digits after `+91`, send the code, and read it from the server log.
 
-Seeded premium tips stay locked for the free user. Sign in as Premium Member to see entry, stop, targets, and rationale.
+Admin email sign-in is `admin@instox.app` with the password set in `scripts/seed.ts`. A forgot-password link is printed in the server log outside production. Production email delivery is not wired yet.
+
+Seeded premium tips stay locked for the free user. Sign in with the premium member phone to see entry, stop, targets, and rationale.
 
 ## Scripts
 
@@ -46,12 +38,11 @@ Seeded premium tips stay locked for the free user. Sign in as Premium Member to 
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Unit tests (lifecycle, entitlements, tip redaction) |
-| `npm run test:rules` | Firestore rules tests. Needs the Firestore emulator. |
-| `npm run seed` | Idempotent users, tips, plans, quotes, news, help, shop, and watchlist rows. Works on the emulator and on a project with Admin credentials. |
-| `npm run emulators` | Auth and Firestore emulators |
+| `npm test` | Unit tests, including API authorization checks on an in-memory Postgres |
+| `npm run db:migrate` | Apply `drizzle/0000_init.sql` and `drizzle/0001_crm_voice.sql` |
+| `npm run seed` | Idempotent users, tips, plans, quotes, news, help, shop, and watchlist rows |
 
-CI runs lint, typecheck, unit tests, rules tests under `firebase emulators:exec`, and `npm run build`.
+CI runs lint, typecheck, unit tests, the migration against Postgres, and `npm run build`.
 
 ## Folder layout
 
@@ -62,12 +53,12 @@ src/features       auth provider and the tip form
 src/server         auth, roles, entitlements, tips, payments, market data, indicators
 src/lib            validation, money, phone, API client
 config             plans, sample instruments, indicator flags, disclosure version
-tests/unit         domain tests
-tests/rules        Firestore security rules
+drizzle            SQL migration
+tests/unit         domain tests and API authorization tests
 public/sw.js       service worker (static files and the offline page)
 ```
 
-Firestore client access is narrow. Tips, roles, entitlements, payments, and audit rows are written by the server. The Admin SDK bypasses security rules, so the route handlers check identity and roles themselves.
+The browser does not talk to the database. Tips, roles, entitlements, payments, and audit rows are written by the API, and the route handlers check identity and roles.
 
 ## Platform slice
 
@@ -77,7 +68,7 @@ Insights use manual close reasons. Unresolved tips are not wins. Cancelled tips 
 
 Referral codes can be stored and applied. `config/features.json` keeps rewards off, and a referral never grants premium while that flag is false.
 
-Tip alerts use Firebase Cloud Messaging. The browser stores an FCM device token, and the server sends with the Admin SDK. Alert text does not include entry, stop, targets, or rationale. With an empty web push certificate, or on the emulator, the delivery status is `skipped_unconfigured`.
+Tip alerts use Firebase Cloud Messaging. The browser stores an FCM device token, and the server sends with the Admin SDK when those credentials exist. Alert text does not include entry, stop, targets, or rationale. With an empty web push certificate, the delivery status is `skipped_unconfigured`.
 
 `PAYMENTS_PROVIDER` defaults to `stub`. Razorpay and Cashfree adapters exist for `PAYMENTS_MODE=test` only. Missing keys return 503 and do not create a remote order. A verified webhook still cannot grant premium while the plan in `config/plans.json` has `approved: false`. A super admin can save provider keys on Integrations. Those values are encrypted with `INTEGRATIONS_ENC_KEY` and override the environment when present. Remote checkout stays off.
 
@@ -100,14 +91,14 @@ The sample instrument list is not an exchange master.
 These still block a real launch. The product owner approved starting this build anyway. The decisions themselves are not closed.
 
 - DEC-001 Brand palette and logo. Resolved from the official wordmark. `in` is teal `#0194A8` and `Stox` is green `#027332`, on white. Primary buttons and the active tab use the logo green `#027332`. Interface text uses `#013316`. Profit `#0F7A45` and loss `#B42318` stay separate from the logo green so gain and loss stay readable.
-- DEC-002 Plan price, tax, billing, cancellation, and refunds. Plan rows live in Firestore and stay `approved: false`. Manual grants are audited and do not approve the price.
+- DEC-002 Plan price, tax, billing, cancellation, and refunds. Plan rows live in Postgres and stay `approved: false`. Manual grants are audited and do not approve the price.
 - DEC-003 SEBI / legal operating model. Paid stock-specific tips should stay off until counsel writes that down. Penny-stock publish is disabled in config.
 - DEC-004 Market-data vendor and redistribution rights. `MARKET_DATA_PROVIDER=aliceblue` streams Nifty 50, Bank Nifty, and Sensex after an admin uses Connect Alice Blue. The provider and Alice Blue app credentials can also be saved on Integrations. The daily login is the account's own broker session and does not grant redistribution rights, so `MARKET_DATA_LICENSED` stays false. Until that session is stored, those cards keep the last known values and show Delayed. Tests and CI leave the provider unset and keep the mock adapter. `MARKET_DATA_PROVIDER=dev` reads public chart quotes for the same three indices and is refused when `NODE_ENV` is production.
 - DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off. Keys can be entered on Integrations instead of the environment.
 - DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual. Insights read those reasons.
 - DEC-007 Referral threshold and reward. The ledger exists. Entitlement grants from referrals stay off.
 - DEC-008 Shop scope. The catalogue is a placeholder. Fulfilment, shipping, and refunds are not approved.
-- DEC-009 Email/SMS notification channels. FCM consent and token storage are built. The web push certificate can be saved on Integrations. Admin credentials stay empty, so nothing is sent.
+- DEC-009 Email/SMS notification channels. Phone sign-in uses APITxT when a key is saved, and the product owner chose to send without a DLT template. FCM consent and token storage are built. The web push certificate can be saved on Integrations. Admin credentials stay empty, so push is not sent.
 - DEC-010 Named support and grievance contact. The about page says this is unassigned.
 
 ## Credentials still required
@@ -116,15 +107,21 @@ Leave these empty until a real account exists. Do not commit values.
 
 These stay in the server environment because the app cannot boot or encrypt secrets without them:
 
+- `DATABASE_URL`, the Postgres connection string.
+- `SESSION_SECRET`, a random string of at least 16 characters. It signs session cookies and hashes phone codes.
 - `INTEGRATIONS_ENC_KEY`, a random string of at least 16 characters. It encrypts secrets saved on Integrations.
-- Firebase admin client email and private key, for a non-emulator deploy and for FCM sends.
-- Firebase web app api key, auth domain, project id, app id, and messaging sender id, when you leave the emulator.
+
+Firebase is optional and is only used to send push:
+
+- Firebase admin client email and private key, for FCM sends.
+- Firebase web app api key, auth domain, project id, app id, and messaging sender id, when the browser should register for push.
+
 - `PAYMENTS_MODE` stays `test`. Remote checkout stays off.
 - `MARKET_DATA_LICENSED` stays false until redistribution rights are decided.
-- Emulator hosts, when you run locally.
 
-A super admin can enter these on Integrations. The same names still work as environment fallbacks when the saved field is empty:
+A super admin can enter these on Integrations. That page has tabs for Payments, SMS, Market data, Push, and Voice. Payments has a gateway list for Razorpay and Cashfree, and it shows only the keys for the gateway you pick. Voice uses Bolna for Telugu, Hindi, and English, with Vapi as the other provider. With no key, call campaigns are simulated. Support and admin use the CRM and those campaigns. The same names still work as environment fallbacks when the saved field is empty:
 
+- `APITXT_AUTHKEY`, the APITxT key for phone codes. Texts are sent without a DLT template. Leave it empty, or set `SMS_PROVIDER=dev`, and the code is written to the server log.
 - Firebase web push certificate (`NEXT_PUBLIC_FIREBASE_VAPID_KEY`). This is the FCM key, not a separate VAPID private key.
 - Razorpay key id, key secret, and webhook secret.
 - Cashfree client id, client secret, and webhook secret.

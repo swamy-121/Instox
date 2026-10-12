@@ -1,10 +1,8 @@
 "use client";
 
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { apiFetch, setTokenProvider } from "@/lib/api-client";
-import { getClientAuth } from "@/lib/firebase-client";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { apiFetch } from "@/lib/api-client";
 import type { ResolvedEntitlement, Role, UserStatus } from "@/types/domain";
 
 export type Me = {
@@ -25,94 +23,51 @@ export type Me = {
 
 type AuthState =
   | { status: "loading" }
-  | { status: "unconfigured" }
   | { status: "signed_out" }
   | { status: "error"; message: string }
   | { status: "ready"; me: Me; emailConflict: boolean };
 
 type AuthContextValue = {
   state: AuthState;
-  refresh: () => Promise<void>;
+  refresh: (flags?: { emailConflict?: boolean }) => Promise<void>;
   signOutUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function loadMe(): Promise<{ me: Me } | { error: string }> {
+async function loadMe(): Promise<{ me: Me } | { error: string; status: number }> {
   const result = await apiFetch<Me>("/api/v1/me");
-  if (!result.ok) return { error: result.message };
+  if (!result.ok) return { error: result.message, status: result.status };
   return { me: result.data };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "loading" });
-  const [emailConflict, setEmailConflict] = useState(false);
 
-  useEffect(() => {
-    const auth = getClientAuth();
-    if (!auth) {
-      setState({ status: "unconfigured" });
+  const refresh = useCallback(async (flags?: { emailConflict?: boolean }) => {
+    const loaded = await loadMe();
+    if ("error" in loaded) {
+      if (loaded.status === 401) setState({ status: "signed_out" });
+      else setState({ status: "error", message: loaded.error });
       return;
     }
-
-    setTokenProvider(async () => {
-      const current = auth.currentUser;
-      if (!current) return null;
-      return current.getIdToken();
-    });
-
-    const unsub = onAuthStateChanged(auth, async (user: User | null) => {
-      if (!user) {
-        setState({ status: "signed_out" });
-        return;
-      }
-      setState({ status: "loading" });
-      const token = await user.getIdToken();
-      const session = await apiFetch<{ emailConflict: boolean }>("/api/v1/session", {
-        method: "POST",
-        body: JSON.stringify({ idToken: token }),
-      });
-      if (!session.ok) {
-        setState({ status: "error", message: session.message });
-        return;
-      }
-      setEmailConflict(Boolean(session.data.emailConflict));
-      const loaded = await loadMe();
-      if ("error" in loaded) {
-        setState({ status: "error", message: loaded.error });
-        return;
-      }
-      setState({ status: "ready", me: loaded.me, emailConflict: Boolean(session.data.emailConflict) });
-    });
-
-    return () => unsub();
+    setState({ status: "ready", me: loaded.me, emailConflict: flags?.emailConflict === true });
   }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       state,
-      refresh: async () => {
-        const auth = getClientAuth();
-        const user = auth?.currentUser;
-        if (!user) {
-          setState({ status: "signed_out" });
-          return;
-        }
-        const loaded = await loadMe();
-        if ("error" in loaded) {
-          setState({ status: "error", message: loaded.error });
-          return;
-        }
-        setState({ status: "ready", me: loaded.me, emailConflict });
-      },
+      refresh,
       signOutUser: async () => {
         await apiFetch("/api/v1/session", { method: "DELETE" });
-        const auth = getClientAuth();
-        if (auth) await signOut(auth);
         setState({ status: "signed_out" });
       },
     }),
-    [state, emailConflict],
+    [state, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

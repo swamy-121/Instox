@@ -1,6 +1,8 @@
+import { eq } from "drizzle-orm";
 import { listContent } from "@/server/content/store";
 import { refreshIntegrations } from "@/server/integrations/store";
-import { adminDb } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { candleSeries } from "@/server/db/schema";
 import { isLiveIndex } from "@/lib/live-indices";
 import { readAliceConnection } from "@/server/market-data/alice-store";
 import { loadFeedQuotes } from "@/server/market-data/hub";
@@ -15,9 +17,8 @@ export async function GET(request: Request): Promise<Response> {
     const chartSymbol = symbol || indices.find((row) => row.kind === "index")?.symbol || "";
     let candles: Array<{ close: number; closeTime?: string }> = [];
     if (chartSymbol) {
-      const doc = await adminDb().collection("candleSeries").doc(chartSymbol).get();
-      const stored = doc.data()?.candles;
-      if (Array.isArray(stored)) candles = stored;
+      const rows = await getDb().select().from(candleSeries).where(eq(candleSeries.symbol, chartSymbol)).limit(1);
+      if (Array.isArray(rows[0]?.candles)) candles = rows[0].candles as Array<{ close: number; closeTime?: string }>;
     }
     const feed = activeFeedId();
     const now = Date.now();
@@ -32,17 +33,6 @@ export async function GET(request: Request): Promise<Response> {
       }
     }
     const live = rows.some((row) => row.freshnessStatus === "live");
-    return apiOk(
-      {
-        indices: rows,
-        chartSymbol,
-        candles,
-        feed,
-        connected,
-        dataLabel: live ? "Live" : "Sample data",
-        live,
-      },
-      requestId,
-    );
+    return apiOk({ indices: rows, chartSymbol, candles, feed, connected, dataLabel: live ? "Live" : "Sample data", live }, requestId);
   });
 }

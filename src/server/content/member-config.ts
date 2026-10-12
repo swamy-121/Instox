@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { claimsPremiumGrant, MEMBER_COPY_DEFAULTS, MEMBER_COPY_KEYS, type MemberCopy } from "@/lib/member-copy";
-import { adminDb } from "@/server/db/admin";
+import { readSetting, writeSetting } from "@/server/db/settings";
 
 const memberCopySchema = z
   .object({
@@ -50,27 +50,14 @@ export function parseMemberCopy(input: unknown): MemberCopy {
 }
 
 export async function loadMemberCopy(): Promise<MemberCopy> {
-  const snap = await adminDb().collection("appConfig").doc("public").get();
-  return memberCopyFromValue(snap.data()?.value);
+  const value = await readSetting("public");
+  const nested = value?.value;
+  return memberCopyFromValue(nested ?? value);
 }
 
 export async function saveMemberCopy(copy: MemberCopy, updatedBy: string): Promise<MemberCopy> {
-  const ref = adminDb().collection("appConfig").doc("public");
-  const snap = await ref.get();
-  const current = snap.data() ?? {};
-  const value = {
-    ...(current.value && typeof current.value === "object" ? current.value : {}),
-    ...copy,
-  };
-  await ref.set(
-    {
-      ...current,
-      key: "public",
-      value,
-      updatedBy,
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true },
-  );
+  const current = (await readSetting("public")) ?? {};
+  const nested = current.value && typeof current.value === "object" ? (current.value as Record<string, unknown>) : current;
+  await writeSetting("public", { ...current, key: "public", value: { ...nested, ...copy } }, updatedBy);
   return copy;
 }

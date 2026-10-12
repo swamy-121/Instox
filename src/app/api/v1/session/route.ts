@@ -1,41 +1,12 @@
-import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { profileComplete, requireActor } from "@/server/auth/actor";
-import { adminAuth } from "@/server/db/admin";
-import { apiError, apiOk, assertRateLimit, clientKey, readJson, withApi } from "@/server/http";
-import { bootstrapUser } from "@/server/users/repo";
-
-const bodySchema = z.object({ idToken: z.string().min(20) }).strict();
-
-function sessionCookie(value: string, maxAge: number): string {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `instox_session=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
-}
-
-export async function POST(request: Request): Promise<Response> {
-  return withApi(request, "POST /api/v1/session", async ({ requestId }) => {
-    assertRateLimit(clientKey(request, "session"), 20, 60_000);
-    const parsed = bodySchema.safeParse(await readJson(request));
-    if (!parsed.success) {
-      throw new AppError(400, "VALIDATION_ERROR", "A valid sign-in token is required.");
-    }
-    let decoded;
-    try {
-      decoded = await adminAuth().verifyIdToken(parsed.data.idToken);
-    } catch {
-      throw new AppError(401, "UNAUTHENTICATED", "That sign-in token was rejected.");
-    }
-    const { emailConflict } = await bootstrapUser(decoded);
-    const expiresIn = 5 * 24 * 60 * 60 * 1000;
-    const cookie = await adminAuth().createSessionCookie(parsed.data.idToken, { expiresIn });
-    const response = apiOk({ uid: decoded.uid, emailConflict }, requestId);
-    response.headers.append("set-cookie", sessionCookie(cookie, Math.floor(expiresIn / 1000)));
-    return response;
-  });
-}
+import { revokeSession, readSessionToken, sessionCookie } from "@/server/auth/session";
+import { apiError, apiOk, withApi } from "@/server/http";
 
 export async function DELETE(request: Request): Promise<Response> {
   return withApi(request, "DELETE /api/v1/session", async ({ requestId }) => {
+    const token = readSessionToken(request);
+    if (token) await revokeSession(token);
     const response = apiOk({ signedOut: true }, requestId);
     response.headers.append("set-cookie", sessionCookie("", 0));
     return response;

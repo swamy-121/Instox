@@ -1,6 +1,8 @@
+import { inArray } from "drizzle-orm";
 import { LIVE_INDEX_SYMBOLS } from "@/lib/live-indices";
 import { refreshIntegrations } from "@/server/integrations/store";
-import { adminDb } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { marketQuotes } from "@/server/db/schema";
 import { readAliceConnection } from "@/server/market-data/alice-store";
 import { aliceConnectFrame, ALICE_SOCKET_URL, openAliceMarketSocket, type AliceSession } from "@/server/market-data/aliceblue";
 import { maybeSendAliceReminder } from "@/server/market-data/reminder";
@@ -44,12 +46,22 @@ function liveSymbols(): string[] {
 async function flush(providerId: FeedId): Promise<void> {
   const rows = [...memory.values()].filter((snapshot) => snapshot.providerId === providerId && snapshot.last !== null);
   if (rows.length === 0) return;
-  const db = adminDb();
-  const batch = db.batch();
+  const db = getDb();
   for (const snapshot of rows) {
-    batch.set(db.collection("marketQuotes").doc(snapshot.symbol), snapshot, { merge: true });
+    await db
+      .insert(marketQuotes)
+      .values(snapshot)
+      .onConflictDoUpdate({
+        target: marketQuotes.symbol,
+        set: {
+          last: snapshot.last,
+          changePct: snapshot.changePct,
+          sourceTimestamp: snapshot.sourceTimestamp,
+          updatedAt: snapshot.updatedAt,
+          providerId: snapshot.providerId,
+        },
+      });
   }
-  await batch.commit();
 }
 
 async function pollDev(symbols: string[]): Promise<void> {
@@ -193,19 +205,15 @@ export async function loadFeedQuotes(symbols: string[]): Promise<Map<string, Quo
   }
   const missing = symbols.filter((symbol) => !found.has(symbol));
   if (missing.length === 0) return found;
-  const db = adminDb();
-  const snaps = await Promise.all(missing.map((symbol) => db.collection("marketQuotes").doc(symbol).get()));
-  for (const snap of snaps) {
-    if (!snap.exists) continue;
-    const data = snap.data() ?? {};
-    const last = Number(data.last);
-    found.set(snap.id, {
-      symbol: snap.id,
-      last: Number.isFinite(last) ? last : null,
-      changePct: Number.isFinite(Number(data.changePct)) ? Number(data.changePct) : null,
-      sourceTimestamp: data.sourceTimestamp ? String(data.sourceTimestamp) : null,
-      updatedAt: String(data.updatedAt ?? ""),
-      providerId: data.providerId === "dev" ? "dev" : "aliceblue",
+  const rows = await getDb().select().from(marketQuotes).where(inArray(marketQuotes.symbol, missing));
+  for (const row of rows) {
+    found.set(row.symbol, {
+      symbol: row.symbol,
+      last: row.last,
+      changePct: row.changePct,
+      sourceTimestamp: row.sourceTimestamp,
+      updatedAt: row.updatedAt,
+      providerId: row.providerId === "dev" ? "dev" : "aliceblue",
     });
   }
   return found;

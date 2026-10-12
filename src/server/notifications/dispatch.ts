@@ -1,9 +1,11 @@
-import type { DocumentReference } from "firebase-admin/firestore";
-import { getMessaging, type Message } from "firebase-admin/messaging";
+import { eq } from "drizzle-orm";
 import { createId } from "@/lib/ids";
 import { recordAudit } from "@/server/audit/log";
-import { adminDb, getAdminApp } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { isUniqueViolation } from "@/server/db/sql-error";
+import { alerts, entitlements, fcmTokens, notificationCampaigns, users } from "@/server/db/schema";
 import { refreshIntegrations } from "@/server/integrations/store";
+import { getFcmMessaging } from "@/server/notifications/firebase-app";
 import {
   FCM_TOPICS,
   buildFcmDeliveries,
@@ -17,12 +19,6 @@ import {
 
 const INVALID_TOKEN = new Set(["messaging/invalid-registration-token", "messaging/registration-token-not-registered"]);
 
-function alreadyExists(error: unknown): boolean {
-  if (!error || typeof error !== "object" || !("code" in error)) return false;
-  const code = String((error as { code: unknown }).code);
-  return code === "6" || code === "already-exists";
-}
-
 type SendRow = { tokenId?: string; ok: boolean; invalid: boolean };
 
 export type TipAlertResult = {
@@ -31,19 +27,19 @@ export type TipAlertResult = {
   campaign: { id: string; counts: Record<string, number>; configured: boolean };
 };
 
-function toMessage(message: FcmOutbound): Message {
-  const data = { title: message.title, body: message.body, url: message.url };
-  if (message.topic) return { topic: message.topic, data };
-  return { token: message.token ?? "", data };
-}
-
 async function sendWithAdmin(messages: FcmOutbound[]): Promise<SendRow[]> {
   if (messages.length === 0) return [];
-  const messaging = getMessaging(getAdminApp());
+  const messaging = await getFcmMessaging();
+  if (!messaging) return messages.map((message) => ({ tokenId: message.tokenId, ok: false, invalid: false }));
   const rows: SendRow[] = [];
   for (let index = 0; index < messages.length; index += 500) {
     const batch = messages.slice(index, index + 500);
-    const response = await messaging.sendEach(batch.map(toMessage));
+    const response = await messaging.sendEach(
+      batch.map((message) => {
+        const data = { title: message.title, body: message.body, url: message.url };
+        return message.topic ? { topic: message.topic, data } : { token: message.token ?? "", data };
+      }),
+    );
     response.responses.forEach((item, itemIndex) => {
       const code = item.error?.code ?? "";
       rows.push({
@@ -59,7 +55,8 @@ async function sendWithAdmin(messages: FcmOutbound[]): Promise<SendRow[]> {
 async function syncTopics(tokens: string[], consent: PushConsent): Promise<void> {
   await refreshIntegrations();
   if (!fcmConfigured() || tokens.length === 0) return;
-  const messaging = getMessaging(getAdminApp());
+  const messaging = await getFcmMessaging();
+  if (!messaging) return;
   const tipTopic = FCM_TOPICS.transactional;
   const marketingTopic = FCM_TOPICS.marketing;
   if (consent.tipPush) await messaging.subscribeToTopic(tokens, tipTopic);
@@ -71,18 +68,14 @@ async function syncTopics(tokens: string[], consent: PushConsent): Promise<void>
 export async function syncUserTopics(uid: string): Promise<void> {
   await refreshIntegrations();
   if (!fcmConfigured()) return;
-  const db = adminDb();
-  const [userSnap, tokens] = await Promise.all([
-    db.collection("users").doc(uid).get(),
-    db.collection("fcmTokens").where("uid", "==", uid).limit(20).get(),
+  const db = getDb();
+  const [userRows, tokens] = await Promise.all([
+    db.select().from(users).where(eq(users.id, uid)).limit(1),
+    db.select().from(fcmTokens).where(eq(fcmTokens.userId, uid)).limit(20),
   ]);
-  const consent = {
-    tipPush: userSnap.data()?.tipPush === true,
-    marketingPush: userSnap.data()?.marketingPush === true,
-  };
-  const active = tokens.docs
-    .filter((doc) => doc.data().revoked !== true && typeof doc.data().token === "string")
-    .map((doc) => String(doc.data().token));
+  const user = userRows[0];
+  const consent = { tipPush: user?.tipPush === true, marketingPush: user?.marketingPush === true };
+  const active = tokens.filter((row) => !row.revoked && row.token).map((row) => row.token);
   await syncTopics(active, consent);
 }
 
@@ -97,64 +90,35 @@ export async function dispatchTipAlert(input: {
   requestId: string;
 }): Promise<TipAlertResult> {
   await refreshIntegrations();
-  const db = adminDb();
-  const payload = safePushPayload({
-    symbol: input.symbol,
-    accessTier: input.accessTier,
-    tipId: input.tipId,
-  });
-  const key = pushIdempotencyKey({
-    tipId: input.tipId,
-    version: input.version,
-    audience: input.kind,
-    channel: "fcm",
-  });
-  const campaignRef = db.collection("notificationCampaigns").doc(key);
-  const existing = await campaignRef.get();
-  if (existing.exists) {
+  const db = getDb();
+  const payload = safePushPayload({ symbol: input.symbol, accessTier: input.accessTier, tipId: input.tipId });
+  const key = pushIdempotencyKey({ tipId: input.tipId, version: input.version, audience: input.kind, channel: "fcm" });
+  const existing = await db.select().from(notificationCampaigns).where(eq(notificationCampaigns.id, key)).limit(1);
+  if (existing[0]) {
     return {
       duplicate: true,
       notice: "This tip alert was already queued.",
-      campaign: {
-        id: key,
-        counts: (existing.data()?.counts as Record<string, number>) ?? {},
-        configured: existing.data()?.configured === true,
-      },
+      campaign: { id: key, counts: (existing[0].counts as Record<string, number>) ?? {}, configured: existing[0].configured === true },
     };
   }
 
-  const consentField = input.kind === "marketing" ? "marketingPush" : "tipPush";
-  const users = await db.collection("users").where(consentField, "==", true).limit(200).get();
+  const consentField = input.kind === "marketing" ? users.marketingPush : users.tipPush;
+  const consented = await db.select().from(users).where(eq(consentField, true)).limit(200);
   const devices = [];
-  for (const userDoc of users.docs) {
-    const consent = {
-      tipPush: userDoc.data().tipPush === true,
-      marketingPush: userDoc.data().marketingPush === true,
-    };
-    const tokens = await db.collection("fcmTokens").where("uid", "==", userDoc.id).limit(10).get();
-    for (const tokenDoc of tokens.docs) {
-      const token = tokenDoc.data().token;
-      if (typeof token !== "string" || !token) continue;
-      devices.push({
-        tokenId: tokenDoc.id,
-        token,
-        revoked: tokenDoc.data().revoked === true,
-        consent,
-      });
+  for (const user of consented) {
+    const consent = { tipPush: user.tipPush, marketingPush: user.marketingPush };
+    const tokens = await db.select().from(fcmTokens).where(eq(fcmTokens.userId, user.id)).limit(10);
+    for (const tokenRow of tokens) {
+      if (!tokenRow.token) continue;
+      devices.push({ tokenId: tokenRow.id, token: tokenRow.token, revoked: tokenRow.revoked, consent });
     }
   }
 
   const configured = fcmConfigured();
-  const plan = buildFcmDeliveries({
-    devices,
-    kind: input.kind,
-    payload,
-    configured,
-    mode: fcmSendMode(),
-  });
+  const plan = buildFcmDeliveries({ devices, kind: input.kind, payload, configured, mode: fcmSendMode() });
   const now = new Date().toISOString();
   try {
-    await campaignRef.create({
+    await db.insert(notificationCampaigns).values({
       id: key,
       tipId: input.tipId,
       kind: input.kind,
@@ -167,12 +131,8 @@ export async function dispatchTipAlert(input: {
       reason: input.reason,
     });
   } catch (error) {
-    if (!alreadyExists(error)) throw error;
-    return {
-      duplicate: true,
-      notice: "This tip alert was already queued.",
-      campaign: { id: key, counts: plan.counts, configured },
-    };
+    if (!isUniqueViolation(error)) throw error;
+    return { duplicate: true, notice: "This tip alert was already queued.", campaign: { id: key, counts: plan.counts, configured } };
   }
 
   let rows: SendRow[] = [];
@@ -192,9 +152,7 @@ export async function dispatchTipAlert(input: {
   const byToken = new Map(rows.filter((row) => row.tokenId).map((row) => [row.tokenId, row]));
   const jobs = plan.jobs.map((job) => {
     if (job.status !== "queued") return { ...job, finalStatus: job.status };
-    if (plan.messages.some((message) => message.topic)) {
-      return { ...job, finalStatus: topicOk ? "sent" : "failed" };
-    }
+    if (plan.messages.some((message) => message.topic)) return { ...job, finalStatus: topicOk ? "sent" : "failed" };
     const row = byToken.get(job.tokenId);
     return { ...job, finalStatus: row?.ok ? "sent" : "failed" };
   });
@@ -204,30 +162,15 @@ export async function dispatchTipAlert(input: {
     failed: jobs.filter((job) => job.finalStatus === "failed").length,
   };
 
-  const writes: Array<{ ref: DocumentReference; data: Record<string, unknown> }> = [
-    {
-      ref: campaignRef,
-      data: {
-        id: key,
-        tipId: input.tipId,
-        kind: input.kind,
-        channel: "fcm",
-        status: counts.failed > 0 ? "failed" : "sent",
-        configured,
-        counts,
-        createdBy: input.actorUid,
-        createdAt: now,
-        updatedAt: now,
-        reason: input.reason,
-      },
-    },
-  ];
-  for (const job of jobs) {
-    const id = createId("job");
-    writes.push({
-      ref: db.collection("notificationJobs").doc(id),
-      data: {
-        id,
+  await db.update(notificationCampaigns).set({
+    status: counts.failed > 0 ? "failed" : "sent",
+    counts,
+    updatedAt: now,
+  }).where(eq(notificationCampaigns.id, key));
+  if (jobs.length > 0) {
+    await db.insert(alerts).values(
+      jobs.map((job) => ({
+        id: createId("job"),
         campaignId: key,
         tokenId: job.tokenId,
         status: job.finalStatus,
@@ -235,21 +178,12 @@ export async function dispatchTipAlert(input: {
         body: payload.body,
         url: payload.url,
         createdAt: now,
-      },
-    });
-  }
-  for (let index = 0; index < writes.length; index += 400) {
-    const batch = db.batch();
-    for (const write of writes.slice(index, index + 400)) {
-      batch.set(write.ref, write.data, { merge: true });
-    }
-    await batch.commit();
+      })),
+    );
   }
 
   const invalidIds = rows.filter((row) => row.invalid && row.tokenId).map((row) => row.tokenId as string);
-  await Promise.all(
-    invalidIds.map((id) => db.collection("fcmTokens").doc(id).set({ revoked: true, updatedAt: now }, { merge: true })),
-  );
+  await Promise.all(invalidIds.map((id) => db.update(fcmTokens).set({ revoked: true, updatedAt: now }).where(eq(fcmTokens.id, id))));
 
   await recordAudit({
     actorUid: input.actorUid,
@@ -271,44 +205,32 @@ export async function dispatchBroadcast(input: {
   requestId: string;
 }): Promise<TipAlertResult> {
   await refreshIntegrations();
-  const db = adminDb();
+  const db = getDb();
   const id = createId("camp");
-  const campaignRef = db.collection("notificationCampaigns").doc(id);
-  const entitlements = await db.collection("userEntitlements").limit(300).get();
-  const premium = new Set(
-    entitlements.docs
-      .filter((doc) => doc.data().status === "active" || doc.data().status === "grace")
-      .map((doc) => doc.id),
-  );
-  const users = await db.collection("users").where("tipPush", "==", true).limit(200).get();
+  const entitlementRows = await db.select().from(entitlements).limit(300);
+  const premium = new Set(entitlementRows.filter((row) => row.status === "active" || row.status === "grace").map((row) => row.userId));
+  const consented = await db.select().from(users).where(eq(users.tipPush, true)).limit(200);
   const devices = [];
-  for (const userDoc of users.docs) {
-    const isPremium = premium.has(userDoc.id);
+  for (const user of consented) {
+    const isPremium = premium.has(user.id);
     if (input.audience === "premium" && !isPremium) continue;
     if (input.audience === "free" && isPremium) continue;
-    const tokens = await db.collection("fcmTokens").where("uid", "==", userDoc.id).limit(10).get();
-    for (const tokenDoc of tokens.docs) {
-      const token = tokenDoc.data().token;
-      if (typeof token !== "string" || !token) continue;
+    const tokens = await db.select().from(fcmTokens).where(eq(fcmTokens.userId, user.id)).limit(10);
+    for (const tokenRow of tokens) {
+      if (!tokenRow.token) continue;
       devices.push({
-        tokenId: tokenDoc.id,
-        token,
-        revoked: tokenDoc.data().revoked === true,
-        consent: { tipPush: true, marketingPush: userDoc.data().marketingPush === true },
+        tokenId: tokenRow.id,
+        token: tokenRow.token,
+        revoked: tokenRow.revoked,
+        consent: { tipPush: true, marketingPush: user.marketingPush },
       });
     }
   }
   const configured = fcmConfigured();
   const payload = { title: input.title, body: input.body, url: "/home" };
-  const plan = buildFcmDeliveries({
-    devices,
-    kind: "transactional",
-    payload,
-    configured,
-    mode: fcmSendMode(),
-  });
+  const plan = buildFcmDeliveries({ devices, kind: "transactional", payload, configured, mode: fcmSendMode() });
   const now = new Date().toISOString();
-  await campaignRef.set({
+  await db.insert(notificationCampaigns).values({
     id,
     title: input.title,
     body: input.body,
@@ -328,7 +250,7 @@ export async function dispatchBroadcast(input: {
       await sendWithAdmin(plan.messages);
     } catch {
       notice = "The message was saved. FCM did not accept the send.";
-      await campaignRef.set({ status: "failed" }, { merge: true });
+      await db.update(notificationCampaigns).set({ status: "failed" }).where(eq(notificationCampaigns.id, id));
     }
   }
   await recordAudit({

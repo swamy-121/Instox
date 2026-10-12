@@ -1,5 +1,5 @@
+import { readSetting, writeSetting } from "@/server/db/settings";
 import { runtimeEnv } from "@/server/integrations/store";
-import { adminDb } from "@/server/db/admin";
 import { isAliceSessionCurrent, istClock, type StoredAliceSession } from "@/server/market-data/session";
 
 const DOC_ID = "aliceblue";
@@ -18,7 +18,7 @@ export function aliceConfigured(env: Record<string, string | undefined> = runtim
   return Boolean(env.ALICEBLUE_APP_CODE && env.ALICEBLUE_API_SECRET);
 }
 
-function storedSession(data: { userId?: unknown; clientId?: unknown; userSession?: unknown; tradingDay?: unknown } | undefined): StoredAliceSession | null {
+function storedSession(data: Record<string, unknown> | null): StoredAliceSession | null {
   if (!data) return null;
   return {
     userId: String(data.userId ?? ""),
@@ -29,8 +29,7 @@ function storedSession(data: { userId?: unknown; clientId?: unknown; userSession
 }
 
 export async function readAliceConnection(now = new Date()): Promise<AliceConnection> {
-  const snap = await adminDb().collection("appConfig").doc(DOC_ID).get();
-  const data = snap.data();
+  const data = await readSetting(DOC_ID);
   const session = storedSession(data);
   const connected = isAliceSessionCurrent(session, now);
   return {
@@ -45,17 +44,21 @@ export async function readAliceConnection(now = new Date()): Promise<AliceConnec
 }
 
 export async function saveAliceSession(input: { userId: string; clientId: string; userSession: string }, now = new Date()): Promise<void> {
-  await adminDb().collection("appConfig").doc(DOC_ID).set(
-    {
-      userId: input.userId,
-      clientId: input.clientId,
-      userSession: input.userSession,
-      tradingDay: istClock(now).date,
-      connectedAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    },
-    { merge: true },
-  );
+  const current = (await readSetting(DOC_ID)) ?? {};
+  await writeSetting(DOC_ID, {
+    ...current,
+    userId: input.userId,
+    clientId: input.clientId,
+    userSession: input.userSession,
+    tradingDay: istClock(now).date,
+    connectedAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  });
+}
+
+export async function markAliceReminderSent(day: string, now = new Date()): Promise<void> {
+  const current = (await readSetting(DOC_ID)) ?? {};
+  await writeSetting(DOC_ID, { ...current, reminderSentOn: day, updatedAt: now.toISOString() });
 }
 
 export function publicAliceStatus(connection: AliceConnection, provider: string): {

@@ -1,0 +1,118 @@
+{
+  "tabs": [
+    {
+      "id": "payments",
+      "title": "Payments",
+      "lede": "Choose Razorpay or Cashfree to edit that gateway's keys. Remote checkout stays off, and live mode stays disabled.",
+      "selector": {
+        "label": "Gateway",
+        "options": [
+          {
+            "value": "razorpay",
+            "label": "Razorpay",
+            "test": "razorpay",
+            "note": "A test reads one order list and does not create a charge."
+          },
+          {
+            "value": "cashfree",
+            "label": "Cashfree",
+            "test": "cashfree",
+            "note": "A test talks to the sandbox only."
+          }
+        ]
+      },
+      "fields": [
+        {
+          "key": "PAYMENTS_PROVIDER",
+          "group": "payments",
+          "label": "Checkout record",
+          "secret": false,
+          "options": [
+            { "value": "stub", "label": "Stub" },
+            { "value": "razorpay", "label": "Razorpay" },
+            { "value": "cashfree", "label": "Cashfree" }
+          ]
+        },
+        { "key": "RAZORPAY_KEY_ID", "group": "razorpay", "label": "Key id", "secret": true, "when": "razorpay" },
+        { "key": "RAZORPAY_KEY_SECRET", "group": "razorpay", "label": "Key secret", "secret": true, "when": "razorpay" },
+        { "key": "RAZORPAY_WEBHOOK_SECRET", "group": "razorpay", "label": "Webhook secret", "secret": true, "when": "razorpay" },
+        { "key": "CASHFREE_CLIENT_ID", "group": "cashfree", "label": "Client id", "secret": true, "when": "cashfree" },
+        { "key": "CASHFREE_CLIENT_SECRET", "group": "cashfree", "label": "Client secret", "secret": true, "when": "cashfree" },
+        { "key": "CASHFREE_WEBHOOK_SECRET", "group": "cashfree", "label": "Webhook secret", "secret": true, "when": "cashfree" }
+      ]
+    },
+    {
+      "id": "sms",
+      "title": "SMS",
+      "lede": "APITxT sends phone codes without a DLT template. Leave the key empty and codes are written to the server log.",
+      "test": "sms",
+      "fields": [
+        { "key": "APITXT_AUTHKEY", "group": "sms", "label": "APITxT API key", "secret": true }
+      ]
+    },
+    {
+      "id": "market",
+      "title": "Market data",
+      "lede": "App code and API secret for the three index prices. The daily login is still Connect Alice Blue.",
+      "test": "aliceblue",
+      "fields": [
+        {
+          "key": "MARKET_DATA_PROVIDER",
+          "group": "aliceblue",
+          "label": "Market data provider",
+          "secret": false,
+          "options": [
+            { "value": "", "label": "Mock" },
+            { "value": "aliceblue", "label": "Alice Blue" },
+            { "value": "dev", "label": "Dev quotes" }
+          ]
+        },
+        { "key": "ALICEBLUE_APP_CODE", "group": "aliceblue", "label": "App code", "secret": true },
+        { "key": "ALICEBLUE_API_SECRET", "group": "aliceblue", "label": "API secret", "secret": true }
+      ]
+    },
+    {
+      "id": "push",
+      "title": "Push",
+      "lede": "Web push certificate used by the browser. The Firebase Admin service account stays in the server environment.",
+      "test": "fcm",
+      "fields": [
+        {
+          "key": "FCM_SEND_MODE",
+          "group": "fcm",
+          "label": "Send mode",
+          "secret": false,
+          "options": [
+            { "value": "token", "label": "Token" },
+            { "value": "topic", "label": "Topic" }
+          ]
+        },
+        { "key": "NEXT_PUBLIC_FIREBASE_VAPID_KEY", "group": "fcm", "label": "Web push key", "secret": true }
+      ]
+    },
+    {
+      "id": "voice",
+      "title": "Voice",
+      "lede": "Bolna places calls in Telugu, Hindi, and English. Vapi is the other option. With no key, campaigns are simulated.",
+      "test": "voice",
+      "fields": [
+        {
+          "key": "VOICE_PROVIDER",
+          "group": "voice",
+          "label": "Voice provider",
+          "secret": false,
+          "options": [
+            { "value": "", "label": "Automatic" },
+            { "value": "bolna", "label": "Bolna" },
+            { "value": "vapi", "label": "Vapi" },
+            { "value": "dev", "label": "Dev simulator" }
+          ]
+        },
+        { "key": "BOLNA_API_KEY", "group": "voice", "label": "Bolna API key", "secret": true },
+        { "key": "VAPI_API_KEY", "group": "voice", "label": "Vapi API key", "secret": true },
+        { "key": "VAPI_PHONE_NUMBER_ID", "group": "voice", "label": "Vapi phone number id", "secret": false },
+        { "key": "VOICE_WEBHOOK_SECRET", "group": "voice", "label": "Webhook secret", "secret": true }
+      ]
+    }
+  ]
+}

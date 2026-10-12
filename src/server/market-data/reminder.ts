@@ -1,9 +1,12 @@
-import { getMessaging } from "firebase-admin/messaging";
-import { adminDb, getAdminApp } from "@/server/db/admin";
+import { arrayContains, eq } from "drizzle-orm";
+import { getDb } from "@/server/db/client";
+import { isUniqueViolation } from "@/server/db/sql-error";
+import { fcmTokens, notificationCampaigns, userRoles } from "@/server/db/schema";
 import { refreshIntegrations } from "@/server/integrations/store";
-import { readAliceConnection } from "@/server/market-data/alice-store";
+import { markAliceReminderSent, readAliceConnection } from "@/server/market-data/alice-store";
 import { activeFeedId } from "@/server/market-data/quotes";
 import { aliceReminderDue, istClock } from "@/server/market-data/session";
+import { getFcmMessaging } from "@/server/notifications/firebase-app";
 import { fcmConfigured } from "@/server/notifications/push";
 
 const TITLE = "Connect Alice Blue";
@@ -25,11 +28,11 @@ export async function maybeSendAliceReminder(now = new Date()): Promise<void> {
 
   sending = true;
   const day = istClock(now).date;
-  const db = adminDb();
-  const campaign = db.collection("notificationCampaigns").doc(`alice-reminder-${day}`);
+  const db = getDb();
+  const id = `alice-reminder-${day}`;
   try {
-    await campaign.create({
-      id: campaign.id,
+    await db.insert(notificationCampaigns).values({
+      id,
       title: TITLE,
       body: BODY,
       audience: "admin",
@@ -38,12 +41,11 @@ export async function maybeSendAliceReminder(now = new Date()): Promise<void> {
       status: "pending",
       createdAt: now.toISOString(),
     });
-    await db.collection("appConfig").doc("aliceblue").set({ reminderSentOn: day, updatedAt: now.toISOString() }, { merge: true });
+    await markAliceReminderSent(day, now);
     const status = await deliverAdminReminder();
-    await campaign.set({ status, updatedAt: new Date().toISOString() }, { merge: true });
+    await db.update(notificationCampaigns).set({ status, updatedAt: new Date().toISOString() }).where(eq(notificationCampaigns.id, id));
   } catch (error) {
-    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-    if (code !== "6" && code !== "already-exists") {
+    if (!isUniqueViolation(error)) {
       console.error(JSON.stringify({ route: "alice-reminder", category: "INTERNAL_ERROR" }));
     }
   } finally {
@@ -53,22 +55,23 @@ export async function maybeSendAliceReminder(now = new Date()): Promise<void> {
 
 async function deliverAdminReminder(): Promise<"sent" | "skipped_unconfigured" | "skipped_no_device"> {
   if (!fcmConfigured()) return "skipped_unconfigured";
-  const db = adminDb();
+  const messaging = await getFcmMessaging();
+  if (!messaging) return "skipped_unconfigured";
+  const db = getDb();
   const [admins, supers] = await Promise.all([
-    db.collection("userRoles").where("roles", "array-contains", "admin").limit(50).get(),
-    db.collection("userRoles").where("roles", "array-contains", "super_admin").limit(50).get(),
+    db.select().from(userRoles).where(arrayContains(userRoles.roles, ["admin"])).limit(50),
+    db.select().from(userRoles).where(arrayContains(userRoles.roles, ["super_admin"])).limit(50),
   ]);
-  const uids = new Set([...admins.docs, ...supers.docs].map((doc) => doc.id));
+  const uids = new Set([...admins, ...supers].map((row) => row.userId));
   const messages: Array<{ token: string; data: { title: string; body: string; url: string } }> = [];
   for (const uid of uids) {
-    const tokens = await db.collection("fcmTokens").where("uid", "==", uid).limit(10).get();
-    for (const tokenDoc of tokens.docs) {
-      const token = tokenDoc.data().token;
-      if (tokenDoc.data().revoked === true || typeof token !== "string" || !token) continue;
-      messages.push({ token, data: { title: TITLE, body: BODY, url: "/admin" } });
+    const tokens = await db.select().from(fcmTokens).where(eq(fcmTokens.userId, uid)).limit(10);
+    for (const tokenRow of tokens) {
+      if (tokenRow.revoked || !tokenRow.token) continue;
+      messages.push({ token: tokenRow.token, data: { title: TITLE, body: BODY, url: "/admin" } });
     }
   }
   if (messages.length === 0) return "skipped_no_device";
-  await getMessaging(getAdminApp()).sendEach(messages);
+  await messaging.sendEach(messages);
   return "sent";
 }
