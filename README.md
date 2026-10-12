@@ -119,7 +119,7 @@ Firebase is optional and is only used to send push:
 - `PAYMENTS_MODE` stays `test`. Remote checkout stays off.
 - `MARKET_DATA_LICENSED` stays false until redistribution rights are decided.
 
-A super admin can enter these on Integrations. The same names still work as environment fallbacks when the saved field is empty:
+A super admin can enter these on Integrations. That page has tabs for Payments, SMS, Market data, and Push. Payments has a gateway list for Razorpay and Cashfree, and it shows only the keys for the gateway you pick. The same names still work as environment fallbacks when the saved field is empty:
 
 - `APITXT_AUTHKEY`, the APITxT key for phone codes. Texts are sent without a DLT template. Leave it empty, or set `SMS_PROVIDER=dev`, and the code is written to the server log.
 - Firebase web push certificate (`NEXT_PUBLIC_FIREBASE_VAPID_KEY`). This is the FCM key, not a separate VAPID private key.

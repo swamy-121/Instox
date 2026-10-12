@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { decryptSecret, encryptSecret, integrationKey, maskSecret } from "@/server/integrations/crypto";
+import { fieldsForTab, INTEGRATION_FIELDS, INTEGRATION_TABS, tabSelection } from "@/server/integrations/fields";
 import { fieldViews, resolveFields, resetIntegrationCache } from "@/server/integrations/store";
 import { probeIntegration } from "@/server/integrations/probe";
 
@@ -44,5 +46,24 @@ describe("integration secrets", () => {
     expect(result.ok).toBe(false);
     expect(result.message).toBe("Razorpay rejected those keys.");
     expect(result.message).not.toContain("rzp_test_secret");
+  });
+
+  it("builds the integrations form from the config schema", () => {
+    expect(INTEGRATION_TABS.map((tab) => tab.title)).toEqual(["Payments", "SMS", "Market data", "Push"]);
+    const payments = INTEGRATION_TABS[0];
+    if (!payments) throw new Error("Payments tab is missing.");
+    expect(payments.selector?.options.map((option) => option.label)).toEqual(["Razorpay", "Cashfree"]);
+    expect(tabSelection(payments, "cashfree")).toBe("cashfree");
+    expect(tabSelection(payments, "stub")).toBe("razorpay");
+    const razorpay = fieldsForTab(payments, "razorpay").map((field) => field.key);
+    const cashfree = fieldsForTab(payments, "cashfree").map((field) => field.key);
+    expect(razorpay).toEqual(["PAYMENTS_PROVIDER", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"]);
+    expect(cashfree).toContain("CASHFREE_CLIENT_ID");
+    expect(cashfree).not.toContain("RAZORPAY_KEY_ID");
+    expect(INTEGRATION_FIELDS.map((field) => field.key)).toContain("APITXT_AUTHKEY");
+    const page = readFileSync("src/app/admin/integrations/page.tsx", "utf8");
+    expect(page).toContain("INTEGRATION_TABS");
+    expect(page).toContain("fieldsForTab");
+    expect(page).not.toContain("RAZORPAY_KEY_ID");
   });
 });
