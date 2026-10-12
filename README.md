@@ -64,7 +64,7 @@ src/lib            validation, money, phone, API client
 config             plans, sample instruments, indicator flags, disclosure version
 tests/unit         domain tests
 tests/rules        Firestore security rules
-public/sw.js       service worker (static files, offline page, and a push display handler)
+public/sw.js       service worker (static files and the offline page)
 ```
 
 Firestore client access is narrow. Tips, roles, entitlements, payments, and audit rows are written by the server. The Admin SDK bypasses security rules, so the route handlers check identity and roles themselves.
@@ -77,7 +77,7 @@ Insights use manual close reasons. Unresolved tips are not wins. Cancelled tips 
 
 Referral codes can be stored and applied. `config/features.json` keeps rewards off, and a referral never grants premium while that flag is false.
 
-Web Push stores consent and a subscription. Alert text does not include entry, stop, targets, or rationale. With empty VAPID keys the delivery status is `skipped_unconfigured`.
+Tip alerts use Firebase Cloud Messaging. The browser stores an FCM device token, and the server sends with the Admin SDK. Alert text does not include entry, stop, targets, or rationale. With an empty web push certificate, or on the emulator, the delivery status is `skipped_unconfigured`.
 
 `PAYMENTS_PROVIDER` defaults to `stub`. Razorpay and Cashfree adapters exist for `PAYMENTS_MODE=test` only. Missing keys return 503 and do not create a remote order. A verified webhook still cannot grant premium while the plan in `config/plans.json` has `approved: false`.
 
@@ -101,14 +101,16 @@ These still block a real launch. The product owner approved starting this build 
 - DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual. Insights read those reasons.
 - DEC-007 Referral threshold and reward. The ledger exists. Entitlement grants from referrals stay off.
 - DEC-008 Shop scope. Not built.
-- DEC-009 Email/SMS notification channels. Web Push consent is built. VAPID keys are empty, so nothing is sent.
+- DEC-009 Email/SMS notification channels. FCM consent and token storage are built. The web push certificate and Admin credentials are empty, so nothing is sent.
 - DEC-010 Named support and grievance contact. The about page says this is unassigned.
 
 ## Credentials still required
 
 Leave these empty until a real account exists. Do not commit values.
 
-- Firebase admin client email and private key, for a non-emulator deploy.
+- Firebase admin client email and private key, for a non-emulator deploy and for FCM sends.
+- Firebase web app api key, auth domain, project id, and app id, when you leave the emulator.
+- Firebase Cloud Messaging sender id (`NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`).
+- Firebase web push certificate (`NEXT_PUBLIC_FIREBASE_VAPID_KEY`). This is the FCM key, not a separate VAPID private key.
 - Razorpay key id, key secret, and webhook secret.
 - Cashfree client id, client secret, and webhook secret.
-- VAPID public and private keys.

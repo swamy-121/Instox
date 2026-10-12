@@ -6,7 +6,8 @@ import type { Candle } from "@/server/indicators/formulas";
 import { pulseScore } from "@/server/indicators/pulse";
 import { buildInsightReport, type InsightTip } from "@/server/insights/report";
 import { validateInstrumentImport, type InstrumentMaster } from "@/server/market-data/instruments";
-import { assertPushConsent, pushDeliveryPlan, safePushPayload } from "@/server/notifications/push";
+import { firebaseMessagingSwSource } from "@/server/notifications/messaging-sw";
+import { FCM_TOPICS, assertPushConsent, buildFcmDeliveries, fcmConfigured, pushDeliveryPlan, safePushPayload } from "@/server/notifications/push";
 import { applyPaymentEvent, entitlementEffect } from "@/server/payments/apply-event";
 import { CashfreePaymentProvider, RazorpayPaymentProvider, parseCashfreeBody, parseRazorpayBody } from "@/server/payments/adapter";
 import { accessDaysForPlan } from "@/server/payments/access-window";
@@ -225,6 +226,59 @@ describe("referrals and push", () => {
     expect(pushDeliveryPlan({ configured: true, consent: { tipPush: false, marketingPush: false }, revoked: false, kind: "transactional" }).status).toBe(
       "skipped_no_consent",
     );
+    expect(fcmConfigured({ NEXT_PUBLIC_FIREBASE_VAPID_KEY: "cert", FIREBASE_CLIENT_EMAIL: "a@b.c", FIREBASE_PRIVATE_KEY: "key" })).toBe(true);
+    expect(fcmConfigured({ NEXT_PUBLIC_FIREBASE_VAPID_KEY: "", FIREBASE_CLIENT_EMAIL: "a@b.c", FIREBASE_PRIVATE_KEY: "key" })).toBe(false);
+    expect(
+      fcmConfigured({
+        NEXT_PUBLIC_FIREBASE_VAPID_KEY: "cert",
+        FIREBASE_CLIENT_EMAIL: "a@b.c",
+        FIREBASE_PRIVATE_KEY: "key",
+        FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      }),
+    ).toBe(false);
+    const device = {
+      tokenId: "tok_1",
+      token: "device-token",
+      revoked: false,
+      consent: { tipPush: true, marketingPush: false },
+    };
+    const tokenPlan = buildFcmDeliveries({
+      devices: [device],
+      kind: "transactional",
+      payload,
+      configured: true,
+      mode: "token",
+    });
+    expect(tokenPlan.messages).toEqual([{ token: "device-token", tokenId: "tok_1", title: payload.title, body: payload.body, url: payload.url }]);
+    expect(JSON.stringify(tokenPlan.messages)).not.toMatch(/entry|stop|target|rationale/i);
+    const topicPlan = buildFcmDeliveries({
+      devices: [device],
+      kind: "transactional",
+      payload,
+      configured: true,
+      mode: "topic",
+    });
+    expect(topicPlan.messages[0]?.topic).toBe(FCM_TOPICS.transactional);
+    expect(topicPlan.messages[0]).not.toHaveProperty("token");
+    const blocked = buildFcmDeliveries({
+      devices: [{ ...device, revoked: true }],
+      kind: "transactional",
+      payload,
+      configured: true,
+      mode: "token",
+    });
+    expect(blocked.messages).toEqual([]);
+    expect(blocked.counts.skipped_revoked).toBe(1);
+    const worker = firebaseMessagingSwSource({
+      apiKey: "demo",
+      authDomain: "demo.firebaseapp.com",
+      projectId: "demo-instox",
+      appId: "1:000:web:demo",
+      messagingSenderId: "000",
+    });
+    expect(worker).toContain("onBackgroundMessage");
+    expect(worker).not.toContain("caches");
+    expect(firebaseMessagingSwSource(null)).not.toContain("initializeApp");
   });
 });
 

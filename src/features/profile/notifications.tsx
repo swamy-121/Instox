@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { getFirebaseApp } from "@/lib/firebase-client";
 
 type Preferences = { tipPush: boolean; marketingPush: boolean };
-type SubscriptionRow = { id: string; revoked: boolean; createdAt: string };
-type Snapshot = { preferences: Preferences; subscriptions: SubscriptionRow[]; vapidConfigured: boolean; publicKey: string };
+type DeviceRow = { id: string; revoked: boolean; createdAt: string };
+type Snapshot = {
+  preferences: Preferences;
+  devices: DeviceRow[];
+  fcmConfigured: boolean;
+  clientConfigured: boolean;
+};
 
 export function NotificationSettings() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -42,14 +48,20 @@ export function NotificationSettings() {
     if (result.ok) load();
   }
 
-  async function subscribe() {
-    const publicKey = snapshot?.publicKey ?? "";
-    if (!publicKey) {
-      setMessage("Web Push is not configured. Your consent is saved, but no alert will be sent.");
+  async function registerDevice() {
+    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? "";
+    const senderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "";
+    if (!vapidKey || !senderId) {
+      setMessage("The FCM web push certificate or sender id is empty, so this browser cannot register.");
       return;
     }
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-      setMessage("This browser does not support Web Push.");
+    if (!("serviceWorker" in navigator) || !("Notification" in window)) {
+      setMessage("This browser does not support Firebase Cloud Messaging.");
+      return;
+    }
+    const { getMessaging, getToken, isSupported } = await import("firebase/messaging");
+    if (!(await isSupported())) {
+      setMessage("This browser does not support Firebase Cloud Messaging.");
       return;
     }
     const permission = await Notification.requestPermission();
@@ -57,24 +69,42 @@ export function NotificationSettings() {
       setMessage("Notification permission was not granted.");
       return;
     }
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
-    });
-    const json = subscription.toJSON();
-    const result = await apiFetch("/api/v1/push-subscriptions", {
-      method: "POST",
-      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-    });
-    setMessage(result.ok ? "This browser is registered for alerts." : result.message);
-    if (result.ok) load();
+    const app = getFirebaseApp();
+    if (!app) {
+      setMessage("Firebase is not configured in this browser.");
+      return;
+    }
+    try {
+      const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", {
+        scope: "/firebase-cloud-messaging-push-scope",
+      });
+      const token = await getToken(getMessaging(app), { vapidKey, serviceWorkerRegistration: registration });
+      if (!token) {
+        setMessage("Firebase did not return a device token.");
+        return;
+      }
+      const result = await apiFetch("/api/v1/fcm-tokens", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+      setMessage(result.ok ? "This browser is registered for FCM alerts." : result.message);
+      if (result.ok) load();
+    } catch {
+      setMessage("Could not register this browser with Firebase Cloud Messaging.");
+    }
   }
 
   async function revoke(id: string) {
-    const result = await apiFetch(`/api/v1/push-subscriptions/${id}`, { method: "DELETE" });
-    setMessage(result.ok ? "Push subscription revoked." : result.message);
+    const result = await apiFetch(`/api/v1/fcm-tokens/${id}`, { method: "DELETE" });
+    setMessage(result.ok ? "This device token was revoked." : result.message);
     if (result.ok) load();
+  }
+
+  let setupNote = "";
+  if (snapshot && !snapshot.clientConfigured) {
+    setupNote = " The FCM web push certificate or sender id is empty, so this browser cannot register.";
+  } else if (snapshot && !snapshot.fcmConfigured) {
+    setupNote = " Alerts stay off until Firebase Admin credentials are set.";
   }
 
   return (
@@ -82,7 +112,7 @@ export function NotificationSettings() {
       <h2 className="text-base font-semibold text-ink">Notifications</h2>
       <p className="text-sm leading-6 text-muted">
         Tip alerts and marketing alerts are separate. Nothing is sent without a saved choice, and alert text does not include entry, stop, or targets.
-        {snapshot && !snapshot.vapidConfigured ? " VAPID keys are empty, so delivery stays off." : ""}
+        {setupNote}
       </p>
       <form className="space-y-3" onSubmit={(event) => void save(event)}>
         <label className="flex items-center gap-3 text-sm text-ink">
@@ -95,11 +125,11 @@ export function NotificationSettings() {
         </label>
         <button className="btn-secondary" type="submit" disabled={busy}>Save choices</button>
       </form>
-      <button type="button" className="btn-secondary" onClick={() => void subscribe()}>
-        {snapshot?.publicKey ? "Register this browser" : "Push delivery is unconfigured"}
+      <button type="button" className="btn-secondary" onClick={() => void registerDevice()}>
+        {snapshot?.clientConfigured ? "Register this browser" : "FCM is unconfigured"}
       </button>
       <ul className="space-y-2 text-sm">
-        {snapshot?.subscriptions.map((item) => (
+        {snapshot?.devices.map((item) => (
           <li key={item.id} className="flex items-center justify-between gap-3">
             <span>{item.revoked ? "Revoked" : "Active"} · {item.createdAt.slice(0, 10)}</span>
             {item.revoked ? null : (
@@ -111,13 +141,4 @@ export function NotificationSettings() {
       {message ? <p className="text-sm" role="status">{message}</p> : null}
     </section>
   );
-}
-
-function urlBase64ToUint8Array(value: string): Uint8Array {
-  const padding = "=".repeat((4 - (value.length % 4)) % 4);
-  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = window.atob(base64);
-  const output = new Uint8Array(raw.length);
-  for (let index = 0; index < raw.length; index += 1) output[index] = raw.charCodeAt(index);
-  return output;
 }

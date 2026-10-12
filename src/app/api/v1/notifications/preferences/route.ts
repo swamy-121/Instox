@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import { requireActor } from "@/server/auth/actor";
 import { adminDb } from "@/server/db/admin";
 import { apiOk, readJson, withApi } from "@/server/http";
+import { syncUserTopics } from "@/server/notifications/dispatch";
 
 const bodySchema = z.object({ tipPush: z.boolean(), marketingPush: z.boolean() }).strict();
 
@@ -20,6 +21,11 @@ export async function PATCH(request: Request): Promise<Response> {
       marketingPush: parsed.data.marketingPush,
       updatedAt: new Date().toISOString(),
     });
+    try {
+      await syncUserTopics(actor.uid);
+    } catch {
+      // Consent is saved. Topic membership is skipped when FCM credentials are empty.
+    }
     return apiOk({ preferences: parsed.data }, requestId);
   });
 }

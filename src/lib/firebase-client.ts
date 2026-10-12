@@ -6,6 +6,7 @@ export type FirebaseWebConfig = {
   authDomain: string;
   projectId: string;
   appId: string;
+  messagingSenderId?: string;
 };
 
 let emulatorConnected = false;
@@ -15,11 +16,13 @@ export function getFirebaseWebConfig(): FirebaseWebConfig | null {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || (emulator ? "demo-instox" : "");
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || (emulator ? "demo-api-key" : "");
   if (!projectId || !apiKey) return null;
+  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "";
   return {
     apiKey,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${projectId}.firebaseapp.com`,
     projectId,
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:000000000000:web:demoinstox",
+    ...(messagingSenderId ? { messagingSenderId } : {}),
   };
 }
 

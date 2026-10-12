@@ -15,8 +15,8 @@ export function pushIdempotencyKey(input: {
   return ["push", input.tipId, String(input.version), input.audience, input.channel].join(":");
 }
 
-export function endpointHash(endpoint: string): string {
-  return createHash("sha256").update(endpoint).digest("hex");
+export function tokenHash(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 export function assertPushConsent(input: {
@@ -64,6 +64,95 @@ export function pushDeliveryPlan(input: {
   return { deliver: true, status: "queued" };
 }
 
-export function vapidConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
+export const FCM_TOPICS = {
+  transactional: "instox-tips",
+  marketing: "instox-marketing",
+} as const;
+
+export type FcmJobStatus = "queued" | "skipped_unconfigured" | "skipped_no_consent" | "skipped_revoked";
+
+export type FcmDevice = {
+  tokenId: string;
+  token: string;
+  revoked: boolean;
+  consent: PushConsent;
+};
+
+export type FcmOutbound = {
+  token?: string;
+  topic?: string;
+  tokenId?: string;
+  title: string;
+  body: string;
+  url: string;
+};
+
+type EnvLike = Record<string, string | undefined>;
+
+/** Server send needs the public web certificate plus Admin credentials, and it stays off on the emulator. */
+export function fcmConfigured(env: EnvLike = process.env): boolean {
+  if (env.FIRESTORE_EMULATOR_HOST || env.FIREBASE_AUTH_EMULATOR_HOST) return false;
+  return Boolean(env.NEXT_PUBLIC_FIREBASE_VAPID_KEY && env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY);
+}
+
+/** The browser can request a token only when the web certificate and sender id are both set. */
+export function clientMessagingConfigured(env: EnvLike = process.env): boolean {
+  return Boolean(env.NEXT_PUBLIC_FIREBASE_VAPID_KEY && env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID);
+}
+
+export function fcmSendMode(env: EnvLike = process.env): "token" | "topic" {
+  return env.FCM_SEND_MODE === "topic" ? "topic" : "token";
+}
+
+export function buildFcmDeliveries(input: {
+  devices: FcmDevice[];
+  kind: "transactional" | "marketing";
+  payload: { title: string; body: string; url: string };
+  configured: boolean;
+  mode: "token" | "topic";
+}): {
+  messages: FcmOutbound[];
+  jobs: Array<{ tokenId: string; status: FcmJobStatus }>;
+  counts: Record<FcmJobStatus, number>;
+} {
+  const counts: Record<FcmJobStatus, number> = {
+    queued: 0,
+    skipped_unconfigured: 0,
+    skipped_no_consent: 0,
+    skipped_revoked: 0,
+  };
+  const jobs: Array<{ tokenId: string; status: FcmJobStatus }> = [];
+  const eligible: FcmDevice[] = [];
+  for (const device of input.devices) {
+    const plan = pushDeliveryPlan({
+      configured: input.configured,
+      consent: device.consent,
+      revoked: device.revoked,
+      kind: input.kind,
+    });
+    counts[plan.status] += 1;
+    jobs.push({ tokenId: device.tokenId, status: plan.status });
+    if (plan.deliver) eligible.push(device);
+  }
+  const messages: FcmOutbound[] = [];
+  if (eligible.length === 0) return { messages, jobs, counts };
+  if (input.mode === "topic") {
+    messages.push({
+      topic: FCM_TOPICS[input.kind],
+      title: input.payload.title,
+      body: input.payload.body,
+      url: input.payload.url,
+    });
+    return { messages, jobs, counts };
+  }
+  for (const device of eligible) {
+    messages.push({
+      token: device.token,
+      tokenId: device.tokenId,
+      title: input.payload.title,
+      body: input.payload.body,
+      url: input.payload.url,
+    });
+  }
+  return { messages, jobs, counts };
 }

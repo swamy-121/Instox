@@ -108,7 +108,7 @@ function AlertQueue() {
   return (
     <form className="card space-y-4" onSubmit={(event) => void queue(event)}>
       <h2 className="text-base font-semibold text-ink">Tip alerts</h2>
-      <p className="text-sm leading-6 text-muted">Queues a local alert plan. It does not include prices, and it does not send when VAPID keys are empty.</p>
+      <p className="text-sm leading-6 text-muted">Sends an FCM alert to devices that accepted this kind of message. It does not include prices, and it does not send when the FCM certificate or Admin credentials are empty.</p>
       <label className="block">
         <span className="label" id="tip-id-label">Published tip id</span>
         <input id="tipId" aria-labelledby="tip-id-label" className="field" value={tipId} onChange={(event) => setTipId(event.target.value)} />

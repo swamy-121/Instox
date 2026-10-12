@@ -49,6 +49,7 @@ beforeEach(async () => {
     await setDoc(doc(db, "paymentEvents/evt_1"), { providerEventId: "evt_1", payloadHash: "abc" });
     await setDoc(doc(db, "referrals/alice"), { referredUid: "alice", code: "INXTEST" });
     await setDoc(doc(db, "pushSubscriptions/sub_1"), { uid: "alice", endpoint: "https://push.example/secret" });
+    await setDoc(doc(db, "fcmTokens/tok_1"), { uid: "alice", token: "fcm-secret-token" });
   });
 });
 
@@ -90,6 +91,7 @@ describe("firestore rules", () => {
     await assertFails(getDoc(doc(alice, "paymentEvents/evt_1")));
     await assertFails(getDoc(doc(alice, "referrals/alice")));
     await assertFails(getDoc(doc(alice, "pushSubscriptions/sub_1")));
+    await assertFails(getDoc(doc(alice, "fcmTokens/tok_1")));
     await assertFails(updateDoc(doc(alice, "users/alice"), { tipPush: true }));
   });
 
