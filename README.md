@@ -32,7 +32,7 @@ npm run seed
 npm run dev
 ```
 
-`npm run seed` reads `.env.local` when those emulator variables are not already exported.
+`npm run seed` reads `.env.local` when those emulator variables are not already exported. With both emulator hosts set, it writes to the emulator. With neither host set, it uses `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` for `FIREBASE_PROJECT_ID`. A second run overwrites the same document ids.
 
 Open http://localhost:3000/sign-in. The emulator user buttons sign in as the seeded accounts (free, premium, editor, publisher, support, admin, super admin, disabled). Phone OTP and Google also run against the Auth emulator. The emulator prints the SMS code. It does not send a real text.
 

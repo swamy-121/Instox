@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { getApps, initializeApp } from "firebase-admin/app";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import compliance from "../config/compliance.json";
@@ -28,15 +28,27 @@ function loadEnvFile(filePath: string) {
 
 loadEnvFile(".env.local");
 
-const projectId = process.env.FIREBASE_PROJECT_ID || "demo-instox";
+const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-instox";
+const usingEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST);
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
-  console.error("Start the emulators first. FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST are required.");
+if (usingEmulator && (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST)) {
+  console.error("Set both FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST, or neither.");
+  process.exit(1);
+}
+
+if (!usingEmulator && (!clientEmail || !privateKey)) {
+  console.error("Set the emulator hosts, or set FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY for a real project.");
   process.exit(1);
 }
 
 if (getApps().length === 0) {
-  initializeApp({ projectId });
+  if (!usingEmulator && clientEmail && privateKey) {
+    initializeApp({ credential: cert({ projectId, clientEmail, privateKey }), projectId });
+  } else {
+    initializeApp({ projectId });
+  }
 }
 
 const auth = getAuth();

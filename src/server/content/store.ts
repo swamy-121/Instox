@@ -4,6 +4,7 @@ import {
   isContentName,
   parseContent,
   publicRecord,
+  tryParseContent,
   type ContentName,
   type ContentRecord,
 } from "@/server/content/registry";
@@ -16,7 +17,8 @@ export async function listContent<T extends ContentName>(name: T, scope: "public
   const snap = await adminDb().collection(name).limit(100).get();
   const rows: ContentRecord<T>[] = [];
   for (const doc of snap.docs) {
-    const parsed = parseContent(name, { id: doc.id, ...doc.data() });
+    const parsed = tryParseContent(name, { id: doc.id, ...doc.data() });
+    if (!parsed) continue;
     if (scope === "public") {
       const visible = publicRecord(name, parsed);
       if (!visible) continue;

@@ -117,6 +117,12 @@ export function parseContent<T extends ContentName>(name: T, input: unknown): Co
   return contentSchemas[name].parse(input) as ContentRecord<T>;
 }
 
+/** Returns null when a stored document does not match the collection. One bad row must not blank the feed. */
+export function tryParseContent<T extends ContentName>(name: T, input: unknown): ContentRecord<T> | null {
+  const result = contentSchemas[name].safeParse(input);
+  return result.success ? (result.data as ContentRecord<T>) : null;
+}
+
 export function publicRecord<T extends ContentName>(name: T, record: ContentRecord<T>): ContentRecord<T> | null {
   if (name === "newsArticles" || name === "helpArticles") {
     return (record as { status?: string }).status === "published" ? record : null;

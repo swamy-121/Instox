@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseContent, publicRecord } from "@/server/content/registry";
+import { parseContent, publicRecord, tryParseContent } from "@/server/content/registry";
 
 describe("content registry", () => {
   it("accepts a stored index and hides drafts", () => {
@@ -25,5 +25,9 @@ describe("content registry", () => {
       sort: 1,
     });
     expect(publicRecord("newsArticles", draft)).toBeNull();
+  });
+
+  it("skips a stored row that is missing required fields", () => {
+    expect(tryParseContent("newsArticles", { id: "news_1", title: "Sample", status: "published" })).toBeNull();
   });
 });
