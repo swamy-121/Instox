@@ -1,7 +1,9 @@
 import { listContent } from "@/server/content/store";
 import { adminDb } from "@/server/db/admin";
+import { isLiveIndex } from "@/lib/live-indices";
+import { readAliceConnection } from "@/server/market-data/alice-store";
 import { loadFeedQuotes } from "@/server/market-data/hub";
-import { activeFeedId, applyLiveClose, overlayQuote, type Freshness } from "@/server/market-data/quotes";
+import { activeFeedId, applyLiveClose, presentIndexQuote, type Freshness } from "@/server/market-data/quotes";
 import { apiOk, withApi } from "@/server/http";
 
 export async function GET(request: Request): Promise<Response> {
@@ -17,18 +19,14 @@ export async function GET(request: Request): Promise<Response> {
     }
     const feed = activeFeedId();
     const now = Date.now();
+    const connected = feed === "aliceblue" ? (await readAliceConnection()).connected : feed === "dev";
     let rows = indices.map((row) => ({ ...row, freshnessStatus: "stored" as Freshness }));
     if (feed !== "mock") {
-      const quotes = await loadFeedQuotes(indices.map((row) => row.symbol));
-      rows = indices.map((row) => overlayQuote(row, quotes.get(row.symbol) ?? null, feed, now));
-      const chartQuote = rows.find((row) => row.symbol === chartSymbol) ?? overlayQuote(
-        { symbol: chartSymbol, last: 0, changePct: 0 },
-        (await loadFeedQuotes([chartSymbol])).get(chartSymbol) ?? null,
-        feed,
-        now,
-      );
-      if (chartQuote.freshnessStatus === "live" || chartQuote.freshnessStatus === "stale") {
-        candles = applyLiveClose(candles, chartQuote.last, null);
+      const quotes = await loadFeedQuotes(indices.filter((row) => isLiveIndex(row.symbol)).map((row) => row.symbol));
+      rows = indices.map((row) => presentIndexQuote(row, quotes.get(row.symbol) ?? null, feed, connected, now));
+      const chartRow = rows.find((row) => row.symbol === chartSymbol);
+      if (chartRow && isLiveIndex(chartSymbol) && (chartRow.freshnessStatus === "live" || chartRow.freshnessStatus === "stale" || chartRow.freshnessStatus === "delayed")) {
+        candles = applyLiveClose(candles, chartRow.last, null);
       }
     }
     const live = rows.some((row) => row.freshnessStatus === "live");
@@ -38,7 +36,8 @@ export async function GET(request: Request): Promise<Response> {
         chartSymbol,
         candles,
         feed,
-        dataLabel: live ? "Live" : feed === "dev" ? "Dev quotes" : "Sample data",
+        connected,
+        dataLabel: live ? "Live" : "Sample data",
         live,
       },
       requestId,

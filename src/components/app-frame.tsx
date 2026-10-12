@@ -25,7 +25,7 @@ import { ErrorState, PermissionDenied } from "@/components/states";
 import { Wordmark } from "@/components/wordmark";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
-import { canAccessAdmin } from "@/server/authorization/roles";
+import { canAccessAdmin, canManageOperations } from "@/server/authorization/roles";
 
 const ADMIN_LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -185,6 +185,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const [query, setQuery] = useState("");
   const [menu, setMenu] = useState(false);
   const [alerts, setAlerts] = useState(0);
+  const [alice, setAlice] = useState<{ provider: string; connected: boolean; configured: boolean } | null>(null);
+  const [aliceFailed, setAliceFailed] = useState(false);
   const name = state.status === "ready" ? state.me.displayName || "Admin" : "Admin";
   const initial = name.trim().slice(0, 1).toUpperCase() || "A";
 
@@ -193,6 +195,10 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     apiFetch<{ campaigns: unknown[] }>("/api/v1/admin/notifications").then((result) => {
       if (result.ok) setAlerts(result.data.campaigns.length);
     });
+    apiFetch<{ provider: string; connected: boolean; configured: boolean }>("/api/v1/admin/market/aliceblue").then((result) => {
+      if (result.ok) setAlice(result.data);
+    });
+    setAliceFailed(new URLSearchParams(window.location.search).get("alice") === "failed");
   }, [state.status]);
 
   return (
@@ -222,6 +228,21 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
       <div className="min-w-0">
+        {alice?.provider === "aliceblue" && !alice.connected ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-loss px-4 py-3 text-sm text-white md:px-6">
+            <p>
+              {alice.configured
+                ? "Alice Blue is not connected. Index prices are delayed."
+                : "Alice Blue is not configured. Index prices are delayed."}
+              {aliceFailed ? " The connect attempt did not finish." : ""}
+            </p>
+            {alice.configured && state.status === "ready" && canManageOperations(state.me.roles) ? (
+              <a className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-loss" href="/api/v1/admin/market/aliceblue/connect">
+                Connect Alice Blue
+              </a>
+            ) : null}
+          </div>
+        ) : null}
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white px-4 md:px-6">
           <form
             className="relative min-w-0 flex-1"

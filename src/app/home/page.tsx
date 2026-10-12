@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { TipCard } from "@/components/tip-card";
 import { useAuth } from "@/features/auth/auth-provider";
 import { mergeDisplayed } from "@/features/market/live-quotes";
+import { isLiveIndex } from "@/lib/live-indices";
 import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
@@ -67,7 +68,11 @@ function HomeBody() {
 
   const live = useLiveQuotes(overview?.feed);
   if (state.status !== "ready") return null;
-  const shown = (overview?.indices ?? []).map((row) => mergeDisplayed(row, live.quotes.get(row.symbol), overview?.feed, live.streamDown));
+  const shown = (overview?.indices ?? []).map((row) => (
+    isLiveIndex(row.symbol)
+      ? mergeDisplayed(row, live.quotes.get(row.symbol), overview?.feed, live.streamDown)
+      : { ...row, freshnessStatus: "stored" as const }
+  ));
   const indices = shown.filter((row) => row.kind === "index");
   const quotes = new Map(shown.map((row) => [row.symbol, row]));
 

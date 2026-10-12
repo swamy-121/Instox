@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
+import { isLiveIndex, LIVE_INDEX_SYMBOLS } from "@/lib/live-indices";
 
-export const CORE_INDEX_SYMBOLS = ["NIFTY", "SENSEX", "BANKNIFTY", "NIFTYFIN"] as const;
+export { isLiveIndex, LIVE_INDEX_SYMBOLS };
 
 /** Alice Blue contract tokens for index subscriptions. Equity tokens come from the search API. */
 export const ALICE_INDEX_CONTRACTS: Record<string, { exchange: string; token: string }> = {
   NIFTY: { exchange: "NSE", token: "26000" },
   BANKNIFTY: { exchange: "NSE", token: "26009" },
-  NIFTYFIN: { exchange: "NSE", token: "26037" },
   SENSEX: { exchange: "BSE", token: "1" },
 };
 
@@ -17,7 +17,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   NIFTYFIN: "NIFTY_FIN_SERVICE.NS",
 };
 
-export type Freshness = "live" | "stale" | "offline" | "stored";
+export type Freshness = "live" | "stale" | "offline" | "stored" | "delayed";
 export type FeedId = "mock" | "aliceblue" | "dev";
 
 export type QuoteSnapshot = {
@@ -134,6 +134,28 @@ export function freshnessOf(snapshot: QuoteSnapshot | null, feed: FeedId, nowMs:
   const age = nowMs - Date.parse(snapshot.updatedAt);
   if (!Number.isFinite(age) || age > feedMaxAgeMs(feed)) return "stale";
   return "live";
+}
+
+export function presentIndexQuote<T extends { symbol: string; last: number; changePct?: number }>(
+  row: T,
+  snapshot: QuoteSnapshot | null,
+  feed: FeedId,
+  connected: boolean,
+  nowMs: number,
+): T & { freshnessStatus: Freshness } {
+  if (feed === "mock" || !isLiveIndex(row.symbol)) return { ...row, freshnessStatus: "stored" };
+  if (feed === "aliceblue" && !connected) {
+    if (snapshot?.last != null) {
+      return {
+        ...row,
+        last: snapshot.last,
+        ...(snapshot.changePct == null ? {} : { changePct: snapshot.changePct }),
+        freshnessStatus: "delayed",
+      };
+    }
+    return { ...row, freshnessStatus: "delayed" };
+  }
+  return overlayQuote(row, snapshot, feed, nowMs);
 }
 
 export function overlayQuote<T extends { symbol: string; last: number; changePct?: number }>(

@@ -1,10 +1,13 @@
+import { LIVE_INDEX_SYMBOLS } from "@/lib/live-indices";
 import { adminDb } from "@/server/db/admin";
-import { aliceConnectFrame, ALICE_SOCKET_URL, loginAliceBlue, openAliceSocketSession, searchAliceContract, type AliceSession } from "@/server/market-data/aliceblue";
+import { readAliceConnection } from "@/server/market-data/alice-store";
+import { aliceConnectFrame, ALICE_SOCKET_URL, openAliceMarketSocket, type AliceSession } from "@/server/market-data/aliceblue";
+import { maybeSendAliceReminder } from "@/server/market-data/reminder";
 import {
   activeFeedId,
   ALICE_INDEX_CONTRACTS,
-  CORE_INDEX_SYMBOLS,
   decodeFrame,
+  isLiveIndex,
   parseAliceTick,
   parseYahooChart,
   subscribeKey,
@@ -17,33 +20,23 @@ const memory = new Map<string, QuoteSnapshot>();
 const contracts = new Map<string, { exchange: string; token: string }>();
 const tokenIndex = new Map<string, string>();
 let started = false;
+let activeDay = "";
+let generation = 0;
 
 export function rememberedQuote(symbol: string): QuoteSnapshot | undefined {
   return memory.get(symbol);
 }
 
 export function quoteCacheSnapshot(): QuoteSnapshot[] {
-  return [...memory.values()];
+  return [...memory.values()].filter((quote) => isLiveIndex(quote.symbol));
 }
 
 export function rememberQuote(snapshot: QuoteSnapshot): void {
   memory.set(snapshot.symbol, snapshot);
 }
 
-async function universe(): Promise<string[]> {
-  const db = adminDb();
-  const [indices, tips, watch, instruments] = await Promise.all([
-    db.collection("indices").limit(100).get(),
-    db.collection("tips").limit(200).get(),
-    db.collection("watchlistItems").limit(200).get(),
-    db.collection("instruments").limit(100).get(),
-  ]);
-  const symbols = new Set<string>(CORE_INDEX_SYMBOLS);
-  for (const doc of [...indices.docs, ...tips.docs, ...watch.docs, ...instruments.docs]) {
-    const symbol = String(doc.data().symbol ?? "").toUpperCase();
-    if (symbol) symbols.add(symbol);
-  }
-  return [...symbols];
+function liveSymbols(): string[] {
+  return [...LIVE_INDEX_SYMBOLS];
 }
 
 async function flush(providerId: FeedId): Promise<void> {
@@ -80,46 +73,36 @@ async function pollDev(symbols: string[]): Promise<void> {
   }));
 }
 
-function indexContract(symbol: string): { exchange: string; token: string } | undefined {
-  return ALICE_INDEX_CONTRACTS[symbol];
-}
-
-async function resolveContracts(session: AliceSession, symbols: string[]): Promise<void> {
+function bindIndexContracts(): void {
   contracts.clear();
   tokenIndex.clear();
-  for (const symbol of symbols) {
-    const known = indexContract(symbol);
-    if (known) {
-      contracts.set(symbol, known);
-      tokenIndex.set(`${known.exchange}|${known.token}`, symbol);
-      continue;
-    }
-    try {
-      const found = await searchAliceContract(session, symbol);
-      if (!found) continue;
-      contracts.set(symbol, found);
-      tokenIndex.set(`${found.exchange}|${found.token}`, symbol);
-    } catch {
-      // Skip a symbol the search call cannot resolve.
-    }
+  for (const symbol of LIVE_INDEX_SYMBOLS) {
+    const known = ALICE_INDEX_CONTRACTS[symbol];
+    if (!known) continue;
+    contracts.set(symbol, known);
+    tokenIndex.set(`${known.exchange}|${known.token}`, symbol);
   }
 }
 
-function connectAlice(session: AliceSession): void {
+function connectAlice(session: AliceSession & { clientId?: string }, gen: number): void {
   const socket = new WebSocket(ALICE_SOCKET_URL);
+  const beat = setInterval(() => {
+    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ k: "", t: "h" }));
+  }, 50_000);
   socket.addEventListener("open", () => {
     socket.send(aliceConnectFrame(session));
   });
   socket.addEventListener("message", (event) => {
     void decodeFrame(event.data).then((text) => {
-      if (!text) return;
-      let body: { t?: string; s?: string } | null = null;
+      if (!text || gen !== generation) return;
+      let body: { t?: string; s?: string; k?: string } | null = null;
       try {
-        body = JSON.parse(text) as { t?: string; s?: string };
+        body = JSON.parse(text) as { t?: string; s?: string; k?: string };
       } catch {
         body = null;
       }
-      if (body?.t === "ck" && body.s === "OK") {
+      const ready = (body?.t === "ck" && body.s === "OK") || (body?.t === "cf" && (body.k === "OK" || body.s === "OK"));
+      if (ready) {
         const key = subscribeKey([...contracts.values()]);
         if (key) socket.send(JSON.stringify({ k: key, t: "t" }));
         return;
@@ -127,7 +110,7 @@ function connectAlice(session: AliceSession): void {
       const tick = parseAliceTick(text);
       if (!tick) return;
       const symbol = tokenIndex.get(`${tick.exchange}|${tick.token}`);
-      if (!symbol) return;
+      if (!symbol || !isLiveIndex(symbol)) return;
       rememberQuote({
         symbol,
         last: tick.last,
@@ -139,21 +122,31 @@ function connectAlice(session: AliceSession): void {
     });
   });
   socket.addEventListener("close", () => {
+    clearInterval(beat);
     setTimeout(() => {
-      if (activeFeedId() === "aliceblue") connectAlice(session);
+      if (gen === generation && activeFeedId() === "aliceblue") connectAlice(session, gen);
     }, 5000);
   });
 }
 
-async function startAlice(): Promise<void> {
-  const userId = process.env.ALICEBLUE_USER_ID ?? "";
-  const apiKey = process.env.ALICEBLUE_API_KEY ?? "";
-  const sessionId = process.env.ALICEBLUE_SESSION_ID ?? "";
-  if (!userId || (!apiKey && !sessionId)) return;
-  const session = await loginAliceBlue({ userId, apiKey, sessionId });
-  await openAliceSocketSession(session);
-  await resolveContracts(session, await universe());
-  connectAlice(session);
+async function ensureAlice(): Promise<void> {
+  const connection = await readAliceConnection();
+  if (!connection.connected || !connection.userSession || !connection.userId || !connection.clientId || !connection.tradingDay) {
+    generation += 1;
+    activeDay = "";
+    return;
+  }
+  if (activeDay === connection.tradingDay) return;
+  generation += 1;
+  const gen = generation;
+  activeDay = connection.tradingDay;
+  try {
+    await openAliceMarketSocket({ userId: connection.userId, userSession: connection.userSession });
+    bindIndexContracts();
+    connectAlice({ userId: connection.userId, sessionId: connection.userSession, clientId: connection.clientId }, gen);
+  } catch {
+    if (gen === generation) activeDay = "";
+  }
 }
 
 export function startMarketFeed(): void {
@@ -163,18 +156,18 @@ export function startMarketFeed(): void {
   started = true;
   if (feed === "dev") {
     const tick = () => {
-      void universe().then((symbols) => pollDev(symbols)).then(() => flush("dev")).catch(() => undefined);
+      void pollDev(liveSymbols()).then(() => flush("dev")).catch(() => undefined);
     };
     tick();
     setInterval(tick, 60_000);
     return;
   }
   const boot = () => {
-    void startAlice().catch(() => {
-      setTimeout(boot, 60_000);
-    });
+    void ensureAlice().catch(() => undefined);
+    void maybeSendAliceReminder().catch(() => undefined);
   };
   boot();
+  setInterval(boot, 30_000);
   setInterval(() => {
     void flush("aliceblue").catch(() => undefined);
   }, 2000);

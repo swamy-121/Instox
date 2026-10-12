@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mergeDisplayed, shownQuote } from "@/features/market/live-quotes";
 import { MockMarketDataProvider, getMarketDataProvider } from "@/server/market-data/adapter";
-import { aliceConnectFrame, loginAliceBlue, openAliceSocketSession } from "@/server/market-data/aliceblue";
+import { aliceConnectFrame, exchangeAliceAuthCode, loginAliceBlue, openAliceMarketSocket, openAliceSocketSession } from "@/server/market-data/aliceblue";
+import { publicAliceStatus } from "@/server/market-data/alice-store";
 import {
   activeFeedId,
   aliceSocketToken,
@@ -13,9 +14,12 @@ import {
   parseAliceTick,
   parseScripSearch,
   parseYahooChart,
+  presentIndexQuote,
   subscribeKey,
+  LIVE_INDEX_SYMBOLS,
   type QuoteSnapshot,
 } from "@/server/market-data/quotes";
+import { aliceChecksum, aliceReminderDue, isAliceSessionCurrent, isNseMarketDay } from "@/server/market-data/session";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -140,5 +144,74 @@ describe("market feed helpers", () => {
     expect(mergeDisplayed(row, undefined, "mock", true, now).freshnessStatus).toBe("stored");
     expect(shownQuote(undefined, undefined, "aliceblue", false, now)?.freshnessStatus).toBe("offline");
     expect(shownQuote(undefined, undefined, "mock", false, now)).toBeNull();
+    expect(mergeDisplayed(row, undefined, "aliceblue", true, now).freshnessStatus).toBe("stale");
+    const delayed = { ...row, freshnessStatus: "delayed" };
+    expect(mergeDisplayed(delayed, undefined, "aliceblue", true, now).freshnessStatus).toBe("delayed");
+  });
+
+  it("limits the live feed to three indices and keeps a missing session delayed", () => {
+    expect([...LIVE_INDEX_SYMBOLS]).toEqual(["NIFTY", "BANKNIFTY", "SENSEX"]);
+    const now = Date.parse("2026-10-12T03:30:00.000Z");
+    const snapshot: QuoteSnapshot = {
+      symbol: "NIFTY",
+      last: 25000,
+      changePct: 0.4,
+      sourceTimestamp: null,
+      updatedAt: "2026-10-11T10:00:00.000Z",
+      providerId: "aliceblue",
+    };
+    expect(presentIndexQuote({ symbol: "NIFTY", last: 1, changePct: 0 }, snapshot, "aliceblue", false, now)).toMatchObject({
+      last: 25000,
+      changePct: 0.4,
+      freshnessStatus: "delayed",
+    });
+    expect(presentIndexQuote({ symbol: "RELIANCE", last: 10, changePct: 1 }, snapshot, "aliceblue", false, now).freshnessStatus).toBe("stored");
+    expect(presentIndexQuote({ symbol: "NIFTY", last: 1, changePct: 0 }, null, "aliceblue", false, now).freshnessStatus).toBe("delayed");
+    const status = publicAliceStatus({
+      connected: true,
+      configured: true,
+      tradingDay: "2026-10-12",
+      userId: "AB1",
+      clientId: "912444",
+      userSession: "secret-session",
+      reminderSentOn: null,
+    }, "aliceblue");
+    expect(status).toEqual({ provider: "aliceblue", connected: true, configured: true });
+    expect(JSON.stringify(status)).not.toContain("secret-session");
+  });
+
+  it("exchanges the daily auth code and reminds admins only on a market morning", async () => {
+    expect(aliceChecksum("AB1", "auth-code", "secret-key")).toBe("779989c3bbfe07690cbe93a17dac8850f5613f2b83f2bd94f0d671cc8515bdfc");
+    const calls: string[] = [];
+    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(String(init?.body ?? ""));
+      calls.push(String(init?.headers && "authorization" in init.headers ? init.headers.authorization : ""));
+      return new Response(JSON.stringify({ stat: "Ok", clientId: "912444", userSession: "session-token" }), { status: 200 });
+    }) as typeof fetch;
+    const session = await exchangeAliceAuthCode({ userId: "ab1", authCode: "auth-code", apiSecret: "secret-key", fetchImpl });
+    expect(session).toEqual({ userId: "AB1", clientId: "912444", userSession: "session-token" });
+    expect(JSON.parse(calls[0] ?? "{}")).toEqual({ checkSum: aliceChecksum("AB1", "auth-code", "secret-key") });
+    expect(calls.join("")).not.toContain("secret-key");
+
+    const socketFetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = init?.headers as { authorization?: string } | undefined;
+      expect(headers?.authorization).toBe("Bearer session-token");
+      return new Response(JSON.stringify({ status: "Ok", result: [{ Status: "OK" }] }), { status: 200 });
+    }) as typeof fetch;
+    await expect(openAliceMarketSocket({ userId: "AB1", userSession: "session-token" }, socketFetch)).resolves.toBeUndefined();
+
+    const morning = new Date("2026-10-12T03:30:00.000Z");
+    const sessionRow = { userId: "AB1", clientId: "912444", userSession: "session-token", tradingDay: "2026-10-12" };
+    expect(isAliceSessionCurrent(sessionRow, morning)).toBe(true);
+    expect(isAliceSessionCurrent({ ...sessionRow, tradingDay: "2026-10-11" }, morning)).toBe(false);
+    expect(isNseMarketDay("2026-10-12")).toBe(true);
+    expect(isNseMarketDay("2026-10-02")).toBe(false);
+    expect(isNseMarketDay("2026-10-11")).toBe(false);
+    expect(aliceReminderDue({ now: morning, provider: "aliceblue", connected: false, reminderSentOn: null })).toBe(true);
+    expect(aliceReminderDue({ now: new Date("2026-10-12T03:29:00.000Z"), provider: "aliceblue", connected: false, reminderSentOn: null })).toBe(false);
+    expect(aliceReminderDue({ now: morning, provider: "aliceblue", connected: true, reminderSentOn: null })).toBe(false);
+    expect(aliceReminderDue({ now: morning, provider: "aliceblue", connected: false, reminderSentOn: "2026-10-12" })).toBe(false);
+    expect(aliceReminderDue({ now: new Date("2026-10-02T03:30:00.000Z"), provider: "aliceblue", connected: false, reminderSentOn: null })).toBe(false);
+    expect(aliceReminderDue({ now: morning, provider: "dev", connected: false, reminderSentOn: null })).toBe(false);
   });
 });

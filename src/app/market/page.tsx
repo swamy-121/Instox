@@ -7,6 +7,7 @@ import { FreshnessMark } from "@/components/freshness-mark";
 import { AreaChart, StockAvatar } from "@/components/illustrations";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { mergeDisplayed } from "@/features/market/live-quotes";
+import { isLiveIndex } from "@/lib/live-indices";
 import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
@@ -59,7 +60,11 @@ function MarketBody() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol]);
 
-  const shown = (payload?.indices ?? []).map((row) => mergeDisplayed(row, live.quotes.get(row.symbol), payload?.feed, live.streamDown));
+  const shown = (payload?.indices ?? []).map((row) => (
+    isLiveIndex(row.symbol)
+      ? mergeDisplayed(row, live.quotes.get(row.symbol), payload?.feed, live.streamDown)
+      : { ...row, freshnessStatus: "stored" as const }
+  ));
   const indices = shown.filter((row) => row.kind === "index");
   const stocks = [...shown.filter((row) => row.kind === "stock")].sort((a, b) => b.changePct - a.changePct);
   const gainers = stocks.filter((row) => row.changePct >= 0);
@@ -68,7 +73,7 @@ function MarketBody() {
   const count = RANGES.find((item) => item.id === range)?.count ?? 22;
   const chartRow = shown.find((row) => row.symbol === payload?.chartSymbol);
   const closes = (payload?.candles ?? []).slice(-count).map((candle) => candle.close);
-  if (chartRow && (chartRow.freshnessStatus === "live" || chartRow.freshnessStatus === "stale") && closes.length > 0) {
+  if (chartRow && isLiveIndex(chartRow.symbol) && (chartRow.freshnessStatus === "live" || chartRow.freshnessStatus === "stale" || chartRow.freshnessStatus === "delayed") && closes.length > 0) {
     closes[closes.length - 1] = chartRow.last;
   }
 

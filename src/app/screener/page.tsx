@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { FreshnessMark } from "@/components/freshness-mark";
 import { StockAvatar } from "@/components/illustrations";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
-import { mergeDisplayed } from "@/features/market/live-quotes";
-import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
 
@@ -14,14 +11,12 @@ type Row = {
   symbol: string;
   segment: "equity" | "futures" | "options";
   last: number;
-  freshnessStatus?: string;
   indicators: { rsi: number | null; ema: number | null; cpr: { top: number; bottom: number } | null };
 };
 
 type Screen = {
   results: Row[];
   skipped: { symbol: string; reason: string }[];
-  feed?: string;
 };
 
 const TABS = [
@@ -48,7 +43,6 @@ function ScreenerBody() {
   const [error, setError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
-  const live = useLiveQuotes(screen?.feed);
 
   function load(params = "") {
     setLoading(true);
@@ -79,9 +73,7 @@ function ScreenerBody() {
     load(query ? `?${query}` : "");
   }
 
-  const rows = (screen?.results ?? [])
-    .map((row) => mergeDisplayed(row, live.quotes.get(row.symbol), screen?.feed, live.streamDown))
-    .filter((row) => (tab === "fo" ? row.segment !== "equity" : true));
+  const rows = (screen?.results ?? []).filter((row) => (tab === "fo" ? row.segment !== "equity" : true));
 
   return (
     <div className="space-y-4">
@@ -127,9 +119,7 @@ function ScreenerBody() {
                       {row.symbol}
                     </span>
                   </td>
-                  <td className="px-4 py-3 tabular-nums text-ink">
-                    {formatPrice(row.last)} <FreshnessMark status={row.freshnessStatus} />
-                  </td>
+                  <td className="px-4 py-3 tabular-nums text-ink">{formatPrice(row.last)}</td>
                   <td className="px-4 py-3 tabular-nums text-ink">{metric(row, tab)}</td>
                 </tr>
               ))}

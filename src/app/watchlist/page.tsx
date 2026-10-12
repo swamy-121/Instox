@@ -3,16 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { FreshnessMark } from "@/components/freshness-mark";
 import { StockAvatar } from "@/components/illustrations";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
-import { shownQuote } from "@/features/market/live-quotes";
-import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
 
 type Item = { id: string; symbol: string };
-type Quote = { symbol: string; last: number; changePct: number; freshnessStatus?: string };
+type Quote = { symbol: string; last: number; changePct: number };
 
 export default function WatchlistPage() {
   return (
@@ -25,26 +22,21 @@ export default function WatchlistPage() {
 function Body() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [feedId, setFeedId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
-  const live = useLiveQuotes(feedId);
   const [symbol, setSymbol] = useState("");
 
   function load() {
     setError(null);
     Promise.all([
       apiFetch<{ items: Item[] }>("/api/v1/watchlist"),
-      apiFetch<{ indices: Quote[]; feed?: string }>("/api/v1/market/overview"),
+      apiFetch<{ records: Quote[] }>("/api/v1/content/indices"),
     ]).then(([list, market]) => {
       if (!list.ok) {
         setError(list.message);
         return;
       }
       setItems(list.data.items);
-      if (market.ok) {
-        setFeedId(market.data.feed);
-        setQuotes(market.data.indices);
-      }
+      if (market.ok) setQuotes(market.data.records);
     });
   }
 
@@ -86,20 +78,16 @@ function Body() {
       {items && items.length === 0 ? <EmptyState title="Nothing saved" body="Add a symbol from a tip or type one above." /> : null}
       <ul className="space-y-2">
         {items?.map((item) => {
-          const quote = shownQuote(bySymbol.get(item.symbol), live.quotes.get(item.symbol), feedId, live.streamDown);
-          const price = quote && Number.isFinite(quote.last) && Number.isFinite(quote.changePct) ? quote : null;
+          const quote = bySymbol.get(item.symbol);
           return (
             <li key={item.id} className="card flex items-center gap-3">
               <StockAvatar symbol={item.symbol} className="h-10 w-10 text-[10px]" />
               <Link href={`/market?symbol=${item.symbol}`} className="flex-1 font-semibold text-ink">{item.symbol}</Link>
-              {price ? (
-                <span className="text-right text-sm tabular-nums text-ink">
-                  {formatPrice(price.last)}{" "}
-                  <span className={price.changePct >= 0 ? "text-profit" : "text-loss"}>{price.changePct.toFixed(2)}%</span>
-                  <FreshnessMark status={price.freshnessStatus} />
+              {quote ? (
+                <span className="text-sm tabular-nums text-ink">
+                  {formatPrice(quote.last)}{" "}
+                  <span className={quote.changePct >= 0 ? "text-profit" : "text-loss"}>{quote.changePct.toFixed(2)}%</span>
                 </span>
-              ) : quote?.freshnessStatus === "offline" ? (
-                <FreshnessMark status="offline" />
               ) : null}
               <button type="button" className="text-sm text-muted" onClick={() => void remove(item.symbol)}>Remove</button>
             </li>

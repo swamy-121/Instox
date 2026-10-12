@@ -1,3 +1,4 @@
+import { aliceChecksum } from "@/server/market-data/session";
 import { aliceSocketToken, aliceUserData, parseScripSearch } from "@/server/market-data/quotes";
 
 const REST_BASE = "https://ant.aliceblueonline.com/rest/AliceBlueAPIService/api/";
@@ -55,14 +56,56 @@ export async function openAliceSocketSession(session: AliceSession, fetchImpl: F
   if (!created.ok || body.stat !== "Ok") throw new Error("Alice Blue did not open a socket session.");
 }
 
-export function aliceConnectFrame(session: AliceSession): string {
+export function aliceConnectFrame(session: AliceSession & { clientId?: string }): string {
+  const account = session.clientId || session.userId;
   return JSON.stringify({
     susertoken: aliceSocketToken(session.sessionId),
     t: "c",
-    actid: `${session.userId}_API`,
-    uid: `${session.userId}_API`,
+    actid: `${account}_API`,
+    uid: `${account}_API`,
     source: "API",
   });
+}
+
+const OPEN_API = "https://a3.aliceblueonline.com/open-api/od/v1";
+export const ALICE_LOGIN_URL = "https://ant.aliceblueonline.com/";
+
+export async function exchangeAliceAuthCode(input: {
+  userId: string;
+  authCode: string;
+  apiSecret: string;
+  fetchImpl?: FetchLike;
+}): Promise<{ userId: string; clientId: string; userSession: string }> {
+  const userId = input.userId.trim().toUpperCase();
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(`${OPEN_API}/vendor/getUserDetails`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ checkSum: aliceChecksum(userId, input.authCode, input.apiSecret) }),
+  });
+  const body = (await response.json()) as { stat?: string; clientId?: string; userSession?: string };
+  if (!response.ok || body.stat !== "Ok" || !body.userSession || !body.clientId) {
+    throw new Error("Alice Blue did not return a session.");
+  }
+  return { userId, clientId: body.clientId, userSession: body.userSession };
+}
+
+export async function openAliceMarketSocket(
+  session: { userId: string; userSession: string },
+  fetchImpl: FetchLike = fetch,
+): Promise<void> {
+  const headers = { "content-type": "application/json", authorization: `Bearer ${session.userSession}` };
+  const body = JSON.stringify({ source: "API", userId: session.userId });
+  await fetchImpl(`${OPEN_API}/profile/invalidateWsSess`, { method: "POST", headers, body });
+  const created = await fetchImpl(`${OPEN_API}/profile/createWsSess`, { method: "POST", headers, body });
+  let payload: { status?: string; result?: Array<{ Status?: string }> } = {};
+  try {
+    payload = (await created.json()) as { status?: string; result?: Array<{ Status?: string }> };
+  } catch {
+    payload = {};
+  }
+  const accepted = payload.status === "Ok" || payload.result?.[0]?.Status === "OK";
+  if (!created.ok || !accepted) throw new Error("Alice Blue did not open a socket session.");
 }
 
 export async function searchAliceContract(

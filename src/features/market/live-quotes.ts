@@ -5,7 +5,7 @@ export type StreamQuote = {
   updatedAt?: string;
 };
 
-export type ShownFreshness = "live" | "stale" | "offline" | "stored";
+export type ShownFreshness = "live" | "stale" | "offline" | "stored" | "delayed";
 
 const MAX_AGE_MS: Record<"aliceblue" | "dev", number> = {
   aliceblue: 20_000,
@@ -21,6 +21,9 @@ export function mergeDisplayed<T extends { last: number; changePct?: number; fre
 ): T & { freshnessStatus: ShownFreshness } {
   if (feed !== "aliceblue" && feed !== "dev") {
     return { ...row, freshnessStatus: "stored" };
+  }
+  if (row.freshnessStatus === "delayed" && (streamed?.last == null || streamDown)) {
+    return { ...row, freshnessStatus: "delayed" };
   }
   const last = streamed?.last ?? row.last;
   const changePct = streamed?.changePct ?? row.changePct;

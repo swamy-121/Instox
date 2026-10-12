@@ -101,14 +101,14 @@ class RemoteFeedProvider implements MarketDataProvider {
         checkedAt: now.toISOString(),
       };
     }
-    const configured = Boolean(process.env.ALICEBLUE_USER_ID && (process.env.ALICEBLUE_API_KEY || process.env.ALICEBLUE_SESSION_ID));
+    const configured = Boolean(process.env.ALICEBLUE_APP_CODE && process.env.ALICEBLUE_API_SECRET);
     return {
       providerId: this.id,
-      status: configured ? "live" : "unavailable",
+      status: configured ? "degraded" : "unavailable",
       licensed,
       label: configured
-        ? "Alice Blue session feed. Broker credentials stay on the server. Redistribution rights are still open."
-        : "Alice Blue is selected, but ALICEBLUE_USER_ID and ALICEBLUE_API_KEY are empty.",
+        ? "Alice Blue index feed. Connect from the admin panel each market day. Redistribution rights are still open."
+        : "Alice Blue is selected, but ALICEBLUE_APP_CODE and ALICEBLUE_API_SECRET are empty.",
       checkedAt: now.toISOString(),
     };
   }
