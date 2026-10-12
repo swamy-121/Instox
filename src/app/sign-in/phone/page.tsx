@@ -4,6 +4,7 @@ import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } fro
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ErrorState } from "@/components/states";
+import { Wordmark } from "@/components/wordmark";
 import { useAuth, useSignedInRedirect } from "@/features/auth/auth-provider";
 import { getClientAuth } from "@/lib/firebase-client";
 import { toE164 } from "@/lib/phone";
@@ -24,6 +25,12 @@ export default function PhoneSignInPage() {
   const [expiresIn, setExpiresIn] = useState(0);
   const confirmation = useRef<ConfirmationResult | null>(null);
   const verifier = useRef<RecaptchaVerifier | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const preset = params.get("national");
+    if (preset) setNational(preset);
+  }, []);
 
   useEffect(() => {
     if (resendIn <= 0 && expiresIn <= 0) return;
@@ -56,7 +63,7 @@ export default function PhoneSignInPage() {
       const codeName = caught && typeof caught === "object" && "code" in caught ? String(caught.code) : "";
       if (codeName === "auth/too-many-requests") setError("Too many attempts. Wait and try again.");
       else if (codeName === "auth/invalid-phone-number") setError("That phone number was rejected.");
-      else setError("The code could not be sent. On the emulator, check that Auth is running.");
+      else setError("The code could not be sent. Try again in a moment.");
       verifier.current?.clear();
       verifier.current = null;
     } finally {
@@ -94,7 +101,10 @@ export default function PhoneSignInPage() {
 
   return (
     <main className="mx-auto max-w-md px-4 py-10">
-      <Link href="/sign-in" className="text-sm text-muted">
+      <Link href="/" aria-label="inStox" className="inline-flex">
+        <Wordmark decorative className="h-12 w-auto" />
+      </Link>
+      <Link href="/sign-in" className="mt-6 block text-sm text-muted">
         Back
       </Link>
       <h1 className="mt-4 text-3xl font-semibold text-navy">{step === "phone" ? "Phone number" : "Enter the code"}</h1>
@@ -128,10 +138,35 @@ export default function PhoneSignInPage() {
             void verifyCode();
           }}
         >
-          <label className="label" htmlFor="otp">
-            6 digit code
-          </label>
-          <input id="otp" className="field" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} />
+          <p className="text-sm text-muted" id="otp-label">6 digit code</p>
+          <div className="grid grid-cols-6 gap-2" role="group" aria-labelledby="otp-label">
+            {Array.from({ length: 6 }, (_, index) => (
+              <input
+                key={index}
+                className="field px-0 text-center tabular-nums"
+                inputMode="numeric"
+                maxLength={1}
+                value={code[index] ?? ""}
+                readOnly
+              />
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"].map((key) => (
+              <button
+                key={key || "blank"}
+                type="button"
+                className="btn-quiet"
+                disabled={!key}
+                onClick={() => {
+                  if (key === "del") setCode((value) => value.slice(0, -1));
+                  else if (code.length < 6) setCode((value) => `${value}${key}`);
+                }}
+              >
+                {key === "del" ? "Del" : key}
+              </button>
+            ))}
+          </div>
           <p className="text-sm text-muted">Code timer: {Math.floor(expiresIn / 60)}:{String(expiresIn % 60).padStart(2, "0")}</p>
           <button className="btn-primary w-full" type="submit" disabled={busy}>
             {busy ? "Checking" : "Verify"}

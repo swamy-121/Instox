@@ -49,10 +49,14 @@ export function NotificationSettings() {
   }
 
   async function registerDevice() {
-    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? "";
+    let vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? "";
+    if (!vapidKey) {
+      const key = await apiFetch<{ vapidKey: string }>("/api/v1/integrations/push-key");
+      if (key.ok) vapidKey = key.data.vapidKey;
+    }
     const senderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "";
     if (!vapidKey || !senderId) {
-      setMessage("The FCM web push certificate or sender id is empty, so this browser cannot register.");
+      setMessage("Notifications are not available on this device yet.");
       return;
     }
     if (!("serviceWorker" in navigator) || !("Notification" in window)) {
@@ -100,19 +104,11 @@ export function NotificationSettings() {
     if (result.ok) load();
   }
 
-  let setupNote = "";
-  if (snapshot && !snapshot.clientConfigured) {
-    setupNote = " The FCM web push certificate or sender id is empty, so this browser cannot register.";
-  } else if (snapshot && !snapshot.fcmConfigured) {
-    setupNote = " Alerts stay off until Firebase Admin credentials are set.";
-  }
-
   return (
     <section className="card space-y-4">
       <h2 className="text-base font-semibold text-ink">Notifications</h2>
       <p className="text-sm leading-6 text-muted">
-        Tip alerts and marketing alerts are separate. Nothing is sent without a saved choice, and alert text does not include entry, stop, or targets.
-        {setupNote}
+        Tip alerts and marketing alerts are separate. Nothing is sent without a saved choice.
       </p>
       <form className="space-y-3" onSubmit={(event) => void save(event)}>
         <label className="flex items-center gap-3 text-sm text-ink">
@@ -126,7 +122,7 @@ export function NotificationSettings() {
         <button className="btn-secondary" type="submit" disabled={busy}>Save choices</button>
       </form>
       <button type="button" className="btn-secondary" onClick={() => void registerDevice()}>
-        {snapshot?.clientConfigured ? "Register this browser" : "FCM is unconfigured"}
+        Register this browser
       </button>
       <ul className="space-y-2 text-sm">
         {snapshot?.devices.map((item) => (

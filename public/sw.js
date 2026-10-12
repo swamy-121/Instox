@@ -1,6 +1,6 @@
-const CACHE = "instox-static-v2";
-const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/brand/wordmark.svg", "/icons/icon-192.png", "/icons/icon-512.png"];
-const STATIC_EXT = /\.(?:png|svg|ico|webp|woff2)$/i;
+const CACHE = "instox-static-v5";
+const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/brand/wordmark.png", "/brand/splash.avif", "/brand/splash.webp", "/icons/icon-192.png", "/icons/icon-512.png"];
+const STATIC_EXT = /\.(?:png|svg|ico|webp|avif|jpg|woff2)$/i;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
@@ -39,6 +39,14 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/charts")) return;
   if (url.pathname.startsWith("/strategies")) return;
   if (url.pathname.startsWith("/backtest")) return;
+  if (url.pathname.startsWith("/news")) return;
+  if (url.pathname.startsWith("/more")) return;
+  if (url.pathname.startsWith("/watchlist")) return;
+  if (url.pathname.startsWith("/market")) return;
+  if (url.pathname.startsWith("/settings")) return;
+  if (url.pathname.startsWith("/help")) return;
+  if (url.pathname.startsWith("/onboarding")) return;
+  if (url.pathname.startsWith("/premium")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => caches.match("/offline.html")));

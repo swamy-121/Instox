@@ -5,6 +5,8 @@ import { createId } from "@/lib/ids";
 import { recordAudit, writeAudit } from "@/server/audit/log";
 import { assertRoleChange, sanitizeRoles } from "@/server/authorization/roles";
 import { adminDb } from "@/server/db/admin";
+import { loadMemberCopy } from "@/server/content/member-config";
+import { listContent } from "@/server/content/store";
 import { referralCodeFor } from "@/server/referrals/logic";
 import type { Role, UserProfile, UserStatus } from "@/types/domain";
 
@@ -28,6 +30,9 @@ export async function bootstrapUser(token: DecodedIdToken): Promise<{ emailConfl
   }
 
   const code = referralCodeFor(token.uid);
+  const copy = await loadMemberCopy().catch(() => null);
+  const defaults = await listContent("watchlistDefaults", "admin").catch(() => []);
+  const symbols = defaults.filter((row) => row.status === "published").map((row) => row.symbol);
   await db.runTransaction(async (tx) => {
     const userRef = db.collection("users").doc(token.uid);
     const roleRef = db.collection("userRoles").doc(token.uid);
@@ -53,9 +58,18 @@ export async function bootstrapUser(token: DecodedIdToken): Promise<{ emailConfl
         consentVersion: null,
         consentAt: null,
         providers: [provider],
-        tipPush: false,
-        marketingPush: false,
+        tipPush: copy?.tipPushDefault === true,
+        marketingPush: copy?.marketingPushDefault === true,
       });
+      for (const symbol of symbols) {
+        const itemId = `${token.uid}_${symbol}`;
+        tx.set(db.collection("watchlistItems").doc(itemId), {
+          id: itemId,
+          uid: token.uid,
+          symbol,
+          createdAt: now,
+        });
+      }
     } else {
       const current = userSnap.data() ?? {};
       const providers = new Set<string>(Array.isArray(current.providers) ? current.providers.map(String) : []);

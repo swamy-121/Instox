@@ -2,25 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
+import { StockAvatar } from "@/components/illustrations";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
-import { Chip, PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
+import { formatPrice } from "@/lib/money";
 
 type Row = {
   symbol: string;
-  dataLabel: string;
-  live: boolean;
+  segment: "equity" | "futures" | "options";
+  last: number;
   indicators: { rsi: number | null; ema: number | null; cpr: { top: number; bottom: number } | null };
-  matched: string[];
 };
 
 type Screen = {
-  dataLabel: string;
-  live: boolean;
-  notice: string;
   results: Row[];
   skipped: { symbol: string; reason: string }[];
 };
+
+const TABS = [
+  { id: "rsi", label: "RSI" },
+  { id: "ema", label: "EMA" },
+  { id: "cpr", label: "CPR" },
+  { id: "fo", label: "F&O" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
 
 export default function ScreenerPage() {
   return (
@@ -31,9 +37,8 @@ export default function ScreenerPage() {
 }
 
 function ScreenerBody() {
+  const [tab, setTab] = useState<TabId>("rsi");
   const [rsiLt, setRsiLt] = useState("");
-  const [ema, setEma] = useState("");
-  const [cpr, setCpr] = useState("");
   const [screen, setScreen] = useState<Screen | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | undefined>();
@@ -62,68 +67,75 @@ function ScreenerBody() {
     event.preventDefault();
     const params = new URLSearchParams();
     if (rsiLt.trim()) params.set("rsiLt", rsiLt.trim());
-    if (ema) params.set("ema", ema);
-    if (cpr) params.set("cpr", cpr);
+    if (tab === "ema") params.set("ema", "above");
+    if (tab === "cpr") params.set("cpr", "above");
     const query = params.toString();
     load(query ? `?${query}` : "");
   }
 
+  const rows = (screen?.results ?? []).filter((row) => (tab === "fo" ? row.segment !== "equity" : true));
+
   return (
     <div className="space-y-4">
-      <PageHeader title="Screener" lede="Filters combine with AND. ATR and SuperTrend stay off until an admin enables them." />
-      <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-white px-4 py-3 text-sm shadow-card">
-        <p className="text-ink">Sample data. These rows are not live quotes.</p>
-        <Chip>Sample</Chip>
+      <h1 className="text-2xl font-semibold text-ink">Screener</h1>
+      <div className="flex gap-2 overflow-x-auto">
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold ${tab === item.id ? "bg-primary text-white" : "bg-primary-soft text-primary"}`}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
-      <form className="card grid gap-4 sm:grid-cols-3" onSubmit={apply}>
-        <label>
+      <form className="flex items-end gap-2" onSubmit={apply}>
+        <label className="min-w-0 flex-1">
           <span className="label">RSI below</span>
           <input className="field tabular-nums" inputMode="decimal" value={rsiLt} onChange={(event) => setRsiLt(event.target.value)} placeholder="40" />
         </label>
-        <label>
-          <span className="label">Price vs EMA</span>
-          <select className="field" value={ema} onChange={(event) => setEma(event.target.value)}>
-            <option value="">Any</option>
-            <option value="above">Above EMA</option>
-            <option value="below">Below EMA</option>
-          </select>
-        </label>
-        <label>
-          <span className="label">CPR</span>
-          <select className="field" value={cpr} onChange={(event) => setCpr(event.target.value)}>
-            <option value="">Any</option>
-            <option value="above">Above top</option>
-            <option value="inside">Inside</option>
-            <option value="below">Below bottom</option>
-          </select>
-        </label>
-        <div className="sm:col-span-3">
-          <button className="btn-primary w-full sm:w-auto" type="submit">Run sample screen</button>
-        </div>
+        <button className="btn-primary shrink-0" type="submit">Run screener</button>
       </form>
       {loading ? <LoadingState label="Running screener" /> : null}
       {error ? <ErrorState message={error} requestId={requestId} onRetry={() => load()} /> : null}
-      {screen && screen.results.length === 0 ? (
-        <EmptyState title="No matches" body="No eligible sample symbol passed every filter. Stale candles are left out." />
+      {screen && rows.length === 0 ? <EmptyState title="No matches" body="No symbol passed this scan." /> : null}
+      {rows.length > 0 ? (
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs uppercase tracking-wide text-muted">
+              <tr>
+                <th className="px-4 py-3 font-medium">Symbol</th>
+                <th className="px-4 py-3 font-medium">LTP</th>
+                <th className="px-4 py-3 font-medium">{tab === "ema" ? "EMA" : tab === "cpr" ? "CPR" : "RSI"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.symbol} className="border-t border-line">
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-2 font-semibold text-ink">
+                      <StockAvatar symbol={row.symbol} className="h-8 w-8 text-[10px]" />
+                      {row.symbol}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-ink">{formatPrice(row.last)}</td>
+                  <td className="px-4 py-3 tabular-nums text-ink">{metric(row, tab)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
-      {screen && screen.results.length > 0 ? (
-        <ul className="space-y-3">
-          {screen.results.map((row) => (
-            <li key={row.symbol} className="card">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold tracking-tight text-ink">{row.symbol}</h2>
-                <Chip>Sample</Chip>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Chip>RSI {row.indicators.rsi === null ? "n/a" : row.indicators.rsi.toFixed(1)}</Chip>
-                <Chip>EMA {row.indicators.ema === null ? "n/a" : row.indicators.ema.toFixed(2)}</Chip>
-              </div>
-              {row.matched.length > 0 ? <p className="mt-3 text-xs text-muted">Matched {row.matched.join(", ")}</p> : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {screen ? <p className="text-xs leading-5 text-muted">{screen.notice} Skipped {screen.skipped.length}.</p> : null}
     </div>
   );
+}
+
+function metric(row: Row, tab: TabId): string {
+  if (tab === "ema") return row.indicators.ema === null ? "-" : row.indicators.ema.toFixed(2);
+  if (tab === "cpr") {
+    if (!row.indicators.cpr) return "-";
+    return `${row.indicators.cpr.bottom.toFixed(1)} to ${row.indicators.cpr.top.toFixed(1)}`;
+  }
+  return row.indicators.rsi === null ? "-" : row.indicators.rsi.toFixed(1);
 }

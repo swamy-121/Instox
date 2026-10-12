@@ -22,6 +22,8 @@ export type ScreenerFilter =
 
 export type ScreenerRow = {
   symbol: string;
+  segment: InstrumentMaster["segment"];
+  last: number;
   interval: "1d";
   dataLabel: "Sample data";
   live: false;
@@ -163,6 +165,8 @@ export function runScreener(input: {
 
     results.push({
       symbol: instrument.symbol,
+      segment: instrument.segment,
+      last: last.close,
       interval: "1d",
       dataLabel: "Sample data",
       live: false,

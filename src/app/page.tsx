@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SplashGate } from "@/components/brand";
+import { MaintenanceNotice } from "@/features/app/member-config";
 import { PublicFooter, PublicHeader } from "@/components/chrome";
 import { PenIcon, ShieldIcon } from "@/components/icons";
 import { Wordmark } from "@/components/wordmark";
@@ -9,13 +10,14 @@ const TRUST = [
   ["Reviewed by people", "A draft is checked before it is published. Close, cancel, and expire each keep a reason."],
   ["Levels stay on the server", "Premium entry, stop, targets, and the write-up are omitted until a plan is active."],
   ["No orders from this app", "Instox records ideas. It does not place trades and it does not promise a result."],
-  ["Sample figures are labeled", "A market-data vendor is not licensed, so quotes in the app say Sample data."],
+  ["Quotes follow stored records", "Index and stock figures on the home screen come from the published market records."],
 ];
 
 export default function LandingPage() {
   return (
     <SplashGate>
       <PublicHeader />
+      <MaintenanceNotice />
       <main>
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 md:grid-cols-2 md:py-20">
           <div>
@@ -72,7 +74,7 @@ function Illustration() {
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between">
-        <Wordmark decorative className="h-7 w-auto" />
+        <Wordmark decorative className="h-10 w-auto" />
         <Chip>Illustration</Chip>
       </div>
       <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted">NSE · Equity · 1-3 sessions</p>

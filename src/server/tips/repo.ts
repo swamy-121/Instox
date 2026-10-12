@@ -65,6 +65,7 @@ function asTip(id: string, data: DocumentData): TipRecord {
     updatedAt: String(data.updatedAt),
     schemaVersion: Number(data.schemaVersion ?? SCHEMA_VERSION),
     version: Number(data.version ?? 1),
+    featured: data.featured === true,
   };
 }
 
@@ -381,6 +382,7 @@ type MemberFilters = {
   category?: string;
   accessTier?: string;
   q?: string;
+  featured?: boolean;
   cursor: string | null;
   limit: number;
 };
@@ -388,6 +390,7 @@ type MemberFilters = {
 function matchesMember(tip: TipRecord, filters: MemberFilters): boolean {
   if (filters.category && tip.category !== filters.category) return false;
   if (filters.accessTier && tip.accessTier !== filters.accessTier) return false;
+  if (filters.featured && tip.featured !== true) return false;
   if (filters.q) {
     const needle = filters.q.toUpperCase();
     if (!tip.symbol.includes(needle)) return false;
@@ -478,6 +481,15 @@ export async function getTip(tipId: string): Promise<TipRecord | null> {
   const snap = await adminDb().collection("tips").doc(tipId).get();
   if (!snap.exists) return null;
   return asTip(snap.id, snap.data() ?? {});
+}
+
+export async function deleteDraftTip(tipId: string): Promise<void> {
+  const tip = await getTip(tipId);
+  if (!tip) throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
+  if (tip.status !== "draft") {
+    throw new AppError(422, "BUSINESS_RULE_FAILED", "Only a draft can be deleted.");
+  }
+  await adminDb().collection("tips").doc(tipId).delete();
 }
 
 export async function listTipEvents(tipId: string): Promise<TipEvent[]> {

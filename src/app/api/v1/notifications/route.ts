@@ -1,4 +1,5 @@
 import { requireActor } from "@/server/auth/actor";
+import { refreshIntegrations } from "@/server/integrations/store";
 import { adminDb } from "@/server/db/admin";
 import { apiOk, withApi } from "@/server/http";
 import { clientMessagingConfigured, fcmConfigured } from "@/server/notifications/push";
@@ -6,6 +7,7 @@ import { clientMessagingConfigured, fcmConfigured } from "@/server/notifications
 export async function GET(request: Request): Promise<Response> {
   return withApi(request, "GET /api/v1/notifications", async ({ requestId }) => {
     const actor = await requireActor(request);
+    await refreshIntegrations();
     const db = adminDb();
     const [userSnap, tokens] = await Promise.all([
       db.collection("users").doc(actor.uid).get(),

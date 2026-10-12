@@ -63,7 +63,7 @@ function ProfileBody() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Profile" lede="Roles and premium access are read from the server. This page cannot grant them." />
+      <PageHeader title="Profile" lede="Your account details." />
       <section className="card">
         <div className="flex items-start justify-between gap-3">
           <div>

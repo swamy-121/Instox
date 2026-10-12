@@ -2,7 +2,7 @@
 
 Mobile-first PWA for manually published Indian market tips. This repo is the first slice: sign-in, roles, the tip workflow, a free/premium feed, and the admin screens that go with them.
 
-Market data and payments are interfaces with stubs. Nothing here is a live quote, and checkout does not turn on premium.
+Market data stays behind a server provider. Leave `MARKET_DATA_PROVIDER` unset for the mock adapter. Alice Blue can supply Nifty 50, Bank Nifty, and Sensex after an admin connects each market day. That session is not a redistribution licence. Checkout does not turn on premium.
 
 ## Setup
 
@@ -32,7 +32,7 @@ npm run seed
 npm run dev
 ```
 
-`npm run seed` reads `.env.local` when those emulator variables are not already exported.
+`npm run seed` reads `.env.local` when those emulator variables are not already exported. With both emulator hosts set, it writes to the emulator. With neither host set, it uses `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` for `FIREBASE_PROJECT_ID`. A second run overwrites the same document ids.
 
 Open http://localhost:3000/sign-in. The emulator user buttons sign in as the seeded accounts (free, premium, editor, publisher, support, admin, super admin, disabled). Phone OTP and Google also run against the Auth emulator. The emulator prints the SMS code. It does not send a real text.
 
@@ -48,7 +48,7 @@ Seeded premium tips stay locked for the free user. Sign in as Premium Member to 
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Unit tests (lifecycle, entitlements, tip redaction) |
 | `npm run test:rules` | Firestore rules tests. Needs the Firestore emulator. |
-| `npm run seed` | Dummy users, tips, and an audit row in the emulator |
+| `npm run seed` | Idempotent users, tips, plans, quotes, news, help, shop, and watchlist rows. Works on the emulator and on a project with Admin credentials. |
 | `npm run emulators` | Auth and Firestore emulators |
 
 CI runs lint, typecheck, unit tests, rules tests under `firebase emulators:exec`, and `npm run build`.
@@ -79,7 +79,7 @@ Referral codes can be stored and applied. `config/features.json` keeps rewards o
 
 Tip alerts use Firebase Cloud Messaging. The browser stores an FCM device token, and the server sends with the Admin SDK. Alert text does not include entry, stop, targets, or rationale. With an empty web push certificate, or on the emulator, the delivery status is `skipped_unconfigured`.
 
-`PAYMENTS_PROVIDER` defaults to `stub`. Razorpay and Cashfree adapters exist for `PAYMENTS_MODE=test` only. Missing keys return 503 and do not create a remote order. A verified webhook still cannot grant premium while the plan in `config/plans.json` has `approved: false`.
+`PAYMENTS_PROVIDER` defaults to `stub`. Razorpay and Cashfree adapters exist for `PAYMENTS_MODE=test` only. Missing keys return 503 and do not create a remote order. A verified webhook still cannot grant premium while the plan in `config/plans.json` has `approved: false`. A super admin can save provider keys on Integrations. Those values are encrypted with `INTEGRATIONS_ENC_KEY` and override the environment when present. Remote checkout stays off.
 
 Admin screens ADM-06 through ADM-11 cover instruments, screener flags, users, plans and manual entitlements, orders and reconciliation, and referrals.
 
@@ -99,24 +99,36 @@ The sample instrument list is not an exchange master.
 
 These still block a real launch. The product owner approved starting this build anyway. The decisions themselves are not closed.
 
-- DEC-001 Brand palette and logo. Resolved from the product splash. The wordmark uses ink `#0A2C30`, sky blue `#2FAAFC`, and underline `#3DAAB7` on white. Interface text stays on ink. Links use `#227CB8` so small text meets WCAG AA. The screenshot tagline `#D9DADA` is too light, so tagline text uses `#5A6E71`. Profit `#0F7A45` and loss `#B42318` are used only for gain and loss.
-- DEC-002 Plan price, tax, billing, cancellation, and refunds. Config only, marked unapproved. Manual grants are audited and do not approve the price.
+- DEC-001 Brand palette and logo. Resolved from the official wordmark. `in` is teal `#0194A8` and `Stox` is green `#027332`, on white. Primary buttons and the active tab use the logo green `#027332`. Interface text uses `#013316`. Profit `#0F7A45` and loss `#B42318` stay separate from the logo green so gain and loss stay readable.
+- DEC-002 Plan price, tax, billing, cancellation, and refunds. Plan rows live in Firestore and stay `approved: false`. Manual grants are audited and do not approve the price.
 - DEC-003 SEBI / legal operating model. Paid stock-specific tips should stay off until counsel writes that down. Penny-stock publish is disabled in config.
-- DEC-004 Market-data vendor and redistribution rights. The mock adapter and sample instrument master are wired. `MARKET_DATA_LICENSED` stays false.
-- DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off.
+- DEC-004 Market-data vendor and redistribution rights. `MARKET_DATA_PROVIDER=aliceblue` streams Nifty 50, Bank Nifty, and Sensex after an admin uses Connect Alice Blue. The provider and Alice Blue app credentials can also be saved on Integrations. The daily login is the account's own broker session and does not grant redistribution rights, so `MARKET_DATA_LICENSED` stays false. Until that session is stored, those cards keep the last known values and show Delayed. Tests and CI leave the provider unset and keep the mock adapter. `MARKET_DATA_PROVIDER=dev` reads public chart quotes for the same three indices and is refused when `NODE_ENV` is production.
+- DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off. Keys can be entered on Integrations instead of the environment.
 - DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual. Insights read those reasons.
 - DEC-007 Referral threshold and reward. The ledger exists. Entitlement grants from referrals stay off.
 - DEC-008 Shop scope. The catalogue is a placeholder. Fulfilment, shipping, and refunds are not approved.
-- DEC-009 Email/SMS notification channels. FCM consent and token storage are built. The web push certificate and Admin credentials are empty, so nothing is sent.
+- DEC-009 Email/SMS notification channels. FCM consent and token storage are built. The web push certificate can be saved on Integrations. Admin credentials stay empty, so nothing is sent.
 - DEC-010 Named support and grievance contact. The about page says this is unassigned.
 
 ## Credentials still required
 
 Leave these empty until a real account exists. Do not commit values.
 
+These stay in the server environment because the app cannot boot or encrypt secrets without them:
+
+- `INTEGRATIONS_ENC_KEY`, a random string of at least 16 characters. It encrypts secrets saved on Integrations.
 - Firebase admin client email and private key, for a non-emulator deploy and for FCM sends.
-- Firebase web app api key, auth domain, project id, and app id, when you leave the emulator.
-- Firebase Cloud Messaging sender id (`NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`).
+- Firebase web app api key, auth domain, project id, app id, and messaging sender id, when you leave the emulator.
+- `PAYMENTS_MODE` stays `test`. Remote checkout stays off.
+- `MARKET_DATA_LICENSED` stays false until redistribution rights are decided.
+- Emulator hosts, when you run locally.
+
+A super admin can enter these on Integrations. The same names still work as environment fallbacks when the saved field is empty:
+
 - Firebase web push certificate (`NEXT_PUBLIC_FIREBASE_VAPID_KEY`). This is the FCM key, not a separate VAPID private key.
 - Razorpay key id, key secret, and webhook secret.
 - Cashfree client id, client secret, and webhook secret.
+- `PAYMENTS_PROVIDER` (`stub`, `razorpay`, or `cashfree`).
+- `FCM_SEND_MODE` (`token` or `topic`).
+- `MARKET_DATA_PROVIDER` (`aliceblue` or `dev`; leave unset for the mock feed).
+- Alice Blue app code (`ALICEBLUE_APP_CODE`) and API secret (`ALICEBLUE_API_SECRET`) from the developer portal at https://a3.aliceblueonline.com/. Register the redirect URL `https://<your-host>/api/v1/admin/market/aliceblue/callback`. An admin presses Connect Alice Blue once each market day. The session token stays on the server. If it is missing, index cards show Delayed, the admin panel shows a red banner, and admins with an FCM token get one reminder after 9:00 AM IST on NSE market days.

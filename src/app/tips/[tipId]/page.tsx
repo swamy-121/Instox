@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Lock } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
-import { LockIcon } from "@/components/icons";
+import { StockAvatar } from "@/components/illustrations";
 import { ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { Chip, PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
@@ -27,6 +28,7 @@ export default function TipDetailPage() {
 function Detail() {
   const params = useParams<{ tipId: string }>();
   const [tip, setTip] = useState<TipView | null>(null);
+  const [quote, setQuote] = useState<{ last: number; changePct: number } | null>(null);
   const [error, setError] = useState<{ message: string; code: string; requestId?: string } | null>(null);
 
   function load() {
@@ -37,6 +39,11 @@ function Detail() {
         return;
       }
       setTip(result.data.tip);
+      apiFetch<{ records: Array<{ symbol: string; last: number; changePct: number }> }>("/api/v1/content/indices").then((market) => {
+        if (!market.ok) return;
+        const match = market.data.records.find((row) => row.symbol === result.data.tip.symbol);
+        setQuote(match ?? null);
+      });
     });
   }
 
@@ -53,7 +60,19 @@ function Detail() {
 
   return (
     <article>
-      <PageHeader title={tip.symbol} lede={`${CATEGORY_LABELS[tip.category]} · ${tip.timeframe}`} />
+      <div className="mb-4 flex items-center gap-3">
+        <StockAvatar symbol={tip.symbol} />
+        <PageHeader title={tip.symbol} lede={`${CATEGORY_LABELS[tip.category]} · ${tip.timeframe}`} />
+      </div>
+      {quote ? (
+        <p className="mb-4 text-sm tabular-nums text-ink">
+          LTP {formatPrice(quote.last)}{" "}
+          <span className={quote.changePct >= 0 ? "font-semibold text-profit" : "font-semibold text-loss"}>
+            {quote.changePct >= 0 ? "+" : ""}
+            {quote.changePct.toFixed(2)}%
+          </span>
+        </p>
+      ) : null}
       <div className="mb-4 flex flex-wrap gap-2">
         <Chip tone="info">{tip.side}</Chip>
         <Chip tone={reason === "target_hit" ? "profit" : reason === "stop_loss_hit" ? "loss" : "neutral"}>
@@ -65,7 +84,25 @@ function Detail() {
         Published {tip.publishedAt ? new Date(tip.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "not yet"}
       </p>
       {tip.locked ? <PremiumLock /> : <OpenLevels tip={tip} />}
+      <WatchButton symbol={tip.symbol} />
     </article>
+  );
+}
+
+function WatchButton({ symbol }: { symbol: string }) {
+  const [message, setMessage] = useState<string | null>(null);
+  async function add() {
+    const result = await apiFetch<{ symbol: string }>("/api/v1/watchlist", {
+      method: "POST",
+      body: JSON.stringify({ symbol }),
+    });
+    setMessage(result.ok ? `${result.data.symbol} is on your watchlist.` : result.message);
+  }
+  return (
+    <div className="mt-4">
+      <button type="button" className="btn-primary w-full" onClick={() => void add()}>Add to watchlist</button>
+      {message ? <p className="mt-2 text-sm text-muted" role="status">{message}</p> : null}
+    </div>
   );
 }
 
@@ -84,7 +121,7 @@ function PremiumLock() {
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/75 px-6 text-center">
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary">
-          <LockIcon />
+          <Lock className="h-5 w-5" aria-hidden="true" />
         </span>
         <h2 className="mt-3 text-lg font-semibold text-ink">Premium idea</h2>
         <p className="mt-1 max-w-xs text-sm leading-6 text-muted">

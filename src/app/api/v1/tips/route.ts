@@ -37,6 +37,7 @@ export async function GET(request: Request): Promise<Response> {
       category,
       accessTier,
       q,
+      featured: url.searchParams.get("featured") === "1",
       cursor: url.searchParams.get("cursor"),
       limit: limitOf(url),
     });

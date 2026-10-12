@@ -6,6 +6,7 @@ import { useState } from "react";
 import { BrandSplash } from "@/components/brand";
 import { ErrorState } from "@/components/states";
 import { Wordmark } from "@/components/wordmark";
+import { MaintenanceGate } from "@/features/app/member-config";
 import { useAuth, useSignedInRedirect } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { getClientAuth } from "@/lib/firebase-client";
@@ -66,7 +67,7 @@ export default function SignInPage() {
     try {
       await signInWithCustomToken(auth, minted.data.customToken);
     } catch {
-      setMessage("Emulator sign-in failed. Is the Auth emulator running, and has the seed script been run?");
+      setMessage("Sign-in failed. Try again.");
     } finally {
       setBusy(false);
     }
@@ -82,10 +83,11 @@ export default function SignInPage() {
   }
 
   return (
+    <MaintenanceGate>
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
       <div className="card p-6">
         <Link href="/" aria-label="inStox" className="inline-flex">
-          <Wordmark decorative className="h-9 w-auto" />
+          <Wordmark decorative className="h-12 w-auto" />
         </Link>
         <h1 className="mt-6 text-2xl font-semibold tracking-tight text-ink">Sign in</h1>
         <p className="mt-2 text-sm leading-6 text-muted">
@@ -97,21 +99,12 @@ export default function SignInPage() {
             Another account already uses this email. The accounts were not merged.
           </p>
         ) : null}
-        <div className="mt-6 space-y-3">
-          <Link href="/sign-in/phone" className="btn-primary w-full">
-            Continue with phone
-          </Link>
-          <button type="button" className="btn-secondary w-full" onClick={() => void google()} disabled={busy}>
-            {busy ? "Waiting" : "Continue with Google"}
-          </button>
-        </div>
+        <SignInPanel busy={busy} onGoogle={() => void google()} />
         {message ? <p className="mt-4 text-sm text-ink" role="alert">{message}</p> : null}
       </div>
       {emulator ? (
         <section className="mt-6">
-          <h2 className="text-sm font-semibold text-ink">Emulator users</h2>
-          <p className="mt-1 text-xs leading-5 text-muted">Local only. These buttons call the Auth emulator. They are hidden when the emulator flag is off.</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {DEV_USERS.map(([uid, label]) => (
               <button key={uid} type="button" className="btn-quiet" disabled={busy} onClick={() => void devSignIn(uid)}>
                 {label}
@@ -121,5 +114,31 @@ export default function SignInPage() {
         </section>
       ) : null}
     </main>
+    </MaintenanceGate>
+  );
+}
+
+function SignInPanel({ busy, onGoogle }: { busy: boolean; onGoogle: () => void }) {
+  const [tab, setTab] = useState<"login" | "signup">("login");
+  const [national, setNational] = useState("");
+  return (
+    <div className="mt-6">
+      <div className="grid grid-cols-2 rounded-full bg-canvas p-1 text-sm font-medium">
+        <button type="button" className={`h-10 rounded-full ${tab === "login" ? "bg-primary text-white" : "text-ink"}`} onClick={() => setTab("login")}>Login</button>
+        <button type="button" className={`h-10 rounded-full ${tab === "signup" ? "bg-primary text-white" : "text-ink"}`} onClick={() => setTab("signup")}>Sign up</button>
+      </div>
+      <label className="label mt-4" htmlFor="mobile">Mobile number</label>
+      <div className="flex gap-2">
+        <span className="inline-flex h-11 items-center rounded-xl border border-line px-3 text-sm text-ink">+91</span>
+        <input id="mobile" className="field" inputMode="numeric" autoComplete="tel" value={national} onChange={(event) => setNational(event.target.value)} placeholder="10 digit mobile" />
+      </div>
+      <Link href={`/sign-in/phone?national=${encodeURIComponent(national)}`} className="btn-primary mt-4 w-full">
+        {tab === "login" ? "Send OTP" : "Create account"}
+      </Link>
+      <button type="button" className="btn-secondary mt-3 w-full" onClick={onGoogle} disabled={busy}>
+        {busy ? "Waiting" : "Continue with Google"}
+      </button>
+      <p className="mt-3 text-center text-xs text-muted">Email sign-in is not enabled. Use a phone code or Google.</p>
+    </div>
   );
 }

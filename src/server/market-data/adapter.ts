@@ -1,3 +1,6 @@
+import { runtimeEnv } from "@/server/integrations/store";
+import { activeFeedId, type FeedId, type QuoteSnapshot } from "@/server/market-data/quotes";
+
 export type SampleQuote = {
   symbol: string;
   last: number | null;
@@ -11,16 +14,17 @@ export type SampleQuote = {
 
 export type ProviderHealth = {
   providerId: string;
-  status: "mock" | "unavailable";
-  licensed: false;
+  status: "mock" | "live" | "degraded" | "unavailable";
+  licensed: boolean;
   label: string;
   checkedAt: string;
 };
 
 export interface MarketDataProvider {
-  readonly id: string;
+  readonly id: FeedId;
   health(now?: Date): ProviderHealth;
   getSampleQuotes(symbols: string[]): Promise<SampleQuote[]>;
+  getQuotes(symbols: string[]): Promise<QuoteSnapshot[]>;
 }
 
 const SAMPLE_LAST: Record<string, { last: number; changePct: number }> = {
@@ -34,7 +38,7 @@ const SAMPLE_LAST: Record<string, { last: number; changePct: number }> = {
 };
 
 export class MockMarketDataProvider implements MarketDataProvider {
-  readonly id = "mock";
+  readonly id = "mock" as const;
 
   health(now = new Date()): ProviderHealth {
     return {
@@ -61,8 +65,70 @@ export class MockMarketDataProvider implements MarketDataProvider {
       };
     });
   }
+
+  async getQuotes(symbols: string[]): Promise<QuoteSnapshot[]> {
+    const now = new Date().toISOString();
+    return symbols.map((symbol) => {
+      const known = Object.prototype.hasOwnProperty.call(SAMPLE_LAST, symbol);
+      return {
+        symbol,
+        last: known ? SAMPLE_LAST[symbol]?.last ?? null : null,
+        changePct: known ? SAMPLE_LAST[symbol]?.changePct ?? null : null,
+        sourceTimestamp: null,
+        updatedAt: now,
+        providerId: "mock",
+      };
+    });
+  }
 }
 
 export function getMarketDataProvider(): MarketDataProvider {
-  return new MockMarketDataProvider();
+  const feed = activeFeedId();
+  if (feed === "mock") return new MockMarketDataProvider();
+  return new RemoteFeedProvider(feed);
+}
+
+class RemoteFeedProvider implements MarketDataProvider {
+  constructor(readonly id: FeedId) {}
+
+  health(now = new Date()): ProviderHealth {
+    const licensed = process.env.MARKET_DATA_LICENSED === "true";
+    if (this.id === "dev") {
+      return {
+        providerId: this.id,
+        status: "degraded",
+        licensed: false,
+        label: "Dev quotes from a public chart endpoint. Disabled in production. Not a broker feed.",
+        checkedAt: now.toISOString(),
+      };
+    }
+    const env = runtimeEnv();
+    const configured = Boolean(env.ALICEBLUE_APP_CODE && env.ALICEBLUE_API_SECRET);
+    return {
+      providerId: this.id,
+      status: configured ? "degraded" : "unavailable",
+      licensed,
+      label: configured
+        ? "Alice Blue index feed. Connect from the admin panel each market day. Redistribution rights are still open."
+        : "Alice Blue is selected, but ALICEBLUE_APP_CODE and ALICEBLUE_API_SECRET are empty.",
+      checkedAt: now.toISOString(),
+    };
+  }
+
+  async getSampleQuotes(symbols: string[]): Promise<SampleQuote[]> {
+    return new MockMarketDataProvider().getSampleQuotes(symbols);
+  }
+
+  async getQuotes(symbols: string[]): Promise<QuoteSnapshot[]> {
+    const { rememberedQuote } = await import("@/server/market-data/hub");
+    const now = new Date().toISOString();
+    return symbols.map((symbol) => rememberedQuote(symbol) ?? {
+      symbol,
+      last: null,
+      changePct: null,
+      sourceTimestamp: null,
+      updatedAt: now,
+      providerId: this.id,
+    });
+  }
 }

@@ -5,19 +5,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        navy: "#0A2C30",
+        navy: "#013316",
         primary: {
-          DEFAULT: "#227CB8",
-          dark: "#1D6A9D",
-          soft: "#E5F4FE",
+          DEFAULT: "#027332",
+          dark: "#025A28",
+          bright: "#0194A8",
+          soft: "#E5F6EC",
+        },
+        brand: {
+          DEFAULT: "#027332",
+          soft: "#E6F4EC",
         },
         ink: {
-          DEFAULT: "#0A2C30",
-          hover: "#1A3C40",
+          DEFAULT: "#013316",
+          hover: "#024422",
         },
-        muted: "#5A6E71",
-        line: "#D5E3E6",
-        canvas: "#F4F8F8",
+        muted: "#4F6B5E",
+        line: "#D3E3DB",
+        canvas: "#F3F8F5",
         profit: "#0F7A45",
         loss: "#B42318",
         warning: "#9A6700",
@@ -29,7 +34,7 @@ const config: Config = {
         sans: ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(10, 44, 48, 0.04), 0 8px 24px rgba(10, 44, 48, 0.04)",
+        card: "0 1px 2px rgba(1, 51, 22, 0.04), 0 10px 28px rgba(1, 51, 22, 0.08)",
       },
     },
   },

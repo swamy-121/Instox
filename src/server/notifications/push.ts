@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { AppError } from "@/lib/errors";
+import { runtimeEnv } from "@/server/integrations/store";
 
 export type PushConsent = {
   tipPush: boolean;
@@ -90,17 +91,17 @@ export type FcmOutbound = {
 type EnvLike = Record<string, string | undefined>;
 
 /** Server send needs the public web certificate plus Admin credentials, and it stays off on the emulator. */
-export function fcmConfigured(env: EnvLike = process.env): boolean {
+export function fcmConfigured(env: EnvLike = runtimeEnv()): boolean {
   if (env.FIRESTORE_EMULATOR_HOST || env.FIREBASE_AUTH_EMULATOR_HOST) return false;
   return Boolean(env.NEXT_PUBLIC_FIREBASE_VAPID_KEY && env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY);
 }
 
 /** The browser can request a token only when the web certificate and sender id are both set. */
-export function clientMessagingConfigured(env: EnvLike = process.env): boolean {
+export function clientMessagingConfigured(env: EnvLike = runtimeEnv()): boolean {
   return Boolean(env.NEXT_PUBLIC_FIREBASE_VAPID_KEY && env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID);
 }
 
-export function fcmSendMode(env: EnvLike = process.env): "token" | "topic" {
+export function fcmSendMode(env: EnvLike = runtimeEnv()): "token" | "topic" {
   return env.FCM_SEND_MODE === "topic" ? "topic" : "token";
 }
 

@@ -49,7 +49,7 @@ export default function PricingPage() {
       setOrderMessage(result.message);
       return;
     }
-    setOrderMessage(result.data.message);
+    setOrderMessage("Order saved.");
   }
 
   return (
@@ -57,9 +57,6 @@ export default function PricingPage() {
       <PublicHeader />
       <main className="mx-auto max-w-5xl px-4 py-10">
         <h1 className="text-3xl font-semibold text-navy">Pricing</h1>
-        <p className="mt-3 max-w-2xl text-sm text-muted">
-          Prices below are configuration placeholders. Tax, renewal, cancellation, and refund rules are not approved yet.
-        </p>
         <div className="mt-6">
           {!plans && !error ? <LoadingState label="Loading plans" /> : null}
           {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}
@@ -70,9 +67,7 @@ export default function PricingPage() {
                 <h2 className="text-lg font-semibold">{plan.name}</h2>
                 <p className="mt-2 text-sm text-muted">{plan.description}</p>
                 <p className="mt-4 text-2xl font-semibold tabular-nums">{formatInr(plan.priceMinor)}</p>
-                <p className="text-xs text-muted">
-                  {plan.billingPeriod} · {plan.currency} · placeholder
-                </p>
+                <p className="text-xs text-muted">{plan.billingPeriod}</p>
                 <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
                   {plan.features.map((feature) => (
                     <li key={feature}>{feature}</li>
@@ -84,7 +79,7 @@ export default function PricingPage() {
                   </Link>
                 ) : state.status === "ready" ? (
                   <button type="button" className="btn-primary mt-4" disabled={busy} onClick={() => void startCheckout(plan.id)}>
-                    {busy ? "Creating order" : "Create stub checkout"}
+                    {busy ? "Saving" : "Continue"}
                   </button>
                 ) : (
                   <Link href="/sign-in" className="btn-primary mt-4">

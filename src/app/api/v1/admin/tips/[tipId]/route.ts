@@ -4,7 +4,7 @@ import { requireActor } from "@/server/auth/actor";
 import { canEditTips, canPublishTips } from "@/server/authorization/roles";
 import { apiOk, readJson, withApi } from "@/server/http";
 import { validateTipInput } from "@/lib/validation/tip";
-import { getTip, listTipEvents, updateTipContent } from "@/server/tips/repo";
+import { deleteDraftTip, getTip, listTipEvents, updateTipContent } from "@/server/tips/repo";
 
 const patchSchema = z
   .object({
@@ -65,5 +65,18 @@ export async function PATCH(
       requestId,
     });
     return apiOk({ tip: updated }, requestId);
+  });
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ tipId: string }> },
+): Promise<Response> {
+  return withApi(request, "DELETE /api/v1/admin/tips/:tipId", async ({ requestId }) => {
+    const actor = await requireActor(request);
+    if (!canEditTips(actor.roles)) throw new AppError(403, "FORBIDDEN", "You cannot delete tips.");
+    const { tipId } = await context.params;
+    await deleteDraftTip(tipId);
+    return apiOk({ id: tipId }, requestId);
   });
 }
