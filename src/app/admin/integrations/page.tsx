@@ -51,7 +51,10 @@ function Body() {
     setEncryptionReady(ready);
     const enums: Record<string, string> = {};
     for (const field of next) {
-      if (!field.secret) enums[field.key] = field.value ?? "";
+      if (field.secret) continue;
+      const options = field.options ?? [];
+      const value = field.value ?? "";
+      enums[field.key] = options.includes(value) ? value : (options[0] ?? "");
     }
     setDrafts(enums);
     setClear({});
