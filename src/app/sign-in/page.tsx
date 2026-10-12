@@ -7,41 +7,10 @@ import { ErrorState } from "@/components/states";
 import { Wordmark } from "@/components/wordmark";
 import { MaintenanceGate } from "@/features/app/member-config";
 import { useAuth, useSignedInRedirect } from "@/features/auth/auth-provider";
-import { apiFetch } from "@/lib/api-client";
-
-const DEV_USERS = [
-  ["seed_free", "Free member"],
-  ["seed_premium", "Premium member"],
-  ["seed_editor", "Editor"],
-  ["seed_publisher", "Publisher"],
-  ["seed_support", "Support"],
-  ["seed_admin", "Admin"],
-  ["seed_super", "Super admin"],
-  ["seed_disabled", "Disabled account"],
-] as const;
 
 export default function SignInPage() {
-  const { state, refresh } = useAuth();
+  const { state } = useAuth();
   useSignedInRedirect();
-  const [message, setMessage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const demo = process.env.NEXT_PUBLIC_DEMO_LOGIN === "true";
-
-  async function devSignIn(uid: string) {
-    setBusy(true);
-    setMessage(null);
-    const minted = await apiFetch<{ uid: string }>("/api/v1/dev/demo-login", {
-      method: "POST",
-      body: JSON.stringify({ uid }),
-    });
-    if (!minted.ok) {
-      setMessage(minted.message);
-      setBusy(false);
-      return;
-    }
-    await refresh();
-    setBusy(false);
-  }
 
   if (state.status === "loading") return <BrandSplash label="Checking session" />;
 
@@ -63,19 +32,7 @@ export default function SignInPage() {
           </p>
         ) : null}
         <SignInPanel />
-        {message ? <p className="mt-4 text-sm text-ink" role="alert">{message}</p> : null}
       </div>
-      {demo ? (
-        <section className="mt-6">
-          <div className="grid grid-cols-2 gap-2">
-            {DEV_USERS.map(([uid, label]) => (
-              <button key={uid} type="button" className="btn-quiet" disabled={busy} onClick={() => void devSignIn(uid)}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
     </main>
     </MaintenanceGate>
   );

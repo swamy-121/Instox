@@ -22,11 +22,13 @@ npm run seed
 npm run dev
 ```
 
-Open http://localhost:3000/sign-in. With `NEXT_PUBLIC_DEMO_LOGIN=true`, the one-tap buttons sign in as the seeded accounts (free, premium, editor, publisher, support, admin, super admin, disabled). Phone sign-in sends a code through APITxT when `APITXT_AUTHKEY` is set in the environment or on the admin Integrations page. The product owner chose to send those texts without a DLT template, so the request does not include a template id, a PE id, or a sender. With no key, or when `SMS_PROVIDER=dev`, the code is written to the server log and no text is sent. The code is checked on this server and is not kept after sign-in.
+Open http://localhost:3000/sign-in. There is no one-tap demo login. Seeded accounts sign in with a phone code. Phone sign-in sends a code through APITxT when `APITXT_AUTHKEY` is set in the environment or on the admin Integrations page. The product owner chose to send those texts without a DLT template, so the request does not include a template id, a PE id, or a sender. With no key, or when `SMS_PROVIDER=dev`, the code is written to the server log and no text is sent. The code is checked on this server and is not kept after sign-in.
 
-Admin email sign-in uses the seeded admin account. A forgot-password link is printed in the server log outside production. Production email delivery is not wired yet.
+`npm run seed` creates those phones: super admin `+919000000001`, admin `+919000000002`, publisher `+919000000003`, editor `+919000000004`, support `+919000000005`, free member `+919000000006`, premium member `+919000000007`, and a disabled account `+919000000008`. Enter the 10 digits after `+91`, send the code, and read it from the server log.
 
-Seeded premium tips stay locked for the free user. Sign in as Premium Member to see entry, stop, targets, and rationale.
+Admin email sign-in is `admin@instox.app` with the password set in `scripts/seed.ts`. A forgot-password link is printed in the server log outside production. Production email delivery is not wired yet.
+
+Seeded premium tips stay locked for the free user. Sign in with the premium member phone to see entry, stop, targets, and rationale.
 
 ## Scripts
 
