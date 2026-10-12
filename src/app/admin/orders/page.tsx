@@ -40,6 +40,8 @@ function Body() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [statusReason, setStatusReason] = useState("");
+  const [nextStatus, setNextStatus] = useState<Record<string, string>>({});
   const [report, setReport] = useState<Report | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -71,9 +73,27 @@ function Body() {
     setMessage("Reconciliation finished. Orders were not changed.");
   }
 
+  async function updateStatus(orderId: string) {
+    const status = nextStatus[orderId];
+    if (!status) {
+      setMessage("Choose refunded, disputed, or failed.");
+      return;
+    }
+    const result = await apiFetch<{ unchanged?: boolean }>(`/api/v1/admin/orders/${orderId}`, {
+      method: "POST",
+      body: JSON.stringify({ status, reason: statusReason }),
+    });
+    if (!result.ok) {
+      setMessage(result.message);
+      return;
+    }
+    setMessage(result.data.unchanged ? "That status was already saved." : "Status saved. Premium was not granted.");
+    load();
+  }
+
   return (
     <div>
-      <AdminTitle title="Orders" lede="Recorded payment orders. Reconciliation does not change them." />
+      <AdminTitle title="Orders" lede="Recorded payment orders. You can mark one refunded, disputed, or failed. That does not mark it paid and does not grant premium. A refund or dispute revokes a payment entitlement from that order. Reconciliation does not change orders." />
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!orders && !error ? <LoadingState /> : null}
       {orders && orders.length === 0 ? <EmptyState title="No orders" body="Checkout orders will show here." /> : null}
@@ -88,6 +108,7 @@ function Body() {
                 <th className="px-3 py-3 font-medium">Amount</th>
                 <th className="px-3 py-3 font-medium">Provider</th>
                 <th className="px-3 py-3 font-medium">Status</th>
+                <th className="px-3 py-3 font-medium">Update</th>
               </tr>
             </thead>
             <tbody>
@@ -99,12 +120,33 @@ function Body() {
                   <td className="px-3 py-3 tabular-nums">{formatInr(order.amountMinor)}</td>
                   <td className="px-3 py-3">{order.provider}</td>
                   <td className="px-3 py-3"><Pill tone="gray">{order.status}</Pill></td>
+                  <td className="px-3 py-3">
+                    <div className="flex gap-2">
+                      <select
+                        className="field h-9"
+                        aria-label={`Status for ${order.id}`}
+                        value={nextStatus[order.id] ?? ""}
+                        onChange={(event) => setNextStatus({ ...nextStatus, [order.id]: event.target.value })}
+                      >
+                        <option value="">Choose</option>
+                        <option value="refunded">Refunded</option>
+                        <option value="disputed">Disputed</option>
+                        <option value="failed">Failed</option>
+                      </select>
+                      <button type="button" className="btn-secondary h-9" onClick={() => void updateStatus(order.id)}>Save</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : null}
+      <form className="card mt-4 space-y-3" onSubmit={(event) => { event.preventDefault(); }}>
+        <h2 className="font-semibold text-ink">Status reason</h2>
+        <p className="text-sm text-muted">Required when you save a refund, dispute, or failure.</p>
+        <input className="field" placeholder="Reason" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} />
+      </form>
       <form className="card mt-4 space-y-3" onSubmit={(event) => void reconcile(event)}>
         <h2 className="font-semibold text-ink">Reconcile</h2>
         <input className="field" placeholder="Reason" value={reason} onChange={(event) => setReason(event.target.value)} />

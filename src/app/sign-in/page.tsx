@@ -6,6 +6,7 @@ import { useState } from "react";
 import { BrandSplash } from "@/components/brand";
 import { ErrorState } from "@/components/states";
 import { Wordmark } from "@/components/wordmark";
+import { MaintenanceGate } from "@/features/app/member-config";
 import { useAuth, useSignedInRedirect } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { getClientAuth } from "@/lib/firebase-client";
@@ -82,6 +83,7 @@ export default function SignInPage() {
   }
 
   return (
+    <MaintenanceGate>
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
       <div className="card p-6">
         <Link href="/" aria-label="inStox" className="inline-flex">
@@ -112,6 +114,7 @@ export default function SignInPage() {
         </section>
       ) : null}
     </main>
+    </MaintenanceGate>
   );
 }
 

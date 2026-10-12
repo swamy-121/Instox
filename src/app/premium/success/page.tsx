@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { Confetti } from "@/components/illustrations";
 import { ErrorState, LoadingState } from "@/components/states";
+import { useMemberConfig } from "@/features/app/member-config";
 import { apiFetch } from "@/lib/api-client";
 
 type Order = { orderId: string; planId: string; amountMinor: number; currency: string; status: string };
@@ -22,6 +23,7 @@ export default function SuccessPage() {
 }
 
 function Body() {
+  const config = useMemberConfig();
   const params = useSearchParams();
   const orderId = params.get("orderId") ?? "";
   const [order, setOrder] = useState<Order | null>(null);
@@ -54,9 +56,9 @@ function Body() {
           <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-white shadow-card">
             <Check className="h-12 w-12" strokeWidth={3} aria-hidden="true" />
           </span>
-          <h1 className="mt-6 text-2xl font-semibold text-ink">Payment successful</h1>
-          <p className="mt-2 text-sm text-muted">Your order is saved.</p>
-          <Link href="/home" className="btn-primary mt-8 w-full">Go to home</Link>
+          <h1 className="mt-6 text-2xl font-semibold text-ink">{config.paymentSuccessTitle}</h1>
+          <p className="mt-2 text-sm text-muted">{config.paymentSuccessBody}</p>
+          <Link href="/home" className="btn-primary mt-8 w-full">{config.paymentSuccessCta}</Link>
         </>
       ) : null}
     </div>

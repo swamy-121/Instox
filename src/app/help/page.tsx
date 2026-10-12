@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
+import { useMemberConfig } from "@/features/app/member-config";
 import { apiFetch } from "@/lib/api-client";
 
 type Article = { id: string; question: string; answer: string };
@@ -20,6 +21,7 @@ function Body() {
   const [articles, setArticles] = useState<Article[] | null>(null);
   const [support, setSupport] = useState<Doc | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const config = useMemberConfig();
   const [open, setOpen] = useState<string | null>(null);
 
   function load() {
@@ -43,7 +45,7 @@ function Body() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Help and support</h1>
+      <h1 className="text-2xl font-semibold text-ink">{config.helpTitle}</h1>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!articles && !error ? <LoadingState label="Loading help" /> : null}
       {support ? (

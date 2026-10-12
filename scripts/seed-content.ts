@@ -1,6 +1,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import shop from "../config/shop.json";
 import plans from "../config/plans.json";
+import { MEMBER_COPY_DEFAULTS } from "../src/lib/member-copy";
 import { sampleCandleEnd, sampleCandles } from "../src/server/market-data/candles";
 import { sampleInstruments } from "../src/server/market-data/instruments";
 
@@ -140,4 +141,49 @@ export async function seedCatalog(db: Firestore): Promise<void> {
     symbol: "INFY",
     createdAt: NOW,
   });
+
+  const tiles = [
+    { id: "tile_tips", href: "/tips", label: "Tips", icon: "tips", status: "published", sort: 1 },
+    { id: "tile_screener", href: "/screener", label: "Screener", icon: "screener", status: "published", sort: 2 },
+    { id: "tile_news", href: "/news", label: "News", icon: "news", status: "published", sort: 3 },
+    { id: "tile_shop", href: "/shop", label: "Shop", icon: "shop", status: "published", sort: 4 },
+  ];
+  for (const row of tiles) await db.collection("homeTiles").doc(row.id).set(row);
+
+  const more = [
+    { id: "more_profile", href: "/profile", label: "My profile", status: "published", sort: 1 },
+    { id: "more_watchlist", href: "/watchlist", label: "Watchlist", status: "published", sort: 2 },
+    { id: "more_market", href: "/market", label: "Market overview", status: "published", sort: 3 },
+    { id: "more_insights", href: "/insights", label: "Insights history", status: "published", sort: 4 },
+    { id: "more_shop", href: "/shop", label: "Shop", status: "published", sort: 5 },
+    { id: "more_premium", href: "/premium", label: "Go Premium", status: "published", sort: 6 },
+    { id: "more_settings", href: "/settings", label: "Settings", status: "published", sort: 7 },
+    { id: "more_help", href: "/help", label: "Help and support", status: "published", sort: 8 },
+    { id: "more_pricing", href: "/pricing", label: "Plans", status: "published", sort: 9 },
+  ];
+  for (const row of more) await db.collection("moreLinks").doc(row.id).set(row);
+
+  const watchDefaults = [
+    { id: "default_RELIANCE", symbol: "RELIANCE", status: "published", sort: 1 },
+    { id: "default_TCS", symbol: "TCS", status: "published", sort: 2 },
+    { id: "default_INFY", symbol: "INFY", status: "published", sort: 3 },
+  ];
+  for (const row of watchDefaults) await db.collection("watchlistDefaults").doc(row.id).set(row);
+
+  const templates = [
+    { id: "tpl_open", name: "Market open", title: "Market open", body: "The session is open. This template is not sent on its own.", kind: "reminder", status: "published", sort: 1 },
+    { id: "tpl_tip", name: "New tip", title: "New idea", body: "A new tip is published. Open the app to read it.", kind: "tip", status: "draft", sort: 2 },
+  ];
+  for (const row of templates) await db.collection("notificationTemplates").doc(row.id).set(row);
+
+  await db.collection("appConfig").doc("public").set(
+    {
+      value: {
+        product: "instox",
+        sampleData: true,
+        ...MEMBER_COPY_DEFAULTS,
+      },
+    },
+    { merge: true },
+  );
 }

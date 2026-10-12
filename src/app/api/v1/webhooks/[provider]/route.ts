@@ -76,7 +76,14 @@ export async function POST(
       }
       const data = orderSnap.data() ?? {};
       const uid = String(data.uid ?? "");
-      const plan = loadPlans().plans.find((item) => item.id === data.planId);
+      const planId = String(data.planId ?? "");
+      const filePlan = loadPlans().plans.find((item) => item.id === planId);
+      const planSnap = planId ? await tx.get(db.collection("plans").doc(planId)) : null;
+      const storedPlan = planSnap?.data();
+      const plan = {
+        accessDays: typeof storedPlan?.accessDays === "number" ? storedPlan.accessDays : filePlan?.accessDays,
+      };
+      const planApproved = planSnap?.exists ? storedPlan?.approved === true : filePlan?.approved === true;
       const entitlementRef = db.collection("userEntitlements").doc(uid);
       const subscriptionRef = db.collection("subscriptions").doc(parsed.orderId as string);
       const entitlementSnap = await tx.get(entitlementRef);
@@ -99,7 +106,7 @@ export async function POST(
           currency: parsed.currency,
         },
         seenEventIds: new Set(),
-        planApproved: plan?.approved === true,
+        planApproved,
       });
       const effect = entitlementEffect(applied);
       const now = new Date().toISOString();

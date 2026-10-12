@@ -83,6 +83,32 @@ const SPECS: Record<string, { title: string; fields: Field[] }> = {
     { key: "body", label: "Body", type: "lines" },
     { key: "kind", label: "Kind (splash, support, or note)", type: "text" },
   ] },
+  homeTiles: { title: "Home tiles", fields: [
+    { key: "href", label: "Path", type: "text" },
+    { key: "label", label: "Label", type: "text" },
+    { key: "icon", label: "Icon", type: "text" },
+    { key: "status", label: "Status (published or draft)", type: "text" },
+    { key: "sort", label: "Sort", type: "number" },
+  ] },
+  moreLinks: { title: "More menu", fields: [
+    { key: "href", label: "Path", type: "text" },
+    { key: "label", label: "Label", type: "text" },
+    { key: "status", label: "Status (published or draft)", type: "text" },
+    { key: "sort", label: "Sort", type: "number" },
+  ] },
+  watchlistDefaults: { title: "Watchlist defaults", fields: [
+    { key: "symbol", label: "Symbol", type: "text" },
+    { key: "status", label: "Status (published or draft)", type: "text" },
+    { key: "sort", label: "Sort", type: "number" },
+  ] },
+  notificationTemplates: { title: "Notification templates", fields: [
+    { key: "name", label: "Name", type: "text" },
+    { key: "title", label: "Title", type: "text" },
+    { key: "body", label: "Body", type: "lines" },
+    { key: "kind", label: "Kind (tip, marketing, or reminder)", type: "text" },
+    { key: "status", label: "Status (published or draft)", type: "text" },
+    { key: "sort", label: "Sort", type: "number" },
+  ] },
   candleSeries: { title: "Candle series", fields: [
     { key: "symbol", label: "Symbol", type: "text" },
     { key: "candles", label: "Candles JSON", type: "json" },
@@ -97,7 +123,10 @@ function blank(collection: string): Record<string, string> {
     else if (field.key === "fulfillment") form[field.key] = "unconfigured";
     else if (field.key === "currency") form[field.key] = "INR";
     else if (field.key === "status") form[field.key] = "draft";
+    else if (field.key === "icon" && collection === "homeTiles") form[field.key] = "tips";
     else if (field.key === "icon") form[field.key] = "chart";
+    else if (field.key === "href") form[field.key] = "/tips";
+    else if (field.key === "kind" && collection === "notificationTemplates") form[field.key] = "reminder";
     else if (field.key === "kind" && collection === "contentDocs") form[field.key] = "note";
     else if (field.key === "kind") form[field.key] = "stock";
     else form[field.key] = "";

@@ -3,15 +3,17 @@
 import { AppFrame } from "@/components/app-frame";
 import { OperationsGate } from "@/components/operations-gate";
 import { ContentDesk } from "@/features/admin/content-desk";
+import { MemberCopyForm } from "@/features/admin/member-copy-form";
 
 export default function SettingsPage() {
   return (
     <AppFrame admin>
       <OperationsGate>
+        <MemberCopyForm />
         <ContentDesk
           collection="contentDocs"
-          title="Settings"
-          lede="Copy stored for splash, support, and internal notes."
+          title="Notes"
+          lede="Support text and internal notes. The splash screen uses the approved artwork, so a splash note is not drawn on it."
           addLabel="Add Setting"
           columns={[
             { key: "title", label: "Title" },

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SplashGate } from "@/components/brand";
+import { MaintenanceNotice } from "@/features/app/member-config";
 import { PublicFooter, PublicHeader } from "@/components/chrome";
 import { PenIcon, ShieldIcon } from "@/components/icons";
 import { Wordmark } from "@/components/wordmark";
@@ -16,6 +17,7 @@ export default function LandingPage() {
   return (
     <SplashGate>
       <PublicHeader />
+      <MaintenanceNotice />
       <main>
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 md:grid-cols-2 md:py-20">
           <div>

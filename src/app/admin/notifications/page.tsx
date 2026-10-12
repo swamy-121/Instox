@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTabs, AdminTitle, Pill } from "@/components/admin-ui";
+import { ContentDesk } from "@/features/admin/content-desk";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -16,6 +17,8 @@ type Campaign = {
   status: string;
   createdAt: string;
 };
+
+type Template = { id: string; name: string; title: string; body: string; status: string };
 
 export default function NotificationsPage() {
   return (
@@ -32,6 +35,7 @@ function Body() {
   const [message, setMessage] = useState("");
   const [audience, setAudience] = useState<"all" | "free" | "premium">("all");
   const [rows, setRows] = useState<Campaign[] | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +52,11 @@ function Body() {
   }
 
   useEffect(() => {
-    if (state.status === "ready") load();
+    if (state.status !== "ready") return;
+    load();
+    apiFetch<{ records: Template[] }>("/api/v1/admin/content/notificationTemplates").then((result) => {
+      if (result.ok) setTemplates(result.data.records);
+    });
   }, [state.status]);
 
   if (state.status === "ready" && !canPublishTips(state.me.roles)) {
@@ -81,6 +89,7 @@ function Body() {
       <AdminTabs
         tabs={[
           { id: "send", label: "Send Notification" },
+          { id: "templates", label: "Templates" },
           { id: "history", label: "Notification History" },
         ]}
         value={tab}
@@ -89,6 +98,24 @@ function Body() {
       {error ? <div className="mt-4"><ErrorState message={error} onRetry={load} /></div> : null}
       {tab === "send" ? (
         <form className="card mt-4 max-w-2xl space-y-4" onSubmit={(event) => void send(event)}>
+          <label className="block max-w-xs">
+            <span className="label">Start from a template</span>
+            <select
+              className="field"
+              value=""
+              onChange={(event) => {
+                const template = templates.find((row) => row.id === event.target.value);
+                if (!template) return;
+                setTitle(template.title);
+                setMessage(template.body);
+              }}
+            >
+              <option value="">Write a new message</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>{template.name}</option>
+              ))}
+            </select>
+          </label>
           <label className="block">
             <span className="label">Title</span>
             <input className="field" value={title} onChange={(event) => setTitle(event.target.value)} required minLength={3} maxLength={80} />
@@ -108,6 +135,42 @@ function Body() {
           {notice ? <p className="text-sm text-ink" role="status">{notice}</p> : null}
           <button className="btn-primary" type="submit" disabled={busy}>{busy ? "Sending" : "Send Notification"}</button>
         </form>
+      ) : null}
+      {tab === "templates" ? (
+        <div className="mt-4">
+          <ContentDesk
+            collection="notificationTemplates"
+            title="Templates"
+            lede="Reusable title and message. Saving a template does not send it."
+            addLabel="Add template"
+            columns={[
+              { key: "name", label: "Name" },
+              { key: "kind", label: "Kind" },
+              { key: "status", label: "Status", render: (row) => <Pill tone={row.status === "published" ? "green" : "gray"}>{row.status === "published" ? "Published" : "Draft"}</Pill> },
+            ]}
+            fields={[
+              { key: "name", label: "Name", kind: "text" },
+              { key: "title", label: "Title", kind: "text" },
+              { key: "kind", label: "Kind", kind: "select", options: [
+                { value: "tip", label: "Tip" },
+                { value: "marketing", label: "Marketing" },
+                { value: "reminder", label: "Reminder" },
+              ] },
+              { key: "status", label: "Status", kind: "select", options: [{ value: "published", label: "Published" }, { value: "draft", label: "Draft" }] },
+              { key: "body", label: "Message", kind: "textarea" },
+            ]}
+            blank={() => ({ id: "", name: "", title: "", body: "", kind: "reminder", status: "draft" })}
+            toPayload={(form) => ({
+              id: form.id || slug(form.name),
+              name: form.name,
+              title: form.title,
+              body: form.body,
+              kind: form.kind === "tip" || form.kind === "marketing" ? form.kind : "reminder",
+              status: form.status === "published" ? "published" : "draft",
+              sort: Date.now() % 100000,
+            })}
+          />
+        </div>
       ) : null}
       {tab === "history" ? (
         <div className="mt-4">
@@ -144,4 +207,9 @@ function Body() {
       ) : null}
     </div>
   );
+}
+
+function slug(value: string): string {
+  const base = value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40);
+  return base ? `tpl_${base}` : `tpl_${Date.now().toString(36)}`;
 }

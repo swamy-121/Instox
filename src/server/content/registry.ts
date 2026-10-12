@@ -101,6 +101,36 @@ export const contentSchemas = {
     status: z.enum(["published", "draft"]),
     sort: z.number().int(),
   }),
+  homeTiles: z.object({
+    id,
+    href: z.string().regex(/^\/(tips|screener|news|shop|market|watchlist|premium|help|profile|insights|settings|pricing|home)$/),
+    label: z.string().min(1).max(40),
+    icon: z.enum(["tips", "screener", "news", "shop", "market", "watchlist", "premium", "help"]),
+    status: z.enum(["published", "draft"]),
+    sort: z.number().int(),
+  }),
+  moreLinks: z.object({
+    id,
+    href: z.string().regex(/^\/(tips|screener|news|shop|market|watchlist|premium|help|profile|insights|settings|pricing|home)$/),
+    label: z.string().min(1).max(40),
+    status: z.enum(["published", "draft"]),
+    sort: z.number().int(),
+  }),
+  watchlistDefaults: z.object({
+    id,
+    symbol: z.string().regex(/^[A-Z0-9]{1,32}$/),
+    status: z.enum(["published", "draft"]),
+    sort: z.number().int(),
+  }),
+  notificationTemplates: z.object({
+    id,
+    name: z.string().min(1).max(80),
+    title: z.string().min(1).max(80),
+    body: z.string().min(1).max(240),
+    kind: z.enum(["tip", "marketing", "reminder"]),
+    status: z.enum(["published", "draft"]),
+    sort: z.number().int(),
+  }),
 } as const;
 
 export type ContentName = keyof typeof contentSchemas;
@@ -115,6 +145,9 @@ export const PUBLIC_CONTENT: ContentName[] = [
   "contentDocs",
   "paymentMethods",
   "plans",
+  "advertisements",
+  "homeTiles",
+  "moreLinks",
 ];
 
 export function isContentName(value: string): value is ContentName {
@@ -132,12 +165,18 @@ export function tryParseContent<T extends ContentName>(name: T, input: unknown):
 }
 
 export function publicRecord<T extends ContentName>(name: T, record: ContentRecord<T>): ContentRecord<T> | null {
-  if (name === "newsArticles" || name === "helpArticles" || name === "advertisements") {
+  if (
+    name === "newsArticles" ||
+    name === "helpArticles" ||
+    name === "advertisements" ||
+    name === "homeTiles" ||
+    name === "moreLinks"
+  ) {
     return (record as { status?: string }).status === "published" ? record : null;
   }
   if (name === "shopProducts" || name === "paymentMethods" || name === "plans") {
     return (record as { active?: boolean }).active === false ? null : record;
   }
-  if (name === "candleSeries") return null;
+  if (name === "candleSeries" || name === "watchlistDefaults" || name === "notificationTemplates") return null;
   return record;
 }

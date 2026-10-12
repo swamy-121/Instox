@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
+import { useMemberConfig } from "@/features/app/member-config";
 import { apiFetch } from "@/lib/api-client";
 import { formatInr } from "@/lib/money";
 
@@ -31,6 +32,7 @@ export default function PremiumPage() {
 function Body() {
   const [payload, setPayload] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const config = useMemberConfig();
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
 
   function load() {
@@ -52,7 +54,7 @@ function Body() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Go Premium</h1>
+      <h1 className="text-2xl font-semibold text-ink">{config.premiumTitle}</h1>
       <div className="grid grid-cols-2 rounded-full bg-canvas p-1 text-sm font-medium">
         {(["monthly", "yearly"] as const).map((item) => (
           <button key={item} type="button" className={`h-10 rounded-full capitalize ${period === item ? "bg-primary text-white" : "text-ink"}`} onClick={() => setPeriod(item)}>
@@ -67,7 +69,7 @@ function Body() {
         {plans.map((plan) => (
           <li key={plan.id} className={`card relative ${plan.mostPopular ? "border-2 border-[#E8772E]" : ""}`}>
             {plan.mostPopular ? (
-              <span className="absolute -top-3 right-4 rounded-full bg-[#E8772E] px-2.5 py-1 text-xs font-semibold text-white">Most popular</span>
+              <span className="absolute -top-3 right-4 rounded-full bg-[#E8772E] px-2.5 py-1 text-xs font-semibold text-white">{config.popularBadge}</span>
             ) : null}
             <h2 className="text-lg font-semibold text-ink">{plan.name}</h2>
             <p className="mt-2 text-2xl font-semibold tabular-nums text-ink">

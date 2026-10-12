@@ -7,6 +7,7 @@ import {
   BarChart3,
   Bell,
   CreditCard,
+  Crown,
   LayoutDashboard,
   LifeBuoy,
   LineChart,
@@ -17,12 +18,14 @@ import {
   ShoppingBag,
   ShoppingCart,
   SlidersHorizontal,
+  Smartphone,
   Users,
 } from "lucide-react";
 import { BrandSplash } from "@/components/brand";
 import { BottomNav, DesktopNav } from "@/components/chrome";
 import { ErrorState, PermissionDenied } from "@/components/states";
 import { Wordmark } from "@/components/wordmark";
+import { MemberConfigProvider, useMemberConfig } from "@/features/app/member-config";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { canAccessAdmin, canManageOperations } from "@/server/authorization/roles";
@@ -32,6 +35,7 @@ const ADMIN_LINKS = [
   { href: "/admin/tips", label: "Trading Tips", icon: LineChart },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { href: "/admin/plans", label: "Plans", icon: Crown },
   { href: "/admin/screener", label: "Screener", icon: SlidersHorizontal },
   { href: "/admin/news", label: "Market News", icon: Newspaper },
   { href: "/admin/shop", label: "Shop", icon: ShoppingBag },
@@ -39,6 +43,7 @@ const ADMIN_LINKS = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/advertisements", label: "Advertisements", icon: Megaphone },
+  { href: "/admin/member", label: "Member app", icon: Smartphone },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
 ];
@@ -124,10 +129,34 @@ export function AppFrame({
   const signedIn = state.status === "ready";
 
   return (
+    <MemberConfigProvider>
+      <MemberShell signedIn={signedIn}>{children}</MemberShell>
+    </MemberConfigProvider>
+  );
+}
+
+function MemberShell({ children, signedIn }: { children: React.ReactNode; signedIn: boolean }) {
+  const config = useMemberConfig();
+  const { signOutUser } = useAuth();
+  return (
     <div className="min-h-screen bg-white">
       <MemberHeader signedIn={signedIn} />
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 pb-24 md:pb-10">{children}</main>
-      {signedIn ? <BottomNav /> : null}
+      <main className="mx-auto w-full max-w-5xl px-4 py-6 pb-24 md:pb-10">
+        {config.maintenance ? (
+          <div className="card">
+            <h1 className="text-lg font-semibold text-ink">{config.maintenanceTitle}</h1>
+            <p className="mt-2 text-sm leading-6 text-muted">{config.maintenanceBody}</p>
+            {signedIn ? (
+              <button type="button" className="btn-secondary mt-4" onClick={() => void signOutUser()}>
+                Sign out
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          children
+        )}
+      </main>
+      {signedIn && !config.maintenance ? <BottomNav /> : null}
     </div>
   );
 }
@@ -135,6 +164,7 @@ export function AppFrame({
 function MemberHeader({ signedIn }: { signedIn: boolean }) {
   const pathname = usePathname();
   const { state } = useAuth();
+  const config = useMemberConfig();
   const home = pathname === "/home" && state.status === "ready";
   const name = state.status === "ready" ? state.me.displayName || "there" : "there";
   const initial = name.trim().slice(0, 1).toUpperCase() || "I";
@@ -144,8 +174,8 @@ function MemberHeader({ signedIn }: { signedIn: boolean }) {
       <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 py-3">
         {home ? (
           <div className="min-w-0">
-            <p className="text-sm text-muted">Hi, {name}</p>
-            <p className="text-base font-semibold leading-5 text-ink">Let us find your next opportunity</p>
+            <p className="text-sm text-muted">{config.greetingPrefix}, {name}</p>
+            <p className="text-base font-semibold leading-5 text-ink">{config.greetingSubtitle}</p>
           </div>
         ) : (
           <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">

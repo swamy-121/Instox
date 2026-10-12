@@ -12,7 +12,7 @@ export default function AdvertisementsPage() {
         <ContentDesk
           collection="advertisements"
           title="Advertisements"
-          lede="Placements stored for the app. Publishing one does not change tip access."
+          lede="A published row with placement home shows on the member home screen. Ads do not change tip access."
           addLabel="Add Advertisement"
           columns={[
             { key: "title", label: "Title" },

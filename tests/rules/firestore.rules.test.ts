@@ -54,6 +54,10 @@ beforeEach(async () => {
     await setDoc(doc(db, "strategies/str_1"), { uid: "alice", name: "Draft", status: "draft" });
     await setDoc(doc(db, "newsArticles/news_1"), { title: "Sample", status: "published" });
     await setDoc(doc(db, "advertisements/ad_1"), { title: "Banner", status: "published" });
+    await setDoc(doc(db, "homeTiles/tile_1"), { label: "Tips", href: "/tips", status: "published" });
+    await setDoc(doc(db, "moreLinks/link_1"), { label: "Shop", href: "/shop", status: "published" });
+    await setDoc(doc(db, "watchlistDefaults/def_1"), { symbol: "RELIANCE", status: "published" });
+    await setDoc(doc(db, "notificationTemplates/tpl_1"), { name: "Open", title: "Open", body: "Hello", status: "draft" });
     await setDoc(doc(db, "watchlistItems/alice_RELIANCE"), { uid: "alice", symbol: "RELIANCE" });
     await setDoc(doc(db, "marketQuotes/q_1"), { symbol: "NIFTY", last: 1, providerId: "aliceblue" });
     await setDoc(doc(db, "appConfig/aliceblue"), { userSession: "secret-session", userId: "AB1" });
@@ -103,6 +107,10 @@ describe("firestore rules", () => {
     await assertFails(getDoc(doc(alice, "strategies/str_1")));
     await assertFails(getDoc(doc(alice, "newsArticles/news_1")));
     await assertFails(getDoc(doc(alice, "advertisements/ad_1")));
+    await assertFails(getDoc(doc(alice, "homeTiles/tile_1")));
+    await assertFails(getDoc(doc(alice, "moreLinks/link_1")));
+    await assertFails(getDoc(doc(alice, "watchlistDefaults/def_1")));
+    await assertFails(getDoc(doc(alice, "notificationTemplates/tpl_1")));
     await assertFails(getDoc(doc(alice, "watchlistItems/alice_RELIANCE")));
     await assertFails(getDoc(doc(alice, "marketQuotes/q_1")));
     await assertFails(getDoc(doc(alice, "appConfig/aliceblue")));

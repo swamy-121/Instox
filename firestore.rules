@@ -165,6 +165,22 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /homeTiles/{id} {
+      allow read, write: if false;
+    }
+
+    match /moreLinks/{id} {
+      allow read, write: if false;
+    }
+
+    match /watchlistDefaults/{id} {
+      allow read, write: if false;
+    }
+
+    match /notificationTemplates/{id} {
+      allow read, write: if false;
+    }
+
     match /marketQuotes/{id} {
       allow read, write: if false;
     }
