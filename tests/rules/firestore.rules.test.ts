@@ -55,6 +55,7 @@ beforeEach(async () => {
     await setDoc(doc(db, "newsArticles/news_1"), { title: "Sample", status: "published" });
     await setDoc(doc(db, "advertisements/ad_1"), { title: "Banner", status: "published" });
     await setDoc(doc(db, "watchlistItems/alice_RELIANCE"), { uid: "alice", symbol: "RELIANCE" });
+    await setDoc(doc(db, "marketQuotes/q_1"), { symbol: "NIFTY", last: 1, providerId: "aliceblue" });
   });
 });
 
@@ -102,6 +103,7 @@ describe("firestore rules", () => {
     await assertFails(getDoc(doc(alice, "newsArticles/news_1")));
     await assertFails(getDoc(doc(alice, "advertisements/ad_1")));
     await assertFails(getDoc(doc(alice, "watchlistItems/alice_RELIANCE")));
+    await assertFails(getDoc(doc(alice, "marketQuotes/q_1")));
     await assertFails(updateDoc(doc(alice, "users/alice"), { tipPush: true }));
   });
 

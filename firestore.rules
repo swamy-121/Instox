@@ -165,6 +165,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /marketQuotes/{id} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

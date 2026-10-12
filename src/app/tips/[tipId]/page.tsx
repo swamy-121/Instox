@@ -5,9 +5,12 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
+import { FreshnessMark } from "@/components/freshness-mark";
 import { StockAvatar } from "@/components/illustrations";
 import { ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { Chip, PageHeader } from "@/components/ui";
+import { shownQuote } from "@/features/market/live-quotes";
+import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import { CATEGORY_LABELS, statusLabel } from "@/lib/labels";
 import { formatPrice } from "@/lib/money";
@@ -28,8 +31,10 @@ export default function TipDetailPage() {
 function Detail() {
   const params = useParams<{ tipId: string }>();
   const [tip, setTip] = useState<TipView | null>(null);
-  const [quote, setQuote] = useState<{ last: number; changePct: number } | null>(null);
+  const [quote, setQuote] = useState<{ last: number; changePct: number; freshnessStatus?: string } | null>(null);
+  const [feedId, setFeedId] = useState<string | undefined>();
   const [error, setError] = useState<{ message: string; code: string; requestId?: string } | null>(null);
+  const live = useLiveQuotes(feedId);
 
   function load() {
     setError(null);
@@ -39,8 +44,9 @@ function Detail() {
         return;
       }
       setTip(result.data.tip);
-      apiFetch<{ indices: Array<{ symbol: string; last: number; changePct: number }> }>("/api/v1/market/overview").then((market) => {
+      apiFetch<{ indices: Array<{ symbol: string; last: number; changePct: number; freshnessStatus?: string }>; feed?: string }>("/api/v1/market/overview").then((market) => {
         if (!market.ok) return;
+        setFeedId(market.data.feed);
         const match = market.data.indices.find((row) => row.symbol === result.data.tip.symbol);
         setQuote(match ?? null);
       });
@@ -57,6 +63,8 @@ function Detail() {
   if (!tip) return <LoadingState label="Loading tip" />;
 
   const reason = isOpen(tip) ? tip.closeReason : null;
+  const shown = shownQuote(quote ?? undefined, live.quotes.get(tip.symbol), feedId, live.streamDown);
+  const price = shown && Number.isFinite(shown.last) && Number.isFinite(shown.changePct) ? shown : null;
 
   return (
     <article>
@@ -64,14 +72,17 @@ function Detail() {
         <StockAvatar symbol={tip.symbol} />
         <PageHeader title={tip.symbol} lede={`${CATEGORY_LABELS[tip.category]} · ${tip.timeframe}`} />
       </div>
-      {quote ? (
+      {price ? (
         <p className="mb-4 text-sm tabular-nums text-ink">
-          LTP {formatPrice(quote.last)}{" "}
-          <span className={quote.changePct >= 0 ? "font-semibold text-profit" : "font-semibold text-loss"}>
-            {quote.changePct >= 0 ? "+" : ""}
-            {quote.changePct.toFixed(2)}%
-          </span>
+          LTP {formatPrice(price.last)}{" "}
+          <span className={price.changePct >= 0 ? "font-semibold text-profit" : "font-semibold text-loss"}>
+            {price.changePct >= 0 ? "+" : ""}
+            {price.changePct.toFixed(2)}%
+          </span>{" "}
+          <FreshnessMark status={price.freshnessStatus} />
         </p>
+      ) : shown?.freshnessStatus === "offline" ? (
+        <p className="mb-4 text-sm text-muted">Offline</p>
       ) : null}
       <div className="mb-4 flex flex-wrap gap-2">
         <Chip tone="info">{tip.side}</Chip>

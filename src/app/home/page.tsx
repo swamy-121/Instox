@@ -4,16 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Lightbulb, LineChart, Newspaper, ShoppingBag } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
+import { FreshnessMark } from "@/components/freshness-mark";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { TipCard } from "@/components/tip-card";
 import { useAuth } from "@/features/auth/auth-provider";
+import { mergeDisplayed } from "@/features/market/live-quotes";
+import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
 import type { TipView } from "@/server/tips/present";
 
-type Quote = { symbol: string; name: string; last: number; changePct: number; kind: "index" | "stock" };
+type Quote = { symbol: string; name: string; last: number; changePct: number; kind: "index" | "stock"; freshnessStatus?: string };
 type Feed = { tips: TipView[]; viewerTier: string };
-type Overview = { indices: Quote[]; dataLabel: string; live: boolean };
+type Overview = { indices: Quote[]; feed?: string; dataLabel: string; live: boolean };
 
 const GRID = [
   ["/tips", "Tips", Lightbulb],
@@ -62,9 +65,11 @@ function HomeBody() {
     if (state.status === "ready") load();
   }, [state.status]);
 
+  const live = useLiveQuotes(overview?.feed);
   if (state.status !== "ready") return null;
-  const indices = overview?.indices.filter((row) => row.kind === "index") ?? [];
-  const quotes = new Map((overview?.indices ?? []).map((row) => [row.symbol, row]));
+  const shown = (overview?.indices ?? []).map((row) => mergeDisplayed(row, live.quotes.get(row.symbol), overview?.feed, live.streamDown));
+  const indices = shown.filter((row) => row.kind === "index");
+  const quotes = new Map(shown.map((row) => [row.symbol, row]));
 
   return (
     <div className="space-y-6">
@@ -85,6 +90,7 @@ function HomeBody() {
                 {row.changePct >= 0 ? "+" : ""}
                 {row.changePct.toFixed(2)}%
               </p>
+              <FreshnessMark status={row.freshnessStatus} />
             </Link>
           ))}
         </section>

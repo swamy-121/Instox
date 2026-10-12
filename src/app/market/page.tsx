@@ -3,14 +3,17 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppFrame } from "@/components/app-frame";
+import { FreshnessMark } from "@/components/freshness-mark";
 import { AreaChart, StockAvatar } from "@/components/illustrations";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
+import { mergeDisplayed } from "@/features/market/live-quotes";
+import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
 
-type Quote = { symbol: string; name: string; last: number; changePct: number; kind: "index" | "stock" };
+type Quote = { symbol: string; name: string; last: number; changePct: number; kind: "index" | "stock"; freshnessStatus?: string };
 type Candle = { close: number; closeTime: string };
-type Payload = { indices: Quote[]; chartSymbol: string; candles: Candle[]; dataLabel: string; live: boolean };
+type Payload = { indices: Quote[]; chartSymbol: string; candles: Candle[]; feed?: string; dataLabel: string; live: boolean };
 
 const RANGES = [
   { id: "1D", count: 2 },
@@ -37,6 +40,7 @@ function MarketBody() {
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("1M");
   const [board, setBoard] = useState<"gainers" | "losers">("gainers");
+  const live = useLiveQuotes(payload?.feed);
 
   function load() {
     setError(null);
@@ -55,13 +59,18 @@ function MarketBody() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol]);
 
-  const indices = payload?.indices.filter((row) => row.kind === "index") ?? [];
-  const stocks = [...(payload?.indices.filter((row) => row.kind === "stock") ?? [])].sort((a, b) => b.changePct - a.changePct);
+  const shown = (payload?.indices ?? []).map((row) => mergeDisplayed(row, live.quotes.get(row.symbol), payload?.feed, live.streamDown));
+  const indices = shown.filter((row) => row.kind === "index");
+  const stocks = [...shown.filter((row) => row.kind === "stock")].sort((a, b) => b.changePct - a.changePct);
   const gainers = stocks.filter((row) => row.changePct >= 0);
   const losers = [...stocks].reverse().filter((row) => row.changePct < 0);
   const movers = board === "gainers" ? gainers : losers;
   const count = RANGES.find((item) => item.id === range)?.count ?? 22;
+  const chartRow = shown.find((row) => row.symbol === payload?.chartSymbol);
   const closes = (payload?.candles ?? []).slice(-count).map((candle) => candle.close);
+  if (chartRow && (chartRow.freshnessStatus === "live" || chartRow.freshnessStatus === "stale") && closes.length > 0) {
+    closes[closes.length - 1] = chartRow.last;
+  }
 
   return (
     <div className="space-y-4">
@@ -78,6 +87,7 @@ function MarketBody() {
               {row.changePct >= 0 ? "+" : ""}
               {row.changePct.toFixed(2)}%
             </p>
+            <FreshnessMark status={row.freshnessStatus} />
           </article>
         ))}
       </div>
@@ -115,6 +125,7 @@ function MarketBody() {
               {row.changePct >= 0 ? "+" : ""}
               {row.changePct.toFixed(2)}%
             </span>
+            <FreshnessMark status={row.freshnessStatus} />
           </li>
         ))}
       </ul>

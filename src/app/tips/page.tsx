@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { TipCard, type TipQuote } from "@/components/tip-card";
+import { shownQuote } from "@/features/market/live-quotes";
+import { useLiveQuotes } from "@/features/market/use-live-quotes";
 import { apiFetch } from "@/lib/api-client";
 import type { TipView } from "@/server/tips/present";
 
 type Feed = { tips: TipView[]; viewerTier: string };
+type Overview = { indices: Array<TipQuote & { symbol: string }>; feed?: string };
 
 const GROUPS = [
   { id: "all", label: "All" },
@@ -52,20 +55,25 @@ function TipsBody() {
   const [duration, setDuration] = useState<(typeof DURATIONS)[number]["id"]>("all");
   const [tips, setTips] = useState<TipView[] | null>(null);
   const [quotes, setQuotes] = useState<Map<string, TipQuote>>(new Map());
+  const [feedId, setFeedId] = useState<string | undefined>();
   const [error, setError] = useState<{ message: string; code: string; requestId?: string } | null>(null);
+  const live = useLiveQuotes(feedId);
 
   function load() {
     setError(null);
     Promise.all([
       apiFetch<Feed>("/api/v1/tips?limit=20"),
-      apiFetch<{ indices: Array<TipQuote & { symbol: string }> }>("/api/v1/market/overview"),
+      apiFetch<Overview>("/api/v1/market/overview"),
     ]).then(([feed, market]) => {
       if (!feed.ok) {
         setError({ message: feed.message, code: feed.code, requestId: feed.requestId });
         return;
       }
       setTips(feed.data.tips);
-      if (market.ok) setQuotes(new Map(market.data.indices.map((row) => [row.symbol, row])));
+      if (market.ok) {
+        setFeedId(market.data.feed);
+        setQuotes(new Map(market.data.indices.map((row) => [row.symbol, row])));
+      }
     });
   }
 
@@ -74,6 +82,14 @@ function TipsBody() {
   }, []);
 
   const visible = tips?.filter((tip) => matchesGroup(tip, group) && matchesDuration(tip, duration)) ?? [];
+  function quoteFor(symbol: string): TipQuote | null {
+    const quote = shownQuote(quotes.get(symbol), live.quotes.get(symbol), feedId, live.streamDown);
+    if (!quote) return null;
+    if (!Number.isFinite(quote.last) || !Number.isFinite(quote.changePct)) {
+      return { last: null, changePct: null, freshnessStatus: "offline" };
+    }
+    return quote;
+  }
 
   return (
     <div className="space-y-4">
@@ -99,7 +115,7 @@ function TipsBody() {
       {!tips && !error ? <LoadingState label="Loading tips" /> : null}
       {tips && !error && visible.length === 0 ? <EmptyState title="No tips match" body="Try another category, or check back after a tip is published." /> : null}
       <div className="space-y-3">
-        {visible.map((tip) => <TipCard key={tip.id} tip={tip} quote={quotes.get(tip.symbol) ?? null} />)}
+        {visible.map((tip) => <TipCard key={tip.id} tip={tip} quote={quoteFor(tip.symbol)} />)}
       </div>
     </div>
   );

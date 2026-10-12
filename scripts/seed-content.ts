@@ -38,6 +38,8 @@ export async function seedCatalog(db: Firestore): Promise<void> {
   const indices = [
     { id: "NIFTY", symbol: "NIFTY", name: "Nifty 50", last: 24635.5, changePct: 0.82, kind: "index", sort: 1 },
     { id: "SENSEX", symbol: "SENSEX", name: "Sensex", last: 80421.1, changePct: 0.62, kind: "index", sort: 2 },
+    { id: "BANKNIFTY", symbol: "BANKNIFTY", name: "Nifty Bank", last: 52340, changePct: -0.19, kind: "index", sort: 3 },
+    { id: "NIFTYFIN", symbol: "NIFTYFIN", name: "Nifty Financial Services", last: 23450, changePct: 0.35, kind: "index", sort: 4 },
     { id: "RELIANCE", symbol: "RELIANCE", name: "Reliance Industries", last: 2864.5, changePct: 2.35, kind: "stock", sort: 10 },
     { id: "TCS", symbol: "TCS", name: "Tata Consultancy Services", last: 3982.1, changePct: -1.2, kind: "stock", sort: 11 },
     { id: "HDFCBANK", symbol: "HDFCBANK", name: "HDFC Bank", last: 1702.3, changePct: 0.85, kind: "stock", sort: 12 },
@@ -115,7 +117,7 @@ export async function seedCatalog(db: Firestore): Promise<void> {
     const candles = sampleCandles(instrument.symbol, 40, end);
     await db.collection("candleSeries").doc(instrument.symbol).set({ id: instrument.symbol, symbol: instrument.symbol, candles });
   }
-  for (const symbol of ["NIFTY", "SENSEX"] as const) {
+  for (const symbol of ["NIFTY", "SENSEX", "BANKNIFTY", "NIFTYFIN"] as const) {
     const last = indices.find((row) => row.symbol === symbol)?.last ?? 100;
     await db.collection("candleSeries").doc(symbol).set(seriesAround(symbol, last));
   }

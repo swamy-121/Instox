@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Lock } from "lucide-react";
+import { FreshnessMark } from "@/components/freshness-mark";
 import { StockAvatar } from "@/components/illustrations";
 import { formatPrice } from "@/lib/money";
 import type { OpenTipView, TipView } from "@/server/tips/present";
 
-export type TipQuote = { last: number; changePct: number };
+export type TipQuote = { last: number | null; changePct: number | null; freshnessStatus?: string };
 
 function isOpen(tip: TipView): tip is OpenTipView {
   return tip.locked === false;
@@ -39,17 +40,22 @@ export function TipCard({ tip, quote }: { tip: TipView; quote?: TipQuote | null 
           {tip.side}
         </span>
       </div>
-      {quote ? (
+      {quote && quote.last != null && quote.changePct != null ? (
         <div className="mt-3 flex items-end justify-between">
           <div>
             <p className="text-xs text-muted">LTP</p>
             <p className="text-xl font-semibold tabular-nums text-ink">{formatPrice(quote.last)}</p>
           </div>
-          <p className={`text-sm font-semibold tabular-nums ${quote.changePct >= 0 ? "text-profit" : "text-loss"}`}>
-            {quote.changePct >= 0 ? "+" : ""}
-            {quote.changePct.toFixed(2)}%
-          </p>
+          <div className="text-right">
+            <p className={`text-sm font-semibold tabular-nums ${quote.changePct >= 0 ? "text-profit" : "text-loss"}`}>
+              {quote.changePct >= 0 ? "+" : ""}
+              {quote.changePct.toFixed(2)}%
+            </p>
+            <FreshnessMark status={quote.freshnessStatus} />
+          </div>
         </div>
+      ) : quote?.freshnessStatus === "offline" || quote?.freshnessStatus === "stale" ? (
+        <p className="mt-3 text-xs text-muted"><FreshnessMark status={quote.freshnessStatus} /></p>
       ) : null}
       {open ? (
         <dl className="mt-3 grid grid-cols-4 gap-2 border-t border-line pt-3 text-xs">

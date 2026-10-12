@@ -2,7 +2,7 @@
 
 Mobile-first PWA for manually published Indian market tips. This repo is the first slice: sign-in, roles, the tip workflow, a free/premium feed, and the admin screens that go with them.
 
-Market data and payments are interfaces with stubs. Nothing here is a live quote, and checkout does not turn on premium.
+Market data stays behind a server provider. Leave `MARKET_DATA_PROVIDER` unset for the mock adapter. Alice Blue can supply last prices when the broker env vars are set, and that session is not a redistribution licence. Checkout does not turn on premium.
 
 ## Setup
 
@@ -102,7 +102,7 @@ These still block a real launch. The product owner approved starting this build 
 - DEC-001 Brand palette and logo. Resolved from the official wordmark. `in` is teal `#0194A8` and `Stox` is green `#027332`, on white. Primary buttons and the active tab use the logo green `#027332`. Interface text uses `#013316`. Profit `#0F7A45` and loss `#B42318` stay separate from the logo green so gain and loss stay readable.
 - DEC-002 Plan price, tax, billing, cancellation, and refunds. Plan rows live in Firestore and stay `approved: false`. Manual grants are audited and do not approve the price.
 - DEC-003 SEBI / legal operating model. Paid stock-specific tips should stay off until counsel writes that down. Penny-stock publish is disabled in config.
-- DEC-004 Market-data vendor and redistribution rights. The mock adapter and sample instrument master are wired. `MARKET_DATA_LICENSED` stays false.
+- DEC-004 Market-data vendor and redistribution rights. `MARKET_DATA_PROVIDER=aliceblue` starts a server-side ANT session feed for NSE and BSE symbols. That login is the account's own broker session and does not grant redistribution rights, so `MARKET_DATA_LICENSED` stays false. Tests and CI leave the provider unset and keep the mock adapter. `MARKET_DATA_PROVIDER=dev` reads public chart quotes and is refused when `NODE_ENV` is production.
 - DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off.
 - DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual. Insights read those reasons.
 - DEC-007 Referral threshold and reward. The ledger exists. Entitlement grants from referrals stay off.
@@ -120,3 +120,6 @@ Leave these empty until a real account exists. Do not commit values.
 - Firebase web push certificate (`NEXT_PUBLIC_FIREBASE_VAPID_KEY`). This is the FCM key, not a separate VAPID private key.
 - Razorpay key id, key secret, and webhook secret.
 - Cashfree client id, client secret, and webhook secret.
+- `MARKET_DATA_PROVIDER` (`aliceblue` or `dev`; leave unset for the mock feed).
+- Alice Blue user id (`ALICEBLUE_USER_ID`) and API key (`ALICEBLUE_API_KEY`). There is no separate app secret. Optional `ALICEBLUE_SESSION_ID` skips the API-key login when a session already exists. Log in through the ANT website or app once that day before the session call can succeed. Broker credentials stay on the server and are not written to Firestore or sent to the browser.
+- `MARKET_DATA_LICENSED` stays false until redistribution rights are decided.
