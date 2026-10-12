@@ -1,36 +1,35 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { createId } from "@/lib/ids";
 import { requireActor } from "@/server/auth/actor";
-import { adminDb } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { strategies } from "@/server/db/schema";
 import { apiOk, readJson, withApi } from "@/server/http";
 import { assertStrategyDoesNotPublish, validateStrategy } from "@/server/strategies/model";
 
-const bodySchema = z
-  .object({
-    name: z.string(),
-    rules: z.array(z.unknown()).min(1).max(8),
-    status: z.string().optional(),
-    publish: z.boolean().optional(),
-  })
-  .strict();
+const bodySchema = z.object({
+  name: z.string(),
+  rules: z.array(z.unknown()).min(1).max(8),
+  status: z.string().optional(),
+  publish: z.boolean().optional(),
+}).strict();
 
 export async function GET(request: Request): Promise<Response> {
   return withApi(request, "GET /api/v1/strategies", async ({ requestId }) => {
     const actor = await requireActor(request);
-    const snap = await adminDb().collection("strategies").where("uid", "==", actor.uid).limit(20).get();
-    const strategies = snap.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: String(data.name ?? ""),
-        rules: data.rules ?? [],
-        version: Number(data.version ?? 1),
+    const rows = await getDb().select().from(strategies).where(eq(strategies.userId, actor.uid)).limit(20);
+    return apiOk({
+      strategies: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        rules: row.rules,
+        version: row.version,
         status: "draft",
-        updatedAt: String(data.updatedAt ?? ""),
-      };
-    });
-    return apiOk({ strategies, note: "Strategies stay in draft. They do not publish tips." }, requestId);
+        updatedAt: row.updatedAt,
+      })),
+      note: "Strategies stay in draft. They do not publish tips.",
+    }, requestId);
   });
 }
 
@@ -38,17 +37,18 @@ export async function POST(request: Request): Promise<Response> {
   return withApi(request, "POST /api/v1/strategies", async ({ requestId }) => {
     const actor = await requireActor(request);
     const parsed = bodySchema.safeParse(await readJson(request));
-    if (!parsed.success) {
-      throw new AppError(400, "VALIDATION_ERROR", "A strategy needs a name and rules.", { form: "Check the strategy." });
-    }
+    if (!parsed.success) throw new AppError(400, "VALIDATION_ERROR", "A strategy needs a name and rules.", { form: "Check the strategy." });
     assertStrategyDoesNotPublish(parsed.data);
     const draft = validateStrategy(parsed.data, 1);
     const id = createId("str");
     const now = new Date().toISOString();
-    await adminDb().collection("strategies").doc(id).set({
+    await getDb().insert(strategies).values({
       id,
-      uid: actor.uid,
-      ...draft,
+      userId: actor.uid,
+      name: draft.name,
+      rules: draft.rules,
+      version: draft.version,
+      status: "draft",
       createdAt: now,
       updatedAt: now,
     });

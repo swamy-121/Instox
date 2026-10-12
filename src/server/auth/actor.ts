@@ -1,11 +1,13 @@
-import type { DecodedIdToken } from "firebase-admin/auth";
+import { eq } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import { resolveEntitlement } from "@/server/authorization/entitlements";
 import { resolveRoles } from "@/server/authorization/roles";
 import { assertAccountActive } from "@/server/authorization/session-policy";
-import type { DocumentData } from "firebase-admin/firestore";
-import { adminAuth, adminDb } from "@/server/db/admin";
-import type { EntitlementRecord, ResolvedEntitlement, Role, UserProfile } from "@/types/domain";
+import { loadSession, readSessionToken } from "@/server/auth/session";
+import { getDb } from "@/server/db/client";
+import { entitlements, users } from "@/server/db/schema";
+import { rolesFor } from "@/server/users/repo";
+import type { EntitlementRecord, ResolvedEntitlement, Role, UserProfile, UserStatus } from "@/types/domain";
 
 export type Actor = {
   uid: string;
@@ -15,79 +17,67 @@ export type Actor = {
   entitlement: ResolvedEntitlement;
 };
 
-function readCookie(request: Request, name: string): string | null {
-  const header = request.headers.get("cookie");
-  if (!header) return null;
-  for (const part of header.split(";")) {
-    const [rawKey, ...rest] = part.trim().split("=");
-    if (rawKey === name) return decodeURIComponent(rest.join("="));
-  }
-  return null;
+function asStatus(value: string | null | undefined): UserStatus {
+  if (value === "disabled" || value === "deletion_pending") return value;
+  return "active";
 }
 
-async function verifyToken(request: Request): Promise<DecodedIdToken> {
-  const bearer = request.headers.get("authorization");
-  try {
-    if (bearer?.startsWith("Bearer ")) {
-      return await adminAuth().verifyIdToken(bearer.slice("Bearer ".length).trim());
-    }
-    const session = readCookie(request, "instox_session");
-    if (session) {
-      return await adminAuth().verifySessionCookie(session);
-    }
-  } catch {
-    throw new AppError(401, "UNAUTHENTICATED", "Your session is missing or has expired. Sign in again.");
-  }
-  throw new AppError(401, "UNAUTHENTICATED", "Sign in to continue.");
-}
-
-function asProfile(uid: string, data: DocumentData): UserProfile {
+function toProfile(row: typeof users.$inferSelect): UserProfile {
   return {
-    uid,
-    displayName: String(data.displayName ?? ""),
-    email: data.email ? String(data.email) : null,
-    phoneNumber: data.phoneNumber ? String(data.phoneNumber) : null,
-    photoURL: data.photoURL ? String(data.photoURL) : null,
-    status: data.status === "disabled" || data.status === "deletion_pending" ? data.status : "active",
-    locale: String(data.locale ?? "en-IN"),
-    timezone: String(data.timezone ?? "Asia/Kolkata"),
-    createdAt: String(data.createdAt ?? ""),
-    updatedAt: String(data.updatedAt ?? ""),
-    consentVersion: data.consentVersion ? String(data.consentVersion) : null,
-    consentAt: data.consentAt ? String(data.consentAt) : null,
-    providers: Array.isArray(data.providers) ? data.providers.map(String) : [],
+    uid: row.id,
+    displayName: row.displayName,
+    email: row.email,
+    phoneNumber: row.phoneNumber,
+    photoURL: row.photoUrl,
+    status: asStatus(row.status),
+    locale: row.locale,
+    timezone: row.timezone,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    consentVersion: row.consentVersion,
+    consentAt: row.consentAt,
+    providers: row.providers ?? [],
   };
 }
 
 export async function requireActor(request: Request, options?: { allowInactive?: boolean }): Promise<Actor> {
-  const token = await verifyToken(request);
-  const db = adminDb();
-  const [userSnap, roleSnap, entitlementSnap] = await Promise.all([
-    db.collection("users").doc(token.uid).get(),
-    db.collection("userRoles").doc(token.uid).get(),
-    db.collection("userEntitlements").doc(token.uid).get(),
+  const token = readSessionToken(request);
+  if (!token) throw new AppError(401, "UNAUTHENTICATED", "Sign in to continue.");
+  const session = await loadSession(token);
+  if (!session) throw new AppError(401, "UNAUTHENTICATED", "Your session is missing or has expired. Sign in again.");
+
+  const rows = await getDb().select().from(users).where(eq(users.id, session.userId)).limit(1);
+  const row = rows[0];
+  if (!row) throw new AppError(401, "UNAUTHENTICATED", "Finish sign-in before continuing.");
+
+  const user = toProfile(row);
+  if (!options?.allowInactive) assertAccountActive(user.status);
+
+  const [roles, entitlementRows] = await Promise.all([
+    rolesFor(session.userId),
+    getDb().select().from(entitlements).where(eq(entitlements.userId, session.userId)).limit(1),
   ]);
-
-  if (!userSnap.exists) {
-    throw new AppError(401, "UNAUTHENTICATED", "Finish sign-in before continuing.");
-  }
-
-  const user = asProfile(token.uid, userSnap.data() ?? {});
-  if (!options?.allowInactive) {
-    assertAccountActive(user.status);
-  }
-
-  const roles = resolveRoles(roleSnap.data()?.roles, token);
-  const entitlement = entitlementSnap.exists
-    ? resolveEntitlement(entitlementSnap.data() as EntitlementRecord, new Date())
-    : resolveEntitlement(null, new Date());
+  const stored = entitlementRows[0];
+  const record: EntitlementRecord | null = stored
+    ? {
+        uid: stored.userId,
+        planId: stored.planId ?? "",
+        status: stored.status === "active" || stored.status === "grace" || stored.status === "expired" || stored.status === "revoked" ? stored.status : "expired",
+        startsAt: stored.startsAt ?? "",
+        endsAt: stored.endsAt ?? "",
+        sourceOrderId: stored.sourceOrderId,
+        source: stored.source,
+        updatedAt: stored.updatedAt,
+        version: stored.version,
+      }
+    : null;
 
   return {
-    uid: token.uid,
-    authTime: typeof token.auth_time === "number" ? token.auth_time : undefined,
+    uid: session.userId,
+    authTime: session.authTime,
     user,
-    roles,
-    entitlement,
+    roles: resolveRoles(roles),
+    entitlement: resolveEntitlement(record, new Date()),
   };
 }
 

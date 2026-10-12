@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { requireActor } from "@/server/auth/actor";
-import { adminDb } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { users } from "@/server/db/schema";
 import { apiOk, readJson, withApi } from "@/server/http";
 import { syncUserTopics } from "@/server/notifications/dispatch";
 
@@ -16,11 +18,11 @@ export async function PATCH(request: Request): Promise<Response> {
         preferences: "Send tipPush and marketingPush.",
       });
     }
-    await adminDb().collection("users").doc(actor.uid).update({
+    await getDb().update(users).set({
       tipPush: parsed.data.tipPush,
       marketingPush: parsed.data.marketingPush,
       updatedAt: new Date().toISOString(),
-    });
+    }).where(eq(users.id, actor.uid));
     try {
       await syncUserTopics(actor.uid);
     } catch {

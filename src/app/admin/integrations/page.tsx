@@ -24,6 +24,7 @@ const GROUPS = [
   { id: "cashfree", title: "Cashfree", test: "cashfree", lede: "Client id, client secret, and webhook secret. A test talks to the sandbox only." },
   { id: "aliceblue", title: "Alice Blue", test: "aliceblue", lede: "App code and API secret for the three index prices. The daily login is still Connect Alice Blue." },
   { id: "fcm", title: "Firebase Cloud Messaging", test: "fcm", lede: "Web push certificate used by the browser. The Firebase Admin service account stays in the server environment." },
+  { id: "sms", title: "SMS", test: "sms", lede: "APITxT sends phone codes without a DLT template. Leave the key empty and codes are written to the server log." },
 ];
 
 export default function IntegrationsPage() {

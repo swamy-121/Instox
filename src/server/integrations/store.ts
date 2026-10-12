@@ -1,7 +1,8 @@
 import { AppError } from "@/lib/errors";
 import { decryptSecret, encryptSecret, integrationKey, isCipherBlob, maskSecret, type CipherBlob } from "@/server/integrations/crypto";
 import { INTEGRATION_FIELDS, integrationField, validFieldValue, type IntegrationField } from "@/server/integrations/fields";
-import { adminDb } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { integrationSecrets } from "@/server/db/schema";
 
 export type SecretSource = "stored" | "env" | "missing" | "unreadable";
 
@@ -18,7 +19,6 @@ type Cache = {
   fields: Record<string, ResolvedField>;
 };
 
-const DOC = "integrations";
 let cache: Cache | null = null;
 
 export function resetIntegrationCache(): void {
@@ -64,22 +64,21 @@ function readKey(): Buffer | null {
 }
 
 async function readStored(): Promise<Record<string, string | null>> {
-  const snap = await adminDb().collection("appConfig").doc(DOC).get();
-  const secrets = snap.data()?.secrets;
+  const rows = await getDb().select().from(integrationSecrets);
   const stored: Record<string, string | null> = {};
-  if (!secrets || typeof secrets !== "object") return stored;
   const key = readKey();
-  for (const field of INTEGRATION_FIELDS) {
-    const blob = (secrets as Record<string, unknown>)[field.key];
+  for (const row of rows) {
+    const blob = { iv: row.iv, tag: row.tag, data: row.data };
     if (!isCipherBlob(blob)) continue;
+    if (!INTEGRATION_FIELDS.some((field) => field.key === row.fieldKey)) continue;
     if (!key) {
-      stored[field.key] = null;
+      stored[row.fieldKey] = null;
       continue;
     }
     try {
-      stored[field.key] = decryptSecret(blob, key);
+      stored[row.fieldKey] = decryptSecret(blob, key);
     } catch {
-      stored[field.key] = null;
+      stored[row.fieldKey] = null;
     }
   }
   return stored;
@@ -149,12 +148,13 @@ export async function saveIntegrationFields(input: {
       throw new AppError(400, "VALIDATION_ERROR", "Check the integration fields.", { form: "Unknown field." });
     }
   }
-  const ref = adminDb().collection("appConfig").doc(DOC);
-  const snap = await ref.get();
-  const current = (snap.data()?.secrets ?? {}) as Record<string, CipherBlob>;
+  const db = getDb();
+  const now = new Date().toISOString();
+  const currentRows = await db.select().from(integrationSecrets);
   const secrets: Record<string, CipherBlob> = {};
-  for (const field of INTEGRATION_FIELDS) {
-    if (isCipherBlob(current[field.key])) secrets[field.key] = current[field.key];
+  for (const row of currentRows) {
+    const blob = { iv: row.iv, tag: row.tag, data: row.data };
+    if (isCipherBlob(blob)) secrets[row.fieldKey] = blob;
   }
   for (const name of input.clear) delete secrets[name];
   for (const [name, value] of Object.entries(input.values)) {
@@ -165,14 +165,20 @@ export async function saveIntegrationFields(input: {
     }
     secrets[name] = encryptSecret(value, key);
   }
-  await ref.set(
-    {
-      secrets,
-      updatedBy: input.updatedBy,
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true },
-  );
+  await db.delete(integrationSecrets);
+  const entries = Object.entries(secrets);
+  if (entries.length > 0) {
+    await db.insert(integrationSecrets).values(
+      entries.map(([fieldKey, blob]) => ({
+        fieldKey,
+        iv: blob.iv,
+        tag: blob.tag,
+        data: blob.data,
+        updatedBy: input.updatedBy,
+        updatedAt: now,
+      })),
+    );
+  }
   return refreshIntegrations(true);
 }
 

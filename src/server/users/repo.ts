@@ -1,12 +1,13 @@
-import type { DecodedIdToken } from "firebase-admin/auth";
 import complianceConfig from "../../../config/compliance.json";
+import { arrayContains, desc, eq } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import { createId } from "@/lib/ids";
-import { recordAudit, writeAudit } from "@/server/audit/log";
+import { insertAudit, recordAudit } from "@/server/audit/log";
 import { assertRoleChange, sanitizeRoles } from "@/server/authorization/roles";
-import { adminDb } from "@/server/db/admin";
 import { loadMemberCopy } from "@/server/content/member-config";
 import { listContent } from "@/server/content/store";
+import { getDb } from "@/server/db/client";
+import { deletionRequests, referralAccounts, referralCodes, userRoles, users, watchlistItems } from "@/server/db/schema";
 import { referralCodeFor } from "@/server/referrals/logic";
 import type { Role, UserProfile, UserStatus } from "@/types/domain";
 
@@ -16,40 +17,75 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-export async function bootstrapUser(token: DecodedIdToken): Promise<{ emailConflict: boolean }> {
-  const db = adminDb();
+function asStatus(value: string | null | undefined): UserStatus {
+  if (value === "disabled" || value === "deletion_pending") return value;
+  return "active";
+}
+
+function toProfile(row: typeof users.$inferSelect): UserProfile {
+  return {
+    uid: row.id,
+    displayName: row.displayName,
+    email: row.email,
+    phoneNumber: row.phoneNumber,
+    photoURL: row.photoUrl,
+    status: asStatus(row.status),
+    locale: row.locale,
+    timezone: row.timezone,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    consentVersion: row.consentVersion,
+    consentAt: row.consentAt,
+    providers: row.providers ?? [],
+  };
+}
+
+export async function findUserById(uid: string): Promise<(typeof users.$inferSelect) | null> {
+  const rows = await getDb().select().from(users).where(eq(users.id, uid)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function findUserByPhone(phoneNumber: string): Promise<(typeof users.$inferSelect) | null> {
+  const rows = await getDb().select().from(users).where(eq(users.phoneNumber, phoneNumber)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function findUserByEmail(email: string): Promise<(typeof users.$inferSelect) | null> {
+  const rows = await getDb().select().from(users).where(eq(users.email, email)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function bootstrapUser(input: {
+  uid: string;
+  email?: string | null;
+  phoneNumber?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+  provider: string;
+}): Promise<{ emailConflict: boolean }> {
+  const db = getDb();
   const now = nowIso();
-  const email = token.email ?? null;
-  const phoneNumber = token.phone_number ?? null;
-  const provider = token.firebase?.sign_in_provider ?? "unknown";
+  const email = input.email ?? null;
+  const phoneNumber = input.phoneNumber ?? null;
   let emailConflict = false;
-
   if (email) {
-    const existing = await db.collection("users").where("email", "==", email).limit(5).get();
-    emailConflict = existing.docs.some((doc) => doc.id !== token.uid);
+    const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(5);
+    emailConflict = existing.some((row) => row.id !== input.uid);
   }
-
-  const code = referralCodeFor(token.uid);
+  const code = referralCodeFor(input.uid);
   const copy = await loadMemberCopy().catch(() => null);
   const defaults = await listContent("watchlistDefaults", "admin").catch(() => []);
   const symbols = defaults.filter((row) => row.status === "published").map((row) => row.symbol);
-  await db.runTransaction(async (tx) => {
-    const userRef = db.collection("users").doc(token.uid);
-    const roleRef = db.collection("userRoles").doc(token.uid);
-    const codeRef = db.collection("referralCodes").doc(code);
-    const accountRef = db.collection("referralAccounts").doc(token.uid);
-    const userSnap = await tx.get(userRef);
-    const roleSnap = await tx.get(roleRef);
-    const codeSnap = await tx.get(codeRef);
-    const accountSnap = await tx.get(accountRef);
 
-    if (!userSnap.exists) {
-      tx.set(userRef, {
-        uid: token.uid,
-        displayName: token.name ?? "",
+  await db.transaction(async (tx) => {
+    const current = await tx.select().from(users).where(eq(users.id, input.uid)).limit(1);
+    if (!current[0]) {
+      await tx.insert(users).values({
+        id: input.uid,
+        displayName: input.displayName ?? "",
         email,
         phoneNumber,
-        photoURL: token.picture ?? null,
+        photoUrl: input.photoURL ?? null,
         status: "active",
         locale: "en-IN",
         timezone: "Asia/Kolkata",
@@ -57,51 +93,49 @@ export async function bootstrapUser(token: DecodedIdToken): Promise<{ emailConfl
         updatedAt: now,
         consentVersion: null,
         consentAt: null,
-        providers: [provider],
+        providers: [input.provider],
         tipPush: copy?.tipPushDefault === true,
         marketingPush: copy?.marketingPushDefault === true,
       });
       for (const symbol of symbols) {
-        const itemId = `${token.uid}_${symbol}`;
-        tx.set(db.collection("watchlistItems").doc(itemId), {
-          id: itemId,
-          uid: token.uid,
+        await tx.insert(watchlistItems).values({
+          id: `${input.uid}_${symbol}`,
+          userId: input.uid,
           symbol,
           createdAt: now,
-        });
+        }).onConflictDoNothing();
       }
     } else {
-      const current = userSnap.data() ?? {};
-      const providers = new Set<string>(Array.isArray(current.providers) ? current.providers.map(String) : []);
-      providers.add(provider);
-      tx.update(userRef, {
-        email: email ?? current.email ?? null,
-        phoneNumber: phoneNumber ?? current.phoneNumber ?? null,
-        photoURL: current.photoURL || token.picture || null,
-        displayName: current.displayName || token.name || "",
+      const providers = new Set(current[0].providers ?? []);
+      providers.add(input.provider);
+      await tx.update(users).set({
+        email: email ?? current[0].email,
+        phoneNumber: phoneNumber ?? current[0].phoneNumber,
+        photoUrl: current[0].photoUrl || input.photoURL || null,
+        displayName: current[0].displayName || input.displayName || "",
         providers: [...providers],
         updatedAt: now,
-      });
+      }).where(eq(users.id, input.uid));
     }
-
-    if (!roleSnap.exists) {
-      tx.set(roleRef, {
-        uid: token.uid,
+    const role = await tx.select().from(userRoles).where(eq(userRoles.userId, input.uid)).limit(1);
+    if (!role[0]) {
+      await tx.insert(userRoles).values({
+        userId: input.uid,
         roles: ["member"],
         grantedBy: "system",
         grantedAt: now,
         updatedAt: now,
       });
     }
-
-    if (!codeSnap.exists) {
-      tx.set(codeRef, { uid: token.uid, code, createdAt: now });
+    const codeRow = await tx.select().from(referralCodes).where(eq(referralCodes.code, code)).limit(1);
+    if (!codeRow[0]) {
+      await tx.insert(referralCodes).values({ userId: input.uid, code, createdAt: now });
     }
-    if (!accountSnap.exists) {
-      tx.set(accountRef, { uid: token.uid, code, conversions: 0, createdAt: now, updatedAt: now });
+    const account = await tx.select().from(referralAccounts).where(eq(referralAccounts.userId, input.uid)).limit(1);
+    if (!account[0]) {
+      await tx.insert(referralAccounts).values({ userId: input.uid, code, conversions: 0, createdAt: now, updatedAt: now });
     }
   });
-
   return { emailConflict };
 }
 
@@ -109,35 +143,27 @@ export async function updateOwnProfile(
   uid: string,
   patch: { displayName?: string; locale?: string; timezone?: string; consentAccepted?: boolean },
 ): Promise<UserProfile> {
-  const db = adminDb();
-  const ref = db.collection("users").doc(uid);
-  const snap = await ref.get();
-  if (!snap.exists) throw new AppError(404, "NOT_FOUND", "Profile not found.");
-  const current = snap.data() ?? {};
-  const next: Record<string, unknown> = { updatedAt: nowIso() };
+  const db = getDb();
+  const current = await findUserById(uid);
+  if (!current) throw new AppError(404, "NOT_FOUND", "Profile not found.");
+  const next: Partial<typeof users.$inferInsert> = { updatedAt: nowIso() };
 
   if (patch.displayName !== undefined) {
     const name = patch.displayName.trim();
     if (name.length < 2 || name.length > 80) {
-      throw new AppError(400, "VALIDATION_ERROR", "Review the highlighted fields.", {
-        displayName: "Use 2 to 80 characters.",
-      });
+      throw new AppError(400, "VALIDATION_ERROR", "Review the highlighted fields.", { displayName: "Use 2 to 80 characters." });
     }
     next.displayName = name;
   }
   if (patch.locale !== undefined) {
     if (!/^[a-z]{2}-[A-Z]{2}$/.test(patch.locale)) {
-      throw new AppError(400, "VALIDATION_ERROR", "Review the highlighted fields.", {
-        locale: "Use a locale like en-IN.",
-      });
+      throw new AppError(400, "VALIDATION_ERROR", "Review the highlighted fields.", { locale: "Use a locale like en-IN." });
     }
     next.locale = patch.locale;
   }
   if (patch.timezone !== undefined) {
     if (patch.timezone.length < 3 || patch.timezone.length > 64) {
-      throw new AppError(400, "VALIDATION_ERROR", "Review the highlighted fields.", {
-        timezone: "Choose a timezone.",
-      });
+      throw new AppError(400, "VALIDATION_ERROR", "Review the highlighted fields.", { timezone: "Choose a timezone." });
     }
     next.timezone = patch.timezone;
   }
@@ -146,8 +172,8 @@ export async function updateOwnProfile(
     next.consentAt = nowIso();
   }
 
-  const displayName = String(next.displayName ?? current.displayName ?? "");
-  const consentAt = String(next.consentAt ?? current.consentAt ?? "");
+  const displayName = next.displayName ?? current.displayName;
+  const consentAt = next.consentAt ?? current.consentAt ?? "";
   const fields: Record<string, string> = {};
   if (!displayName) fields.displayName = "Name is required.";
   if (!consentAt) fields.consentAccepted = "Acknowledge the risk disclosure to continue.";
@@ -155,23 +181,10 @@ export async function updateOwnProfile(
     throw new AppError(400, "VALIDATION_ERROR", "Name and the risk acknowledgement are required.", fields);
   }
 
-  await ref.update(next);
-  const updated = await ref.get();
-  return {
-    uid,
-    displayName: String(updated.data()?.displayName ?? ""),
-    email: updated.data()?.email ? String(updated.data()?.email) : null,
-    phoneNumber: updated.data()?.phoneNumber ? String(updated.data()?.phoneNumber) : null,
-    photoURL: updated.data()?.photoURL ? String(updated.data()?.photoURL) : null,
-    status: (updated.data()?.status as UserStatus) ?? "active",
-    locale: String(updated.data()?.locale ?? "en-IN"),
-    timezone: String(updated.data()?.timezone ?? "Asia/Kolkata"),
-    createdAt: String(updated.data()?.createdAt ?? ""),
-    updatedAt: String(updated.data()?.updatedAt ?? ""),
-    consentVersion: updated.data()?.consentVersion ? String(updated.data()?.consentVersion) : null,
-    consentAt: updated.data()?.consentAt ? String(updated.data()?.consentAt) : null,
-    providers: Array.isArray(updated.data()?.providers) ? updated.data()?.providers.map(String) : [],
-  };
+  await db.update(users).set(next).where(eq(users.id, uid));
+  const updated = await findUserById(uid);
+  if (!updated) throw new AppError(404, "NOT_FOUND", "Profile not found.");
+  return toProfile(updated);
 }
 
 export async function requestDeletion(input: {
@@ -179,33 +192,28 @@ export async function requestDeletion(input: {
   reason: string;
   requestId: string;
 }): Promise<{ status: "pending"; requestId: string }> {
-  const db = adminDb();
-  const userRef = db.collection("users").doc(input.uid);
-  const snap = await userRef.get();
-  if (!snap.exists) throw new AppError(404, "NOT_FOUND", "Profile not found.");
-  if (snap.data()?.status === "deletion_pending") {
-    return { status: "pending", requestId: input.requestId };
-  }
+  const db = getDb();
+  const current = await findUserById(input.uid);
+  if (!current) throw new AppError(404, "NOT_FOUND", "Profile not found.");
+  if (current.status === "deletion_pending") return { status: "pending", requestId: input.requestId };
   const reason = input.reason.trim();
   if (reason.length < 3) {
-    throw new AppError(400, "VALIDATION_ERROR", "Tell us briefly why you want the account removed.", {
-      reason: "Enter at least 3 characters.",
-    });
+    throw new AppError(400, "VALIDATION_ERROR", "Tell us briefly why you want the account removed.", { reason: "Enter at least 3 characters." });
   }
   const now = nowIso();
   const deletionId = createId("del");
-  await db.runTransaction(async (tx) => {
-    tx.update(userRef, { status: "deletion_pending", updatedAt: now });
-    tx.set(db.collection("deletionRequests").doc(deletionId), {
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ status: "deletion_pending", updatedAt: now }).where(eq(users.id, input.uid));
+    await tx.insert(deletionRequests).values({
       id: deletionId,
-      uid: input.uid,
+      userId: input.uid,
       status: "pending",
       reason,
       requestedAt: now,
       requestId: input.requestId,
       note: "Personal data is retained until a reviewed deletion workflow runs. Retention rules are not approved yet.",
     });
-    writeAudit(tx, db, {
+    await insertAudit(tx, {
       actorUid: input.uid,
       action: "account.deletion_requested",
       targetType: "user",
@@ -223,13 +231,11 @@ export async function setOwnDisabled(uid: string, reason: string, requestId: str
   if (trimmed.length < 3) {
     throw new AppError(400, "VALIDATION_ERROR", "A reason is required.", { reason: "Enter at least 3 characters." });
   }
-  const db = adminDb();
-  const ref = db.collection("users").doc(uid);
-  const snap = await ref.get();
-  if (!snap.exists) throw new AppError(404, "NOT_FOUND", "Profile not found.");
-  if (snap.data()?.status === "disabled") return;
+  const current = await findUserById(uid);
+  if (!current) throw new AppError(404, "NOT_FOUND", "Profile not found.");
+  if (current.status === "disabled") return;
   const now = nowIso();
-  await ref.update({ status: "disabled", updatedAt: now });
+  await getDb().update(users).set({ status: "disabled", updatedAt: now }).where(eq(users.id, uid));
   await recordAudit({
     actorUid: uid,
     action: "account.disabled_self",
@@ -242,31 +248,11 @@ export async function setOwnDisabled(uid: string, reason: string, requestId: str
 }
 
 export async function listUsers(limit: number): Promise<Array<UserProfile & { roles: Role[] }>> {
-  const db = adminDb();
-  const snap = await db.collection("users").orderBy("createdAt", "desc").limit(limit).get();
-  const users = await Promise.all(
-    snap.docs.map(async (doc) => {
-      const roleSnap = await db.collection("userRoles").doc(doc.id).get();
-      const data = doc.data();
-      return {
-        uid: doc.id,
-        displayName: String(data.displayName ?? ""),
-        email: data.email ? String(data.email) : null,
-        phoneNumber: data.phoneNumber ? String(data.phoneNumber) : null,
-        photoURL: data.photoURL ? String(data.photoURL) : null,
-        status: (data.status as UserStatus) ?? "active",
-        locale: String(data.locale ?? "en-IN"),
-        timezone: String(data.timezone ?? "Asia/Kolkata"),
-        createdAt: String(data.createdAt ?? ""),
-        updatedAt: String(data.updatedAt ?? ""),
-        consentVersion: data.consentVersion ? String(data.consentVersion) : null,
-        consentAt: data.consentAt ? String(data.consentAt) : null,
-        providers: Array.isArray(data.providers) ? data.providers.map(String) : [],
-        roles: sanitizeRoles(roleSnap.data()?.roles),
-      };
-    }),
-  );
-  return users;
+  const db = getDb();
+  const rows = await db.select().from(users).orderBy(desc(users.createdAt)).limit(limit);
+  const roles = await db.select().from(userRoles);
+  const byUser = new Map(roles.map((row) => [row.userId, row.roles]));
+  return rows.map((row) => ({ ...toProfile(row), roles: sanitizeRoles(byUser.get(row.id)) }));
 }
 
 export async function updateUserRoles(input: {
@@ -277,37 +263,34 @@ export async function updateUserRoles(input: {
   reason: string;
   requestId: string;
 }): Promise<Role[]> {
-  if (input.actorUid === input.targetUid) {
-    throw new AppError(403, "FORBIDDEN", "You cannot change your own roles.");
-  }
+  if (input.actorUid === input.targetUid) throw new AppError(403, "FORBIDDEN", "You cannot change your own roles.");
   const reason = input.reason.trim();
   if (reason.length < 3) {
     throw new AppError(400, "VALIDATION_ERROR", "A reason is required.", { reason: "Enter at least 3 characters." });
   }
   const nextRoles = sanitizeRoles(input.roles);
-
-  const db = adminDb();
-  const target = await db.collection("users").doc(input.targetUid).get();
-  if (!target.exists) throw new AppError(404, "NOT_FOUND", "That user does not exist.");
-
-  const currentSnap = await db.collection("userRoles").doc(input.targetUid).get();
-  const currentRoles = sanitizeRoles(currentSnap.data()?.roles);
+  const db = getDb();
+  const target = await findUserById(input.targetUid);
+  if (!target) throw new AppError(404, "NOT_FOUND", "That user does not exist.");
+  const currentSnap = await db.select().from(userRoles).where(eq(userRoles.userId, input.targetUid)).limit(1);
+  const currentRoles = sanitizeRoles(currentSnap[0]?.roles);
   assertRoleChange(input.actorRoles, currentRoles, nextRoles);
   if (currentRoles.includes("super_admin") && !nextRoles.includes("super_admin")) {
-    const supers = await db.collection("userRoles").where("roles", "array-contains", "super_admin").get();
-    const others = supers.docs.filter((doc) => doc.id !== input.targetUid);
-    if (others.length === 0) {
+    const supers = await db.select().from(userRoles).where(arrayContains(userRoles.roles, ["super_admin"]));
+    if (supers.filter((row) => row.userId !== input.targetUid).length === 0) {
       throw new AppError(422, "BUSINESS_RULE_FAILED", "Keep at least one super admin.");
     }
   }
-
   const now = nowIso();
-  await db.collection("userRoles").doc(input.targetUid).set({
-    uid: input.targetUid,
+  await db.insert(userRoles).values({
+    userId: input.targetUid,
     roles: nextRoles,
     grantedBy: input.actorUid,
-    grantedAt: currentSnap.data()?.grantedAt ?? now,
+    grantedAt: currentSnap[0]?.grantedAt ?? now,
     updatedAt: now,
+  }).onConflictDoUpdate({
+    target: userRoles.userId,
+    set: { roles: nextRoles, grantedBy: input.actorUid, updatedAt: now },
   });
   await recordAudit({
     actorUid: input.actorUid,
@@ -338,12 +321,10 @@ export async function updateUserStatus(input: {
   if (!["active", "disabled", "deletion_pending"].includes(input.status)) {
     throw new AppError(400, "VALIDATION_ERROR", "Unknown account status.", { status: "Choose a valid status." });
   }
-  const db = adminDb();
-  const ref = db.collection("users").doc(input.targetUid);
-  const snap = await ref.get();
-  if (!snap.exists) throw new AppError(404, "NOT_FOUND", "That user does not exist.");
+  const current = await findUserById(input.targetUid);
+  if (!current) throw new AppError(404, "NOT_FOUND", "That user does not exist.");
   const now = nowIso();
-  await ref.update({ status: input.status, updatedAt: now });
+  await getDb().update(users).set({ status: input.status, updatedAt: now }).where(eq(users.id, input.targetUid));
   await recordAudit({
     actorUid: input.actorUid,
     action: "user.status_updated",
@@ -353,4 +334,9 @@ export async function updateUserStatus(input: {
     requestId: input.requestId,
     occurredAt: now,
   });
+}
+
+export async function rolesFor(uid: string): Promise<Role[]> {
+  const rows = await getDb().select().from(userRoles).where(eq(userRoles.userId, uid)).limit(1);
+  return sanitizeRoles(rows[0]?.roles);
 }

@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
-import { adminDb } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { contentDocuments, entitlements, paymentEvents, paymentOrders, subscriptions } from "@/server/db/schema";
 import { apiOk, withApi } from "@/server/http";
 import { refreshIntegrations } from "@/server/integrations/store";
 import { paymentProviderById } from "@/server/payments/adapter";
@@ -11,14 +13,7 @@ import { nextSubscriptionStatus, subscriptionActionForPayment, type Subscription
 import type { PaymentOrderStatus } from "@/types/domain";
 
 function asOrderStatus(value: unknown): PaymentOrderStatus {
-  if (
-    value === "created" ||
-    value === "checkout_pending" ||
-    value === "paid_verified" ||
-    value === "failed" ||
-    value === "refunded" ||
-    value === "disputed"
-  ) {
+  if (value === "created" || value === "checkout_pending" || value === "paid_verified" || value === "failed" || value === "refunded" || value === "disputed") {
     return value;
   }
   throw new AppError(409, "STATE_CONFLICT", "The stored order status is not recognized.");
@@ -26,79 +21,56 @@ function asOrderStatus(value: unknown): PaymentOrderStatus {
 
 function asSubscriptionStatus(value: unknown): SubscriptionStatus {
   if (
-    value === "created" ||
-    value === "checkout_pending" ||
-    value === "active" ||
-    value === "past_due" ||
-    value === "grace_period" ||
-    value === "expired" ||
-    value === "cancelled_at_period_end" ||
-    value === "cancelled" ||
-    value === "refunded" ||
-    value === "disputed"
+    value === "created" || value === "checkout_pending" || value === "active" || value === "past_due" || value === "grace_period" ||
+    value === "expired" || value === "cancelled_at_period_end" || value === "cancelled" || value === "refunded" || value === "disputed"
   ) {
     return value;
   }
   return "created";
 }
 
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ provider: string }> },
-): Promise<Response> {
+export async function POST(request: Request, context: { params: Promise<{ provider: string }> }): Promise<Response> {
   return withApi(request, "POST /api/v1/webhooks/:provider", async ({ requestId }) => {
     const { provider: providerParam } = await context.params;
     await refreshIntegrations();
     const provider = paymentProviderById(providerParam.toLowerCase());
-    if (!provider || provider.id === "stub") {
-      throw new AppError(404, "NOT_FOUND", "Unknown payment provider.");
-    }
+    if (!provider || provider.id === "stub") throw new AppError(404, "NOT_FOUND", "Unknown payment provider.");
     const rawBody = await request.text();
     if (!provider.verifyWebhookSignature(rawBody, request.headers)) {
       throw new AppError(403, "FORBIDDEN", "The payment event signature could not be verified.");
     }
     const parsed = provider.parseWebhook(rawBody);
-    if (!parsed?.orderId) {
-      throw new AppError(422, "BUSINESS_RULE_FAILED", "The payment event could not be read.");
-    }
+    if (!parsed?.orderId) throw new AppError(422, "BUSINESS_RULE_FAILED", "The payment event could not be read.");
 
     const payloadHash = createHash("sha256").update(rawBody).digest("hex");
     const eventDocId = `${provider.id}_${parsed.providerEventId}`;
-    const db = adminDb();
-    const result = await db.runTransaction(async (tx) => {
-      const eventRef = db.collection("paymentEvents").doc(eventDocId);
-      const orderRef = db.collection("paymentOrders").doc(parsed.orderId as string);
-      const eventSnap = await tx.get(eventRef);
-      if (eventSnap.exists) {
-        return { duplicate: true, granted: false, status: null as string | null };
-      }
-      const orderSnap = await tx.get(orderRef);
-      if (!orderSnap.exists) {
-        throw new AppError(404, "NOT_FOUND", "No matching order.");
-      }
-      const data = orderSnap.data() ?? {};
-      const uid = String(data.uid ?? "");
-      const planId = String(data.planId ?? "");
+    const db = getDb();
+    const result = await db.transaction(async (tx) => {
+      const eventRows = await tx.select().from(paymentEvents).where(eq(paymentEvents.id, eventDocId)).limit(1);
+      if (eventRows[0]) return { duplicate: true, granted: false, status: null as string | null };
+      const orderRows = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, parsed.orderId as string)).limit(1);
+      const data = orderRows[0];
+      if (!data) throw new AppError(404, "NOT_FOUND", "No matching order.");
+      const uid = data.userId;
+      const planId = data.planId;
       const filePlan = loadPlans().plans.find((item) => item.id === planId);
-      const planSnap = planId ? await tx.get(db.collection("plans").doc(planId)) : null;
-      const storedPlan = planSnap?.data();
-      const plan = {
-        accessDays: typeof storedPlan?.accessDays === "number" ? storedPlan.accessDays : filePlan?.accessDays,
-      };
-      const planApproved = planSnap?.exists ? storedPlan?.approved === true : filePlan?.approved === true;
-      const entitlementRef = db.collection("userEntitlements").doc(uid);
-      const subscriptionRef = db.collection("subscriptions").doc(parsed.orderId as string);
-      const entitlementSnap = await tx.get(entitlementRef);
-      const subscriptionSnap = await tx.get(subscriptionRef);
+      const planRows = planId
+        ? await tx.select().from(contentDocuments).where(and(eq(contentDocuments.collection, "plans"), eq(contentDocuments.id, planId))).limit(1)
+        : [];
+      const storedPlan = planRows[0]?.body;
+      const plan = { accessDays: typeof storedPlan?.accessDays === "number" ? storedPlan.accessDays : filePlan?.accessDays };
+      const planApproved = planRows[0] ? storedPlan?.approved === true : filePlan?.approved === true;
+      const entitlementRows = await tx.select().from(entitlements).where(eq(entitlements.userId, uid)).limit(1);
+      const subscriptionRows = await tx.select().from(subscriptions).where(eq(subscriptions.id, parsed.orderId as string)).limit(1);
       const applied = applyPaymentEvent({
         order: {
           id: parsed.orderId as string,
           uid,
-          planId: String(data.planId ?? ""),
-          amountMinor: Number(data.amountMinor),
-          currency: String(data.currency ?? ""),
+          planId,
+          amountMinor: data.amountMinor,
+          currency: data.currency,
           status: asOrderStatus(data.status),
-          entitlementGranted: data.entitlementGranted === true,
+          entitlementGranted: data.entitlementGranted,
         },
         event: {
           providerEventId: parsed.providerEventId,
@@ -114,12 +86,11 @@ export async function POST(
       const now = new Date().toISOString();
       const days = effect === "grant" ? accessDaysForPlan(plan) : 0;
       const endsAt = effect === "grant" ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString() : null;
-
-      tx.set(eventRef, {
+      await tx.insert(paymentEvents).values({
         id: eventDocId,
         provider: provider.id,
         providerEventId: parsed.providerEventId,
-        orderId: parsed.orderId,
+        orderId: parsed.orderId as string,
         eventType: parsed.eventType,
         amountMinor: parsed.amountMinor,
         currency: parsed.currency,
@@ -127,56 +98,58 @@ export async function POST(
         payloadHash,
         receivedAt: now,
       });
-      tx.update(orderRef, {
+      await tx.update(paymentOrders).set({
         status: applied.order.status,
         entitlementGranted: applied.order.entitlementGranted,
-        verifiedAt: applied.order.status === "paid_verified" ? now : data.verifiedAt ?? null,
+        verifiedAt: applied.order.status === "paid_verified" ? now : data.verifiedAt,
         updatedAt: now,
-      });
+      }).where(eq(paymentOrders.id, data.id));
 
-      const currentSubscription = asSubscriptionStatus(subscriptionSnap.data()?.status);
+      const currentSubscription = asSubscriptionStatus(subscriptionRows[0]?.status);
       const nextSubscription = nextSubscriptionStatus(currentSubscription, subscriptionActionForPayment(parsed.eventType));
       if (nextSubscription) {
-        tx.set(
-          subscriptionRef,
-          {
-            id: parsed.orderId,
-            uid,
-            planId: String(data.planId ?? ""),
-            status: nextSubscription,
-            periodEnd: endsAt ?? subscriptionSnap.data()?.periodEnd ?? null,
-            updatedAt: now,
-            createdAt: subscriptionSnap.data()?.createdAt ?? now,
-          },
-          { merge: true },
-        );
+        await tx.insert(subscriptions).values({
+          id: parsed.orderId as string,
+          userId: uid,
+          planId,
+          status: nextSubscription,
+          periodEnd: endsAt ?? subscriptionRows[0]?.periodEnd ?? null,
+          createdAt: subscriptionRows[0]?.createdAt ?? now,
+          updatedAt: now,
+        }).onConflictDoUpdate({
+          target: subscriptions.id,
+          set: { status: nextSubscription, periodEnd: endsAt ?? subscriptionRows[0]?.periodEnd ?? null, updatedAt: now },
+        });
       }
 
-      const entitlement = entitlementSnap.data();
+      const entitlement = entitlementRows[0];
       if (effect === "grant") {
-        tx.set(entitlementRef, {
-          uid,
-          planId: String(data.planId ?? ""),
+        await tx.insert(entitlements).values({
+          userId: uid,
+          planId,
           status: "active",
           startsAt: now,
           endsAt,
-          sourceOrderId: parsed.orderId,
+          sourceOrderId: parsed.orderId as string,
           source: "payment",
           updatedAt: now,
-          version: Number(entitlement?.version ?? 0) + 1,
-        });
-      } else if (effect === "revoke" && entitlement?.source === "payment" && entitlement?.sourceOrderId === parsed.orderId) {
-        tx.set(
-          entitlementRef,
-          {
-            status: "revoked",
+          version: (entitlement?.version ?? 0) + 1,
+        }).onConflictDoUpdate({
+          target: entitlements.userId,
+          set: {
+            planId,
+            status: "active",
+            startsAt: now,
+            endsAt,
+            sourceOrderId: parsed.orderId as string,
+            source: "payment",
             updatedAt: now,
-            version: Number(entitlement?.version ?? 0) + 1,
+            version: (entitlement?.version ?? 0) + 1,
           },
-          { merge: true },
-        );
+        });
+      } else if (effect === "revoke" && entitlement?.source === "payment" && entitlement.sourceOrderId === parsed.orderId) {
+        await tx.update(entitlements).set({ status: "revoked", updatedAt: now, version: entitlement.version + 1 }).where(eq(entitlements.userId, uid));
       }
-
       return { duplicate: false, granted: effect === "grant", status: applied.order.status };
     });
 

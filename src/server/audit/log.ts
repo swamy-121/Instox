@@ -1,6 +1,7 @@
+import { desc } from "drizzle-orm";
 import { createId } from "@/lib/ids";
-import { adminDb } from "@/server/db/admin";
-import type { Firestore, Transaction } from "firebase-admin/firestore";
+import { getDb, type Database } from "@/server/db/client";
+import { auditLogs } from "@/server/db/schema";
 
 export type AuditInput = {
   actorUid: string;
@@ -11,6 +12,8 @@ export type AuditInput = {
   requestId: string;
   occurredAt?: string;
 };
+
+export type Executor = Pick<Database, "insert" | "select" | "update" | "delete">;
 
 export function auditPayload(input: AuditInput) {
   return {
@@ -25,15 +28,16 @@ export function auditPayload(input: AuditInput) {
   };
 }
 
-export function writeAudit(tx: Transaction, db: Firestore, input: AuditInput): string {
+export async function insertAudit(db: Executor, input: AuditInput): Promise<string> {
   const payload = auditPayload(input);
-  tx.set(db.collection("adminAuditLogs").doc(payload.id), payload);
+  await db.insert(auditLogs).values(payload);
   return payload.id;
 }
 
 export async function recordAudit(input: AuditInput): Promise<string> {
-  const db = adminDb();
-  const payload = auditPayload(input);
-  await db.collection("adminAuditLogs").doc(payload.id).set(payload);
-  return payload.id;
+  return insertAudit(getDb(), input);
+}
+
+export async function listAuditLogs(limit = 50) {
+  return getDb().select().from(auditLogs).orderBy(desc(auditLogs.occurredAt)).limit(limit);
 }

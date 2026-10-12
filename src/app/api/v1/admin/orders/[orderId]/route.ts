@@ -1,15 +1,14 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/server/audit/log";
 import { requireOperations } from "@/server/auth/operations";
-import { adminDb } from "@/server/db/admin";
+import { getDb } from "@/server/db/client";
+import { entitlements, paymentOrders, subscriptions } from "@/server/db/schema";
 import { apiOk, readJson, withApi } from "@/server/http";
 import { parseAdminOrderStatus } from "@/server/payments/order-admin";
 
-const bodySchema = z.object({
-  status: z.string(),
-  reason: z.string().trim().min(3).max(500),
-}).strict();
+const bodySchema = z.object({ status: z.string(), reason: z.string().trim().min(3).max(500) }).strict();
 
 type Params = { params: Promise<{ orderId: string }> };
 
@@ -17,58 +16,37 @@ export async function POST(request: Request, { params }: Params): Promise<Respon
   return withApi(request, "POST /api/v1/admin/orders/[orderId]", async ({ requestId }) => {
     const actor = await requireOperations(request, { recent: true });
     const { orderId } = await params;
-    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(orderId)) {
-      throw new AppError(404, "NOT_FOUND", "That order was not found.");
-    }
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(orderId)) throw new AppError(404, "NOT_FOUND", "That order was not found.");
     const parsed = bodySchema.safeParse(await readJson(request));
-    if (!parsed.success) {
-      throw new AppError(400, "VALIDATION_ERROR", "A status and a reason are required.", {
-        reason: "Enter a reason.",
-      });
-    }
+    if (!parsed.success) throw new AppError(400, "VALIDATION_ERROR", "A status and a reason are required.", { reason: "Enter a reason." });
     const status = parseAdminOrderStatus(parsed.data.status);
-    const db = adminDb();
-    const result = await db.runTransaction(async (tx) => {
-      const orderRef = db.collection("paymentOrders").doc(orderId);
-      const orderSnap = await tx.get(orderRef);
-      if (!orderSnap.exists) throw new AppError(404, "NOT_FOUND", "That order was not found.");
-      const data = orderSnap.data() ?? {};
-      const uid = String(data.uid ?? "");
-      const entitlementRef = db.collection("userEntitlements").doc(uid);
-      const subscriptionRef = db.collection("subscriptions").doc(orderId);
-      const entitlementSnap = await tx.get(entitlementRef);
-      const subscriptionSnap = await tx.get(subscriptionRef);
+    const db = getDb();
+    const result = await db.transaction(async (tx) => {
+      const orderRows = await tx.select().from(paymentOrders).where(eq(paymentOrders.id, orderId)).limit(1);
+      const data = orderRows[0];
+      if (!data) throw new AppError(404, "NOT_FOUND", "That order was not found.");
+      const entitlementRows = await tx.select().from(entitlements).where(eq(entitlements.userId, data.userId)).limit(1);
+      const subscriptionRows = await tx.select().from(subscriptions).where(eq(subscriptions.id, orderId)).limit(1);
       const now = new Date().toISOString();
-      const entitlement = entitlementSnap.data();
-      const revoke =
-        (status === "refunded" || status === "disputed") &&
-        entitlement?.source === "payment" &&
-        entitlement?.sourceOrderId === orderId;
-      const unchanged = String(data.status ?? "") === status && !revoke;
+      const entitlement = entitlementRows[0];
+      const revoke = (status === "refunded" || status === "disputed") && entitlement?.source === "payment" && entitlement.sourceOrderId === orderId;
+      const unchanged = data.status === status && !revoke;
       if (!unchanged) {
-        tx.update(orderRef, {
+        await tx.update(paymentOrders).set({
           status,
           statusReason: parsed.data.reason,
           statusUpdatedBy: actor.uid,
           updatedAt: now,
-        });
-        if (subscriptionSnap.exists) {
+        }).where(eq(paymentOrders.id, orderId));
+        if (subscriptionRows[0]) {
           const subscriptionStatus = status === "failed" ? "cancelled" : status;
-          tx.set(subscriptionRef, { status: subscriptionStatus, updatedAt: now }, { merge: true });
+          await tx.update(subscriptions).set({ status: subscriptionStatus, updatedAt: now }).where(eq(subscriptions.id, orderId));
         }
-        if (revoke) {
-          tx.set(
-            entitlementRef,
-            {
-              status: "revoked",
-              updatedAt: now,
-              version: Number(entitlement?.version ?? 0) + 1,
-            },
-            { merge: true },
-          );
+        if (revoke && entitlement) {
+          await tx.update(entitlements).set({ status: "revoked", updatedAt: now, version: entitlement.version + 1 }).where(eq(entitlements.userId, data.userId));
         }
       }
-      return { unchanged, revoked: revoke, uid };
+      return { unchanged, revoked: revoke, uid: data.userId };
     });
     if (!result.unchanged) {
       await recordAudit({
@@ -80,15 +58,6 @@ export async function POST(request: Request, { params }: Params): Promise<Respon
         requestId,
       });
     }
-    return apiOk(
-      {
-        id: orderId,
-        status,
-        unchanged: result.unchanged,
-        revoked: result.revoked,
-        granted: false,
-      },
-      requestId,
-    );
+    return apiOk({ id: orderId, status, unchanged: result.unchanged, revoked: result.revoked, granted: false }, requestId);
   });
 }

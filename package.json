@@ -12,15 +12,16 @@
     "lint": "eslint .",
     "typecheck": "node scripts/ensure-next-types.mjs && tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
-    "test:rules": "vitest run --config vitest.rules.config.ts",
-    "seed": "tsx scripts/seed.ts",
-    "emulators": "firebase emulators:start --project demo-instox"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.4",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.5.0",
     "lucide-react": "^1.55.0",
     "next": "^15.5.4",
+    "postgres": "^3.4.9",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "recharts": "^3.10.1",
@@ -28,14 +29,15 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^4.0.1",
+    "@electric-sql/pglite": "^0.3.16",
     "@types/node": "^22.18.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "autoprefixer": "^10.4.21",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.4",
-    "firebase-tools": "^14.17.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.5",

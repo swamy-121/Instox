@@ -16,6 +16,7 @@ export async function probeIntegration(group: IntegrationGroup, fetchImpl: Fetch
   if (group === "cashfree") return probeCashfree(value(fields, "CASHFREE_CLIENT_ID"), value(fields, "CASHFREE_CLIENT_SECRET"), fetchImpl);
   if (group === "aliceblue") return probeAlice(value(fields, "ALICEBLUE_APP_CODE"), value(fields, "ALICEBLUE_API_SECRET"), fetchImpl);
   if (group === "fcm") return probeFcm(value(fields, "NEXT_PUBLIC_FIREBASE_VAPID_KEY"));
+  if (group === "sms") return probeSms(value(fields, "APITXT_AUTHKEY"));
   return { ok: true, message: "The payment provider is saved. Remote checkout stays off." };
 }
 
@@ -72,6 +73,14 @@ async function probeAlice(appCode: string, apiSecret: string, fetchImpl: FetchLi
   } catch {
     return { ok: false, message: "Alice Blue did not respond." };
   }
+}
+
+function probeSms(authkey: string): ProbeResult {
+  if (!authkey) {
+    return { ok: true, message: "APITxT is not set, so sign-in codes are written to the server log." };
+  }
+  if (authkey.length < 8) return { ok: false, message: "That APITxT key looks too short." };
+  return { ok: true, message: "The APITxT key is saved. Phone codes are sent without a DLT template." };
 }
 
 function probeFcm(vapidKey: string): ProbeResult {

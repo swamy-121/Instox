@@ -1,9 +1,11 @@
 import features from "../../../../../config/features.json";
 import { requireActor } from "@/server/auth/actor";
+import { getDb } from "@/server/db/client";
+import { candleSeries } from "@/server/db/schema";
+import { readSetting } from "@/server/db/settings";
 import { apiOk, withApi } from "@/server/http";
 import type { Candle } from "@/server/indicators/formulas";
 import { loadRuntimeFlags } from "@/server/indicators/runtime";
-import { adminDb } from "@/server/db/admin";
 import { loadInstruments } from "@/server/market-data/catalog";
 import { runScreener } from "@/server/screener/engine";
 import { filtersFromSearchParams } from "@/server/screener/query";
@@ -23,15 +25,13 @@ export async function GET(request: Request): Promise<Response> {
     const now = new Date();
     const instruments = await loadInstruments();
     const flags = await loadRuntimeFlags();
-    const presetSnap = await adminDb().collection("appConfig").doc("screenerPresets").get();
-    const preset = presetSnap.exists ? presetSnap.data() ?? {} : {};
+    const preset = (await readSetting("screenerPresets")) ?? {};
     const rsiPeriod = periodParam(url.searchParams, "rsiPeriod", preset.rsiPeriod, features.indicatorDefaults.rsiPeriod);
     const emaPeriod = periodParam(url.searchParams, "emaPeriod", preset.emaPeriod, features.indicatorDefaults.emaPeriod);
-    const stored = await adminDb().collection("candleSeries").limit(100).get();
+    const stored = await getDb().select().from(candleSeries).limit(100);
     const candlesBySymbol: Record<string, Candle[]> = {};
-    for (const doc of stored.docs) {
-      const candles = doc.data().candles;
-      if (Array.isArray(candles)) candlesBySymbol[doc.id] = candles;
+    for (const row of stored) {
+      if (Array.isArray(row.candles)) candlesBySymbol[row.symbol] = row.candles as Candle[];
     }
     const screen = runScreener({
       instruments,
@@ -48,14 +48,11 @@ export async function GET(request: Request): Promise<Response> {
         supertrendMultiplier: features.indicatorDefaults.supertrendMultiplier,
       },
     });
-    return apiOk(
-      {
-        dataLabel: "Sample data",
-        live: false,
-        notice: "These rows use the candle series stored for each symbol. They are not a live scan.",
-        ...screen,
-      },
-      requestId,
-    );
+    return apiOk({
+      dataLabel: "Sample data",
+      live: false,
+      notice: "These rows use the candle series stored for each symbol. They are not a live scan.",
+      ...screen,
+    }, requestId);
   });
 }

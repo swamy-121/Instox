@@ -1,4 +1,4 @@
-export const INTEGRATION_GROUPS = ["payments", "razorpay", "cashfree", "aliceblue", "fcm"] as const;
+export const INTEGRATION_GROUPS = ["payments", "razorpay", "cashfree", "aliceblue", "fcm", "sms"] as const;
 export type IntegrationGroup = (typeof INTEGRATION_GROUPS)[number];
 
 export type IntegrationField = {
@@ -22,6 +22,7 @@ export const INTEGRATION_FIELDS: IntegrationField[] = [
   { key: "ALICEBLUE_API_SECRET", group: "aliceblue", label: "API secret", secret: true },
   { key: "FCM_SEND_MODE", group: "fcm", label: "Send mode", secret: false, options: ["token", "topic"] },
   { key: "NEXT_PUBLIC_FIREBASE_VAPID_KEY", group: "fcm", label: "Web push key", secret: true },
+  { key: "APITXT_AUTHKEY", group: "sms", label: "APITxT API key", secret: true },
 ];
 
 export const INTEGRATION_KEYS = INTEGRATION_FIELDS.map((field) => field.key);

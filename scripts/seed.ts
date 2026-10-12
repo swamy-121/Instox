@@ -1,12 +1,26 @@
 import { readFileSync } from "node:fs";
-import { cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
 import compliance from "../config/compliance.json";
 import features from "../config/features.json";
 import plans from "../config/plans.json";
+import { hashPassword } from "../src/server/auth/password";
+import { migrateDatabase, getDb } from "../src/server/db/client";
+import {
+  auditLogs,
+  entitlements as entitlementTable,
+  instruments,
+  notificationCampaigns,
+  paymentOrders,
+  referralAccounts,
+  referralCodes,
+  tipEvents,
+  tips as tipTable,
+  userRoles,
+  users as userTable,
+} from "../src/server/db/schema";
+import { writeSetting } from "../src/server/db/settings";
 import { sampleInstruments } from "../src/server/market-data/instruments";
 import { referralCodeFor } from "../src/server/referrals/logic";
+import { saveContent } from "../src/server/content/store";
 import { seedCatalog } from "./seed-content";
 
 function loadEnvFile(filePath: string) {
@@ -28,31 +42,10 @@ function loadEnvFile(filePath: string) {
 
 loadEnvFile(".env.local");
 
-const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-instox";
-const usingEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST);
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-if (usingEmulator && (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST)) {
-  console.error("Set both FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST, or neither.");
+if (!process.env.DATABASE_URL) {
+  console.error("Set DATABASE_URL before seeding. docker compose up -d starts Postgres.");
   process.exit(1);
 }
-
-if (!usingEmulator && (!clientEmail || !privateKey)) {
-  console.error("Set the emulator hosts, or set FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY for a real project.");
-  process.exit(1);
-}
-
-if (getApps().length === 0) {
-  if (!usingEmulator && clientEmail && privateKey) {
-    initializeApp({ credential: cert({ projectId, clientEmail, privateKey }), projectId });
-  } else {
-    initializeApp({ projectId });
-  }
-}
-
-const auth = getAuth();
-const db = getFirestore();
 
 const ADMIN_EMAIL = "admin@instox.app";
 const ADMIN_PASSWORD = "Instox-seed-1";
@@ -94,52 +87,65 @@ function sortKey(iso: string, id: string): string {
   return `${iso}_${id}`;
 }
 
-async function ensureAuthUser(user: SeedUser) {
-  const extras = user.email && user.password ? { email: user.email, password: user.password, emailVerified: true } : {};
-  try {
-    await auth.getUser(user.uid);
-    await auth.updateUser(user.uid, { displayName: user.displayName, phoneNumber: user.phoneNumber, ...extras });
-  } catch {
-    await auth.createUser({ uid: user.uid, displayName: user.displayName, phoneNumber: user.phoneNumber, ...extras });
-  }
-}
-
 async function main() {
+  await migrateDatabase();
+  const db = getDb();
   const now = "2026-10-11T09:00:00.000Z";
   for (const user of users) {
-    await ensureAuthUser(user);
-    await db.collection("users").doc(user.uid).set({
-      uid: user.uid,
+    await db.insert(userTable).values({
+      id: user.uid,
       displayName: user.displayName,
       email: user.email ?? null,
       phoneNumber: user.phoneNumber,
-      photoURL: null,
+      photoUrl: null,
       status: user.status,
       locale: "en-IN",
       timezone: "Asia/Kolkata",
+      passwordHash: user.password ? hashPassword(user.password) : null,
       createdAt: user.createdAt,
       updatedAt: now,
       consentVersion: compliance.consentVersion,
       consentAt: now,
-      providers: ["custom"],
+      providers: user.password ? ["password"] : ["phone"],
       tipPush: user.tipPush === true,
       marketingPush: false,
+    }).onConflictDoUpdate({
+      target: userTable.id,
+      set: {
+        displayName: user.displayName,
+        email: user.email ?? null,
+        phoneNumber: user.phoneNumber,
+        status: user.status,
+        passwordHash: user.password ? hashPassword(user.password) : null,
+        updatedAt: now,
+        tipPush: user.tipPush === true,
+        providers: user.password ? ["password"] : ["phone"],
+      },
     });
     const code = referralCodeFor(user.uid);
-    await db.collection("referralCodes").doc(code).set({ uid: user.uid, code, createdAt: now });
-    await db.collection("referralAccounts").doc(user.uid).set({
-      uid: user.uid,
+    await db.insert(referralCodes).values({ userId: user.uid, code, createdAt: now }).onConflictDoUpdate({
+      target: referralCodes.code,
+      set: { userId: user.uid },
+    });
+    await db.insert(referralAccounts).values({
+      userId: user.uid,
       code,
       conversions: 0,
       createdAt: now,
       updatedAt: now,
+    }).onConflictDoUpdate({
+      target: referralAccounts.userId,
+      set: { code, updatedAt: now },
     });
-    await db.collection("userRoles").doc(user.uid).set({
-      uid: user.uid,
+    await db.insert(userRoles).values({
+      userId: user.uid,
       roles: user.roles,
       grantedBy: "seed",
       grantedAt: now,
       updatedAt: now,
+    }).onConflictDoUpdate({
+      target: userRoles.userId,
+      set: { roles: user.roles, updatedAt: now },
     });
   }
 
@@ -152,12 +158,19 @@ async function main() {
     { uid: "seed_m10", planId: "pro_monthly", status: "revoked", startsAt: "2026-09-04T00:00:00.000Z", endsAt: "2026-10-04T00:00:00.000Z" },
   ];
   for (const row of entitlements) {
-    await db.collection("userEntitlements").doc(row.uid).set({
-      ...row,
+    await db.insert(entitlementTable).values({
+      userId: row.uid,
+      planId: row.planId,
+      status: row.status,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt,
       sourceOrderId: null,
       source: "seed",
       updatedAt: now,
       version: 1,
+    }).onConflictDoUpdate({
+      target: entitlementTable.userId,
+      set: { planId: row.planId, status: row.status, startsAt: row.startsAt, endsAt: row.endsAt, updatedAt: now },
     });
   }
 
@@ -394,7 +407,7 @@ async function main() {
   for (const tip of tips) {
     const createdAt = tip.createdAt;
     const updatedAt = tip.publishedAt ?? now;
-    await db.collection("tips").doc(tip.id).set({
+    const row = {
       ...base,
       ...tip,
       instrumentId: tip.symbol,
@@ -403,8 +416,9 @@ async function main() {
       featured: tip.id === "tip_seed_free" || tip.id === "tip_seed_reliance",
       publishedSort: tip.publishedAt ? sortKey(tip.publishedAt, tip.id) : null,
       updatedSort: sortKey(updatedAt, tip.id),
-    });
-    await db.collection("tipEvents").doc(`evt_${tip.id}`).set({
+    };
+    await db.insert(tipTable).values(row).onConflictDoUpdate({ target: tipTable.id, set: row });
+    await db.insert(tipEvents).values({
       id: `evt_${tip.id}`,
       tipId: tip.id,
       eventType: tip.status === "published" ? "published" : "draft_created",
@@ -417,29 +431,17 @@ async function main() {
       occurredAt: updatedAt,
       requestId: "req_seed",
       previous: null,
-    });
+    }).onConflictDoNothing();
   }
 
   for (const plan of plans.plans) {
-    await db.collection("plans").doc(plan.id).set(plan);
+    await saveContent("plans", plan);
   }
   for (const instrument of sampleInstruments()) {
-    await db.collection("instruments").doc(instrument.symbol).set(instrument);
+    await db.insert(instruments).values(instrument).onConflictDoUpdate({ target: instruments.symbol, set: instrument });
   }
-  await db.collection("appConfig").doc("screener").set({
-    ...features.indicators,
-    updatedBy: "seed",
-    updatedAt: now,
-  });
-  await db.collection("appConfig").doc("public").set({
-    key: "public",
-    value: { product: "instox", sampleData: true },
-    version: 1,
-    effectiveAt: now,
-    updatedBy: "seed",
-    updatedAt: now,
-  });
-  await db.collection("adminAuditLogs").doc("aud_seed").set({
+  await writeSetting("screener", { ...features.indicators, updatedBy: "seed", updatedAt: now }, "seed");
+  await db.insert(auditLogs).values({
     id: "aud_seed",
     actorUid: "seed",
     action: "seed.loaded",
@@ -448,7 +450,7 @@ async function main() {
     reason: "Loaded sample users and tips",
     occurredAt: now,
     requestId: "req_seed",
-  });
+  }).onConflictDoNothing();
 
   const orders = [
     { id: "ord_seed_aug", uid: "seed_m02", planId: "pro_monthly", amountMinor: 29900, createdAt: "2026-08-28T05:00:00.000Z" },
@@ -457,17 +459,30 @@ async function main() {
     { id: "ord_seed_oct8", uid: "seed_premium", planId: "pro_monthly", amountMinor: 29900, createdAt: "2026-10-08T05:00:00.000Z" },
   ];
   for (const order of orders) {
-    await db.collection("paymentOrders").doc(order.id).set({
-      ...order,
+    await db.insert(paymentOrders).values({
+      id: order.id,
+      userId: order.uid,
+      planId: order.planId,
       provider: "seed",
+      providerOrderId: null,
+      amountMinor: order.amountMinor,
       currency: "INR",
       status: "recorded",
+      idempotencyKey: null,
+      createdAt: order.createdAt,
+      expiresAt: null,
+      verifiedAt: null,
+      failureCode: null,
+      placeholder: true,
       entitlementGranted: false,
       updatedAt: now,
+    }).onConflictDoUpdate({
+      target: paymentOrders.id,
+      set: { amountMinor: order.amountMinor, status: "recorded", updatedAt: now },
     });
   }
 
-  await db.collection("notificationCampaigns").doc("camp_seed_open").set({
+  await db.insert(notificationCampaigns).values({
     id: "camp_seed_open",
     title: "Market open",
     body: "A stored alert for the history tab. Nothing was sent.",
@@ -478,9 +493,9 @@ async function main() {
     createdBy: "seed_admin",
     createdAt: "2026-10-10T04:30:00.000Z",
     reason: "Seeded history row",
-  });
+  }).onConflictDoNothing();
 
-  await db.collection("appConfig").doc("screenerPresets").set({
+  await writeSetting("screenerPresets", {
     rsiPeriod: 14,
     rsiBelow: 70,
     rsiAbove: 30,
@@ -490,10 +505,10 @@ async function main() {
     cprSide: "inside",
     updatedBy: "seed",
     updatedAt: now,
-  });
+  }, "seed");
 
-  await seedCatalog(db);
-  console.log("Seeded Auth and Firestore data.");
+  await seedCatalog();
+  console.log("Seeded Postgres.");
 }
 
 main().catch((error: unknown) => {

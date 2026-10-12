@@ -1,17 +1,12 @@
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import { createId } from "@/lib/ids";
-import { adminDb } from "@/server/db/admin";
-import { writeAudit } from "@/server/audit/log";
-import { assertPublishChecklist, planTransition, type TransitionResult } from "@/server/tips/lifecycle";
-import type {
-  CloseReason,
-  TipEvent,
-  TipRecord,
-  TipStatus,
-  TransitionAction,
-} from "@/types/domain";
 import type { TipInput } from "@/lib/validation/tip";
-import type { DocumentData, Firestore, Transaction } from "firebase-admin/firestore";
+import { insertAudit } from "@/server/audit/log";
+import { getDb } from "@/server/db/client";
+import { idempotencyKeys, tipEvents, tips } from "@/server/db/schema";
+import { assertPublishChecklist, planTransition, type TransitionResult } from "@/server/tips/lifecycle";
+import type { CloseReason, TipEvent, TipRecord, TipStatus, TransitionAction } from "@/types/domain";
 
 const SCHEMA_VERSION = 1;
 
@@ -34,38 +29,75 @@ export function decodeCursor(cursor: string | null): string | null {
   throw new AppError(400, "VALIDATION_ERROR", "That page cursor is not valid.", { cursor: "Invalid cursor." });
 }
 
-function asTip(id: string, data: DocumentData): TipRecord {
+function asTip(row: typeof tips.$inferSelect): TipRecord {
   return {
-    id,
-    symbol: String(data.symbol),
-    instrumentId: String(data.instrumentId ?? data.symbol),
-    segment: data.segment === "futures" || data.segment === "options" ? data.segment : "equity",
-    category: data.category,
-    side: data.side === "SELL" ? "SELL" : "BUY",
-    entryMin: Number(data.entryMin),
-    entryMax: data.entryMax == null ? null : Number(data.entryMax),
-    stopLoss: Number(data.stopLoss),
-    targets: Array.isArray(data.targets) ? data.targets : [],
-    optionType: data.optionType === "CE" || data.optionType === "PE" ? data.optionType : null,
-    strikePrice: data.strikePrice == null ? null : Number(data.strikePrice),
-    expiry: data.expiry ? String(data.expiry) : null,
-    underlying: data.underlying ? String(data.underlying) : null,
-    lotSize: data.lotSize == null ? null : Number(data.lotSize),
-    timeframe: String(data.timeframe ?? ""),
-    thesis: String(data.thesis ?? ""),
-    riskDisclosureVersion: String(data.riskDisclosureVersion ?? ""),
-    accessTier: data.accessTier === "premium" ? "premium" : "free",
-    status: data.status,
-    closeReason: data.closeReason ?? null,
-    publishedAt: data.publishedAt ? String(data.publishedAt) : null,
-    expiresAt: data.expiresAt ? String(data.expiresAt) : null,
-    createdBy: String(data.createdBy),
-    updatedBy: String(data.updatedBy),
-    createdAt: String(data.createdAt),
-    updatedAt: String(data.updatedAt),
-    schemaVersion: Number(data.schemaVersion ?? SCHEMA_VERSION),
-    version: Number(data.version ?? 1),
-    featured: data.featured === true,
+    id: row.id,
+    symbol: row.symbol,
+    instrumentId: row.instrumentId,
+    segment: row.segment === "futures" || row.segment === "options" ? row.segment : "equity",
+    category: row.category as TipRecord["category"],
+    side: row.side === "SELL" ? "SELL" : "BUY",
+    entryMin: row.entryMin,
+    entryMax: row.entryMax,
+    stopLoss: row.stopLoss,
+    targets: (row.targets ?? []) as TipRecord["targets"],
+    optionType: row.optionType === "CE" || row.optionType === "PE" ? row.optionType : null,
+    strikePrice: row.strikePrice,
+    expiry: row.expiry,
+    underlying: row.underlying,
+    lotSize: row.lotSize,
+    timeframe: row.timeframe,
+    thesis: row.thesis,
+    riskDisclosureVersion: row.riskDisclosureVersion,
+    accessTier: row.accessTier === "premium" ? "premium" : "free",
+    status: row.status as TipStatus,
+    closeReason: (row.closeReason as CloseReason | null) ?? null,
+    publishedAt: row.publishedAt,
+    expiresAt: row.expiresAt,
+    createdBy: row.createdBy,
+    updatedBy: row.updatedBy,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    schemaVersion: row.schemaVersion,
+    version: row.version,
+    featured: row.featured,
+  };
+}
+
+function tipValues(tip: TipRecord, publishedSort: string | null, updatedSort: string) {
+  return {
+    id: tip.id,
+    symbol: tip.symbol,
+    instrumentId: tip.instrumentId,
+    segment: tip.segment,
+    category: tip.category,
+    side: tip.side,
+    entryMin: tip.entryMin,
+    entryMax: tip.entryMax,
+    stopLoss: tip.stopLoss,
+    targets: tip.targets,
+    optionType: tip.optionType,
+    strikePrice: tip.strikePrice,
+    expiry: tip.expiry,
+    underlying: tip.underlying,
+    lotSize: tip.lotSize,
+    timeframe: tip.timeframe,
+    thesis: tip.thesis,
+    riskDisclosureVersion: tip.riskDisclosureVersion,
+    accessTier: tip.accessTier,
+    status: tip.status,
+    closeReason: tip.closeReason,
+    publishedAt: tip.publishedAt,
+    expiresAt: tip.expiresAt,
+    createdBy: tip.createdBy,
+    updatedBy: tip.updatedBy,
+    createdAt: tip.createdAt,
+    updatedAt: tip.updatedAt,
+    schemaVersion: tip.schemaVersion,
+    version: tip.version,
+    featured: tip.featured === true,
+    publishedSort,
+    updatedSort,
   };
 }
 
@@ -113,12 +145,14 @@ function snapshotTradingFields(tip: TipRecord): Partial<TipRecord> {
   };
 }
 
-export async function createDraft(input: {
-  tip: TipInput;
-  actorUid: string;
-  requestId: string;
-}): Promise<TipRecord> {
-  const db = adminDb();
+async function loadTip(db: Pick<ReturnType<typeof getDb>, "select">, tipId: string): Promise<TipRecord> {
+  const rows = await db.select().from(tips).where(eq(tips.id, tipId)).limit(1);
+  if (!rows[0]) throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
+  return asTip(rows[0]);
+}
+
+export async function createDraft(input: { tip: TipInput; actorUid: string; requestId: string }): Promise<TipRecord> {
+  const db = getDb();
   const now = new Date().toISOString();
   const id = createId("tip");
   const tip: TipRecord = {
@@ -134,28 +168,11 @@ export async function createDraft(input: {
     schemaVersion: SCHEMA_VERSION,
     version: 1,
   };
-  const event = eventFrom(
-    id,
-    "draft_created",
-    input.actorUid,
-    "Draft created",
-    input.requestId,
-    null,
-    "draft",
-    null,
-    1,
-    null,
-    now,
-  );
-
-  await db.runTransaction(async (tx) => {
-    tx.set(db.collection("tips").doc(id), {
-      ...tip,
-      publishedSort: null,
-      updatedSort: sortKey(now, id),
-    });
-    tx.set(db.collection("tipEvents").doc(event.id), event);
-    writeAudit(tx, db, {
+  const event = eventFrom(id, "draft_created", input.actorUid, "Draft created", input.requestId, null, "draft", null, 1, null, now);
+  await db.transaction(async (tx) => {
+    await tx.insert(tips).values(tipValues(tip, null, sortKey(now, id)));
+    await tx.insert(tipEvents).values({ ...event, previous: event.previous });
+    await insertAudit(tx, {
       actorUid: input.actorUid,
       action: "tip.draft_created",
       targetType: "tip",
@@ -165,16 +182,7 @@ export async function createDraft(input: {
       occurredAt: now,
     });
   });
-
   return tip;
-}
-
-async function loadTip(tx: Transaction, db: Firestore, tipId: string): Promise<TipRecord> {
-  const snap = await tx.get(db.collection("tips").doc(tipId));
-  if (!snap.exists) {
-    throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
-  }
-  return asTip(snap.id, snap.data() ?? {});
 }
 
 export async function updateTipContent(input: {
@@ -185,27 +193,20 @@ export async function updateTipContent(input: {
   actorUid: string;
   requestId: string;
 }): Promise<TipRecord> {
-  const db = adminDb();
+  const db = getDb();
   const now = new Date().toISOString();
   const reason = input.reason.trim();
   if (reason.length < 3) {
-    throw new AppError(400, "VALIDATION_ERROR", "A reason is required.", {
-      reason: "Enter a short reason (at least 3 characters).",
-    });
+    throw new AppError(400, "VALIDATION_ERROR", "A reason is required.", { reason: "Enter a short reason (at least 3 characters)." });
   }
-
-  return db.runTransaction(async (tx) => {
-    const current = await loadTip(tx, db, input.tipId);
+  return db.transaction(async (tx) => {
+    const current = await loadTip(tx, input.tipId);
     if (current.version !== input.expectedVersion) {
       throw new AppError(409, "STATE_CONFLICT", "This tip was updated by someone else. Reload it and try again.");
     }
     if (current.status !== "draft" && current.status !== "in_review" && current.status !== "published") {
       throw new AppError(409, "STATE_CONFLICT", "This tip can no longer be edited.");
     }
-    if (current.status === "published" && reason.length < 3) {
-      throw new AppError(400, "VALIDATION_ERROR", "A correction reason is required.", { reason: "Required." });
-    }
-
     const nextVersion = current.version + 1;
     const next: TipRecord = {
       ...current,
@@ -233,13 +234,12 @@ export async function updateTipContent(input: {
       snapshotTradingFields(current),
       now,
     );
-    tx.set(db.collection("tips").doc(current.id), {
-      ...next,
-      publishedSort: next.publishedAt ? sortKey(next.publishedAt, next.id) : null,
-      updatedSort: sortKey(now, next.id),
+    await tx.insert(tips).values(tipValues(next, next.publishedAt ? sortKey(next.publishedAt, next.id) : null, sortKey(now, next.id))).onConflictDoUpdate({
+      target: tips.id,
+      set: tipValues(next, next.publishedAt ? sortKey(next.publishedAt, next.id) : null, sortKey(now, next.id)),
     });
-    tx.set(db.collection("tipEvents").doc(event.id), event);
-    writeAudit(tx, db, {
+    await tx.insert(tipEvents).values(event);
+    await insertAudit(tx, {
       actorUid: input.actorUid,
       action: current.status === "published" ? "tip.content_corrected" : "tip.content_updated",
       targetType: "tip",
@@ -275,36 +275,24 @@ async function commitTransition(input: {
   checklist?: string[];
   idempotencyKey?: string;
 }): Promise<TipRecord> {
-  const db = adminDb();
+  const db = getDb();
   const now = new Date().toISOString();
-
   if (input.idempotencyKey) {
-    const existing = await db.collection("idempotencyKeys").doc(input.idempotencyKey).get();
-    if (existing.exists) {
-      const stored = existing.data();
-      if (stored?.tipId !== input.tipId || stored?.action !== input.action) {
+    const existing = await db.select().from(idempotencyKeys).where(eq(idempotencyKeys.id, input.idempotencyKey)).limit(1);
+    if (existing[0]) {
+      if (existing[0].tipId !== input.tipId || existing[0].action !== input.action) {
         throw new AppError(409, "STATE_CONFLICT", "That idempotency key was already used for a different action.");
       }
-      const tipSnap = await db.collection("tips").doc(input.tipId).get();
-      if (!tipSnap.exists) throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
-      return asTip(tipSnap.id, tipSnap.data() ?? {});
+      return loadTip(db, input.tipId);
     }
   }
-
-  return db.runTransaction(async (tx) => {
+  return db.transaction(async (tx) => {
     if (input.idempotencyKey) {
-      const keySnap = await tx.get(db.collection("idempotencyKeys").doc(input.idempotencyKey));
-      if (keySnap.exists) {
-        const tipSnap = await tx.get(db.collection("tips").doc(input.tipId));
-        if (!tipSnap.exists) throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
-        return asTip(tipSnap.id, tipSnap.data() ?? {});
-      }
+      const keySnap = await tx.select().from(idempotencyKeys).where(eq(idempotencyKeys.id, input.idempotencyKey)).limit(1);
+      if (keySnap[0]) return loadTip(tx, input.tipId);
     }
-
-    const current = await loadTip(tx, db, input.tipId);
-    if (input.action === "publish") {
-      assertPublishChecklist(input.checklist ?? []);
-    }
+    const current = await loadTip(tx, input.tipId);
+    if (input.action === "publish") assertPublishChecklist(input.checklist ?? []);
     const planned = planTransition({
       status: current.status,
       action: input.action,
@@ -327,13 +315,13 @@ async function commitTransition(input: {
       input.action === "publish" ? null : snapshotTradingFields(current),
       now,
     );
-    tx.set(db.collection("tips").doc(current.id), {
-      ...next,
-      publishedSort: next.publishedAt ? sortKey(next.publishedAt, next.id) : null,
-      updatedSort: sortKey(now, next.id),
+    const publishedSort = next.publishedAt ? sortKey(next.publishedAt, next.id) : null;
+    await tx.insert(tips).values(tipValues(next, publishedSort, sortKey(now, next.id))).onConflictDoUpdate({
+      target: tips.id,
+      set: tipValues(next, publishedSort, sortKey(now, next.id)),
     });
-    tx.set(db.collection("tipEvents").doc(event.id), event);
-    writeAudit(tx, db, {
+    await tx.insert(tipEvents).values(event);
+    await insertAudit(tx, {
       actorUid: input.actorUid,
       action: `tip.${planned.eventType}`,
       targetType: "tip",
@@ -343,7 +331,8 @@ async function commitTransition(input: {
       occurredAt: now,
     });
     if (input.idempotencyKey) {
-      tx.set(db.collection("idempotencyKeys").doc(input.idempotencyKey), {
+      await tx.insert(idempotencyKeys).values({
+        id: input.idempotencyKey,
         tipId: current.id,
         action: input.action,
         actorUid: input.actorUid,
@@ -391,29 +380,28 @@ function matchesMember(tip: TipRecord, filters: MemberFilters): boolean {
   if (filters.category && tip.category !== filters.category) return false;
   if (filters.accessTier && tip.accessTier !== filters.accessTier) return false;
   if (filters.featured && tip.featured !== true) return false;
-  if (filters.q) {
-    const needle = filters.q.toUpperCase();
-    if (!tip.symbol.includes(needle)) return false;
-  }
+  if (filters.q && !tip.symbol.includes(filters.q.toUpperCase())) return false;
   return true;
 }
 
 export async function listPublishedTips(filters: MemberFilters): Promise<{ tips: TipRecord[]; nextCursor: string | null }> {
-  const db = adminDb();
+  const db = getDb();
   const cursor = decodeCursor(filters.cursor);
   const matches: TipRecord[] = [];
   let lastSort = cursor;
   let scanned = 0;
-
   while (matches.length <= filters.limit && scanned < 200) {
-    let query = db.collection("tips").where("status", "==", "published").orderBy("publishedSort", "desc");
-    if (lastSort) query = query.startAfter(lastSort);
-    const snap = await query.limit(40).get();
-    if (snap.empty) break;
-    for (const doc of snap.docs) {
+    const rows = await db
+      .select()
+      .from(tips)
+      .where(and(eq(tips.status, "published"), lastSort ? lt(tips.publishedSort, lastSort) : undefined))
+      .orderBy(desc(tips.publishedSort))
+      .limit(40);
+    if (rows.length === 0) break;
+    for (const row of rows) {
       scanned += 1;
-      const tip = asTip(doc.id, doc.data());
-      lastSort = String(doc.data().publishedSort ?? "");
+      const tip = asTip(row);
+      lastSort = row.publishedSort ?? "";
       if (!matchesMember(tip, filters)) continue;
       matches.push(tip);
       if (matches.length > filters.limit) {
@@ -424,13 +412,9 @@ export async function listPublishedTips(filters: MemberFilters): Promise<{ tips:
         };
       }
     }
-    if (snap.size < 40) break;
+    if (rows.length < 40) break;
   }
-
-  return {
-    tips: matches.slice(0, filters.limit),
-    nextCursor: scanned >= 200 && lastSort ? encodeCursor(lastSort) : null,
-  };
+  return { tips: matches.slice(0, filters.limit), nextCursor: scanned >= 200 && lastSort ? encodeCursor(lastSort) : null };
 }
 
 export async function listAdminTips(filters: {
@@ -441,22 +425,23 @@ export async function listAdminTips(filters: {
   cursor: string | null;
   limit: number;
 }): Promise<{ tips: TipRecord[]; nextCursor: string | null }> {
-  const db = adminDb();
+  const db = getDb();
   const cursor = decodeCursor(filters.cursor);
   const matches: TipRecord[] = [];
   let lastSort = cursor;
   let scanned = 0;
-
   while (matches.length <= filters.limit && scanned < 200) {
-    let query = db.collection("tips").orderBy("updatedSort", "desc");
-    if (filters.status) query = db.collection("tips").where("status", "==", filters.status).orderBy("updatedSort", "desc");
-    if (lastSort) query = query.startAfter(lastSort);
-    const snap = await query.limit(40).get();
-    if (snap.empty) break;
-    for (const doc of snap.docs) {
+    const rows = await db
+      .select()
+      .from(tips)
+      .where(and(filters.status ? eq(tips.status, filters.status) : undefined, lastSort ? lt(tips.updatedSort, lastSort) : undefined))
+      .orderBy(desc(tips.updatedSort))
+      .limit(40);
+    if (rows.length === 0) break;
+    for (const row of rows) {
       scanned += 1;
-      const tip = asTip(doc.id, doc.data());
-      lastSort = String(doc.data().updatedSort ?? "");
+      const tip = asTip(row);
+      lastSort = row.updatedSort;
       if (filters.category && tip.category !== filters.category) continue;
       if (filters.author && tip.createdBy !== filters.author) continue;
       if (filters.q && !tip.symbol.includes(filters.q.toUpperCase())) continue;
@@ -469,45 +454,53 @@ export async function listAdminTips(filters: {
         };
       }
     }
-    if (snap.size < 40) break;
+    if (rows.length < 40) break;
   }
-  return {
-    tips: matches.slice(0, filters.limit),
-    nextCursor: scanned >= 200 && lastSort ? encodeCursor(lastSort) : null,
-  };
+  return { tips: matches.slice(0, filters.limit), nextCursor: scanned >= 200 && lastSort ? encodeCursor(lastSort) : null };
 }
 
 export async function getTip(tipId: string): Promise<TipRecord | null> {
-  const snap = await adminDb().collection("tips").doc(tipId).get();
-  if (!snap.exists) return null;
-  return asTip(snap.id, snap.data() ?? {});
+  const rows = await getDb().select().from(tips).where(eq(tips.id, tipId)).limit(1);
+  return rows[0] ? asTip(rows[0]) : null;
 }
 
 export async function deleteDraftTip(tipId: string): Promise<void> {
   const tip = await getTip(tipId);
   if (!tip) throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
-  if (tip.status !== "draft") {
-    throw new AppError(422, "BUSINESS_RULE_FAILED", "Only a draft can be deleted.");
-  }
-  await adminDb().collection("tips").doc(tipId).delete();
+  if (tip.status !== "draft") throw new AppError(422, "BUSINESS_RULE_FAILED", "Only a draft can be deleted.");
+  await getDb().delete(tips).where(eq(tips.id, tipId));
 }
 
 export async function listTipEvents(tipId: string): Promise<TipEvent[]> {
-  const snap = await adminDb()
-    .collection("tipEvents")
-    .where("tipId", "==", tipId)
-    .orderBy("occurredAt", "asc")
-    .get();
-  return snap.docs.map((doc) => doc.data() as TipEvent);
+  const rows = await getDb().select().from(tipEvents).where(eq(tipEvents.tipId, tipId)).orderBy(tipEvents.occurredAt);
+  return rows.map((row) => ({
+    id: row.id,
+    tipId: row.tipId,
+    eventType: row.eventType as TipEvent["eventType"],
+    oldStatus: row.oldStatus as TipStatus | null,
+    newStatus: row.newStatus as TipStatus | null,
+    oldVersion: row.oldVersion,
+    newVersion: row.newVersion,
+    reason: row.reason,
+    actorUid: row.actorUid,
+    occurredAt: row.occurredAt,
+    requestId: row.requestId,
+    previous: row.previous as TipEvent["previous"],
+  }));
 }
 
 export async function countTipsByStatus(): Promise<Record<string, number>> {
-  const statuses: TipStatus[] = ["draft", "in_review", "published", "closed", "cancelled", "expired"];
-  const entries = await Promise.all(
-    statuses.map(async (status) => {
-      const snap = await adminDb().collection("tips").where("status", "==", status).count().get();
-      return [status, snap.data().count] as const;
-    }),
-  );
-  return Object.fromEntries(entries);
+  const rows = await getDb()
+    .select({ status: tips.status, count: sql<number>`count(*)::int` })
+    .from(tips)
+    .groupBy(tips.status);
+  const counts: Record<string, number> = {};
+  for (const status of ["draft", "in_review", "published", "closed", "cancelled", "expired"]) counts[status] = 0;
+  for (const row of rows) counts[row.status] = Number(row.count);
+  return counts;
+}
+
+export async function listTipsByStatuses(statuses: TipStatus[], limit = 200): Promise<TipRecord[]> {
+  const rows = await getDb().select().from(tips).where(inArray(tips.status, statuses)).limit(limit);
+  return rows.map(asTip);
 }

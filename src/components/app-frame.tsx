@@ -72,13 +72,6 @@ export function AppFrame({
   if (state.status === "loading") return <BrandSplash label="Loading Instox" />;
 
   if (requireAuth || admin) {
-    if (state.status === "unconfigured") {
-      return (
-        <div className="mx-auto max-w-md px-4 py-16">
-          <ErrorState message="Sign-in is not available right now." />
-        </div>
-      );
-    }
     if (state.status === "signed_out") {
       if (admin) return <AdminLoginRedirect />;
       return (
