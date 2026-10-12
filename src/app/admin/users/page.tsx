@@ -1,9 +1,10 @@
 "use client";
 
 import { Eye, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { AdminTabs, AdminTitle, Pager, Pill, usePage } from "@/components/admin-ui";
+import { AdminTabs, AdminTitle, Pill } from "@/components/admin-ui";
+import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
 import { ConfirmDialog, EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -25,19 +26,21 @@ type AdminUser = {
 export default function UsersPage() {
   return (
     <AppFrame admin>
-      <Users />
+      <Suspense fallback={<LoadingState label="Loading users" />}>
+        <Users />
+      </Suspense>
     </AppFrame>
   );
 }
 
 function Users() {
   const { state } = useAuth();
+  const list = useListQuery();
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [counts, setCounts] = useState({ all: 0, free: 0, premium: 0 });
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("all");
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState("");
   const [view, setView] = useState<AdminUser | null>(null);
   const [pending, setPending] = useState<{ uid: string; roles: Role[]; status: UserStatus; reason: string } | null>(null);
   const [disableId, setDisableId] = useState<string | null>(null);
@@ -45,7 +48,7 @@ function Users() {
 
   function load() {
     setLoading(true);
-    apiFetch<{ users: AdminUser[] }>("/api/v1/admin/users").then((result) => {
+    apiFetch<{ users: AdminUser[]; counts: { all: number; free: number; premium: number }; total: number }>(`/api/v1/admin/users?${list.queryString(["q", "status", "plan", "from", "to"])}`).then((result) => {
       setLoading(false);
       if (!result.ok) {
         setError(result.message);
@@ -53,24 +56,15 @@ function Users() {
       }
       setError(null);
       setUsers(result.data.users);
+      setCounts(result.data.counts);
+      setTotal(result.data.total);
     });
   }
 
   useEffect(() => {
     if (state.status === "ready") load();
-  }, [state.status]);
-
-  const filtered = useMemo(() => {
-    return users.filter((user) => {
-      if (tab === "free" && user.planId !== "free") return false;
-      if (tab === "premium" && user.planId === "free") return false;
-      if (status && user.status !== status) return false;
-      if (!q.trim()) return true;
-      const hay = `${user.displayName} ${user.email ?? ""} ${user.phoneNumber ?? ""} ${user.uid}`.toLowerCase();
-      return hay.includes(q.trim().toLowerCase());
-    });
-  }, [q, status, tab, users]);
-  const pager = usePage(filtered, 8);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status, list.search]);
 
   if (state.status === "ready" && !state.me.roles.some((role) => role === "support" || role === "admin" || role === "super_admin")) {
     return <PermissionDenied message="User records are limited to support and administrators." />;
@@ -112,11 +106,8 @@ function Users() {
     load();
   }
 
-  const counts = {
-    all: users.length,
-    free: users.filter((user) => user.planId === "free").length,
-    premium: users.filter((user) => user.planId !== "free").length,
-  };
+  const plan = list.search.get("plan") ?? "all";
+  const status = list.search.get("status") ?? "";
 
   return (
     <div>
@@ -128,32 +119,23 @@ function Users() {
             { id: "free", label: "Free", count: counts.free },
             { id: "premium", label: "Premium", count: counts.premium },
           ]}
-          value={tab}
-          onChange={(id) => {
-            setTab(id);
-            pager.setPage(1);
-          }}
+          value={plan}
+          onChange={(id) => list.set({ plan: id === "all" ? null : id })}
         />
-        <form
-          className="flex flex-wrap gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            pager.setPage(1);
-          }}
-        >
-          <input className="field h-10 w-56" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search by name, phone, email" aria-label="Search users" />
-          <select className="field h-10 w-36" value={status} aria-label="Filter" onChange={(event) => setStatus(event.target.value)}>
-            <option value="">Filter</option>
-            {USER_STATUSES.map((item) => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-        </form>
+        <select className="field h-10 w-44" value={status} aria-label="Status" onChange={(event) => list.set({ status: event.target.value })}>
+          <option value="">Any status</option>
+          {USER_STATUSES.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
+      </div>
+      <div className="mt-3">
+        <ListBar placeholder="Name, phone, or email" showDates />
       </div>
       {error ? <div className="mt-4"><ErrorState message={error} onRetry={load} /></div> : null}
       {loading && users.length === 0 ? <div className="mt-4"><LoadingState label="Loading users" /></div> : null}
-      {!loading && !error && filtered.length === 0 ? <div className="mt-4"><EmptyState title="No users" body="No accounts match this filter." /></div> : null}
-      {filtered.length > 0 ? (
+      {!loading && !error && users.length === 0 ? <div className="mt-4"><EmptyState title="No users" body="No accounts match this filter." /></div> : null}
+      {users.length > 0 ? (
         <div className="card mt-4 overflow-x-auto">
           <table className="w-full min-w-[48rem] text-left text-sm">
             <thead>
@@ -167,7 +149,7 @@ function Users() {
               </tr>
             </thead>
             <tbody>
-              {pager.slice.map((user) => (
+              {users.map((user) => (
                 <tr key={user.uid} className="border-b border-line last:border-0">
                   <td className="px-3 py-3 font-medium text-ink">{user.displayName}</td>
                   <td className="px-3 py-3">{user.phoneNumber ?? ""}</td>
@@ -204,9 +186,9 @@ function Users() {
               ))}
             </tbody>
           </table>
-          <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
         </div>
       ) : null}
+      {!loading && !error ? <ListPager total={total} page={list.page} pageSize={list.pageSize} /> : null}
       {view ? (
         <section className="card mt-4 text-sm">
           <h2 className="font-semibold text-ink">{view.displayName}</h2>

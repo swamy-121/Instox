@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { StockAvatar } from "@/components/illustrations";
+import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
@@ -14,13 +15,17 @@ type Quote = { symbol: string; last: number; changePct: number };
 export default function WatchlistPage() {
   return (
     <AppFrame requireAuth>
-      <Body />
+      <Suspense fallback={<LoadingState label="Loading watchlist" />}>
+        <Body />
+      </Suspense>
     </AppFrame>
   );
 }
 
 function Body() {
+  const list = useListQuery();
   const [items, setItems] = useState<Item[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [symbol, setSymbol] = useState("");
@@ -28,7 +33,7 @@ function Body() {
   function load() {
     setError(null);
     Promise.all([
-      apiFetch<{ items: Item[] }>("/api/v1/watchlist"),
+      apiFetch<{ items: Item[]; total: number }>(`/api/v1/watchlist?${list.queryString(["q"])}`),
       apiFetch<{ records: Quote[] }>("/api/v1/content/indices"),
     ]).then(([list, market]) => {
       if (!list.ok) {
@@ -36,13 +41,15 @@ function Body() {
         return;
       }
       setItems(list.data.items);
+      setTotal(list.data.total);
       if (market.ok) setQuotes(market.data.records);
     });
   }
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.search]);
 
   async function add(event: React.FormEvent) {
     event.preventDefault();
@@ -68,7 +75,8 @@ function Body() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Watchlist</h1>
+      <h1 className="text-xl font-semibold text-ink">Watchlist</h1>
+      <ListBar placeholder="Symbol" />
       <form className="flex gap-2" onSubmit={(event) => void add(event)}>
         <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} placeholder="Symbol" aria-label="Symbol" />
         <button className="btn-primary shrink-0" type="submit">Add symbol</button>
@@ -94,6 +102,7 @@ function Body() {
           );
         })}
       </ul>
+      {items ? <ListPager total={total} page={list.page} pageSize={list.pageSize} /> : null}
     </div>
   );
 }

@@ -3,7 +3,8 @@ import { requireActor } from "@/server/auth/actor";
 import { canEditTips } from "@/server/authorization/roles";
 import { apiOk, readJson, withApi } from "@/server/http";
 import { validateTipInput } from "@/lib/validation/tip";
-import { createDraft, listAdminTips } from "@/server/tips/repo";
+import { readPage } from "@/lib/list-page";
+import { createDraft, listAdminTips, listAdminTipsPage } from "@/server/tips/repo";
 import { TIP_CATEGORIES, TIP_STATUSES } from "@/types/domain";
 
 function limitOf(url: URL): number {
@@ -26,6 +27,20 @@ export async function GET(request: Request): Promise<Response> {
     }
     if (category && !TIP_CATEGORIES.includes(category as (typeof TIP_CATEGORIES)[number])) {
       throw new AppError(400, "VALIDATION_ERROR", "Unknown category.", { category: "Choose a known category." });
+    }
+    const paging = readPage(url.searchParams);
+    if (paging.paged) {
+      const result = await listAdminTipsPage({
+        status,
+        category,
+        q: url.searchParams.get("q")?.trim().slice(0, 32) || undefined,
+        author: url.searchParams.get("author")?.trim() || undefined,
+        from: url.searchParams.get("from"),
+        to: url.searchParams.get("to"),
+        page: paging.page,
+        pageSize: paging.pageSize,
+      });
+      return apiOk({ tips: result.tips, total: result.total, page: result.page, pageSize: result.pageSize }, requestId);
     }
     const result = await listAdminTips({
       status,

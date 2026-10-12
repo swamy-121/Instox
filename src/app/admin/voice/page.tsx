@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTitle, Pill } from "@/components/admin-ui";
+import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
 import { ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -158,6 +159,89 @@ function VoiceCampaigns() {
         </label>
         <button className="btn-primary" type="submit">{editing ? "Save script" : "Create campaign"}</button>
       </form>
+      <Suspense fallback={<LoadingState label="Loading calls" />}>
+        <CallList />
+      </Suspense>
     </div>
+  );
+}
+
+type CallRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  provider: string;
+  status: string;
+  durationSeconds: number | null;
+  simulated: boolean;
+  createdAt: string;
+};
+
+function CallList() {
+  const list = useListQuery();
+  const [calls, setCalls] = useState<CallRow[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    apiFetch<{ calls: CallRow[]; total: number }>(`/api/v1/admin/voice/calls?${list.queryString(["q", "status", "from", "to"])}`).then((result) => {
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setError(null);
+      setCalls(result.data.calls);
+      setTotal(result.data.total);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.search, retry]);
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-base font-semibold text-ink">Calls</h2>
+      <div className="flex flex-wrap items-end gap-2">
+        <label>
+          <span className="label">Status</span>
+          <select className="field w-40" value={list.search.get("status") ?? ""} aria-label="Call status" onChange={(event) => list.set({ status: event.target.value })}>
+            <option value="">Any status</option>
+            {["queued", "ringing", "in_progress", "completed", "failed", "no_answer"].map((item) => (
+              <option key={item} value={item}>{item.replaceAll("_", " ")}</option>
+            ))}
+          </select>
+        </label>
+        <div className="min-w-[16rem] flex-1">
+          <ListBar placeholder="Name or phone" showDates />
+        </div>
+      </div>
+      {error ? <ErrorState message={error} onRetry={() => setRetry((value) => value + 1)} /> : null}
+      {!calls && !error ? <LoadingState label="Loading calls" /> : null}
+      {calls && calls.length === 0 ? <p className="text-sm text-muted">No calls match.</p> : null}
+      {calls && calls.length > 0 ? (
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-line text-xs text-muted">
+                <th className="px-3 py-2 font-medium">Person</th>
+                <th className="px-3 py-2 font-medium">Provider</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calls.map((call) => (
+                <tr key={call.id} className="border-b border-line last:border-0">
+                  <td className="px-3 py-2 font-medium text-ink">{call.name || call.phone || "Unknown"}</td>
+                  <td className="px-3 py-2">{call.simulated ? "dev" : call.provider}</td>
+                  <td className="px-3 py-2">{call.status}</td>
+                  <td className="px-3 py-2 tabular-nums">{call.durationSeconds == null ? "" : `${call.durationSeconds}s`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      {calls ? <ListPager total={total} page={list.page} pageSize={list.pageSize} /> : null}
+    </section>
   );
 }

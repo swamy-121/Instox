@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import { createId } from "@/lib/ids";
+import { inDateRange, slicePage } from "@/lib/list-page";
 import type { TipInput } from "@/lib/validation/tip";
 import { insertAudit } from "@/server/audit/log";
 import { getDb } from "@/server/db/client";
@@ -457,6 +458,73 @@ export async function listAdminTips(filters: {
     if (rows.length < 40) break;
   }
   return { tips: matches.slice(0, filters.limit), nextCursor: scanned >= 200 && lastSort ? encodeCursor(lastSort) : null };
+}
+
+function matchesSegment(tip: TipRecord, segment: string | undefined): boolean {
+  if (!segment || segment === "all") return true;
+  if (segment === "equity") return tip.category === "equity";
+  if (segment === "options") return tip.category === "options";
+  return tip.category === "futures" || tip.category === "options";
+}
+
+function matchesDuration(tip: TipRecord, duration: string | undefined): boolean {
+  if (!duration || duration === "all") return true;
+  const frame = tip.timeframe.toLowerCase();
+  if (duration === "intraday") return tip.category === "intraday" || frame.includes("same session") || frame.includes("intraday");
+  if (duration === "short_term") return tip.category === "short_term" || frame.includes("week");
+  if (duration === "btst") return tip.category === "btst" || frame.includes("btst");
+  return true;
+}
+
+export async function listPublishedTipsPage(filters: {
+  category?: string;
+  accessTier?: string;
+  q?: string;
+  segment?: string;
+  duration?: string;
+  side?: string;
+  from?: string | null;
+  to?: string | null;
+  page: number;
+  pageSize: number;
+}): Promise<{ tips: TipRecord[]; total: number; page: number; pageSize: number }> {
+  const rows = await getDb().select().from(tips).where(eq(tips.status, "published")).orderBy(desc(tips.publishedSort));
+  const matches = rows.map(asTip).filter((tip) => {
+    if (filters.category && tip.category !== filters.category) return false;
+    if (filters.accessTier && tip.accessTier !== filters.accessTier) return false;
+    if (filters.q && !tip.symbol.includes(filters.q.toUpperCase())) return false;
+    if (filters.side && tip.side !== filters.side) return false;
+    if (!matchesSegment(tip, filters.segment)) return false;
+    if (!matchesDuration(tip, filters.duration)) return false;
+    return inDateRange(tip.publishedAt, filters.from ?? null, filters.to ?? null);
+  });
+  const window = slicePage(matches, filters.page, filters.pageSize);
+  return { tips: window.items, total: window.total, page: window.page, pageSize: window.pageSize };
+}
+
+export async function listAdminTipsPage(filters: {
+  status?: string;
+  category?: string;
+  q?: string;
+  author?: string;
+  from?: string | null;
+  to?: string | null;
+  page: number;
+  pageSize: number;
+}): Promise<{ tips: TipRecord[]; total: number; page: number; pageSize: number }> {
+  const rows = await getDb()
+    .select()
+    .from(tips)
+    .where(filters.status ? eq(tips.status, filters.status) : undefined)
+    .orderBy(desc(tips.updatedSort));
+  const matches = rows.map(asTip).filter((tip) => {
+    if (filters.category && tip.category !== filters.category) return false;
+    if (filters.author && tip.createdBy !== filters.author) return false;
+    if (filters.q && !tip.symbol.includes(filters.q.toUpperCase())) return false;
+    return inDateRange(tip.updatedAt, filters.from ?? null, filters.to ?? null);
+  });
+  const window = slicePage(matches, filters.page, filters.pageSize);
+  return { tips: window.items, total: window.total, page: window.page, pageSize: window.pageSize };
 }
 
 export async function getTip(tipId: string): Promise<TipRecord | null> {

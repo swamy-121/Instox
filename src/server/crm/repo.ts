@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
+import { inDateRange } from "@/lib/list-page";
 import { createId } from "@/lib/ids";
 import { toE164 } from "@/lib/phone";
 import { normalizePhone } from "@/server/auth/credentials";
@@ -95,6 +96,10 @@ export async function listContacts(filter: {
   trialEnding?: boolean;
   churned?: boolean;
   q?: string;
+  kind?: string;
+  tag?: string;
+  from?: string | null;
+  to?: string | null;
 }): Promise<ContactListItem[]> {
   await syncMemberContacts();
   const rows = await getDb().select().from(crmContacts).orderBy(desc(crmContacts.updatedAt));
@@ -106,6 +111,9 @@ export async function listContacts(filter: {
       if (filter.churned && row.stage !== "churned") return false;
       if (filter.stage && row.stage !== filter.stage) return false;
       if (filter.planId && row.planId !== filter.planId) return false;
+      if (filter.kind && row.kind !== filter.kind) return false;
+      if (filter.tag && !(row.tags ?? []).some((tag) => tag.toLowerCase() === filter.tag?.toLowerCase())) return false;
+      if (!inDateRange(row.updatedAt, filter.from ?? null, filter.to ?? null)) return false;
       if (filter.trialEnding) {
         const trial = row.trialEndsAt ? Date.parse(row.trialEndsAt) : Number.NaN;
         const ending = Number.isFinite(trial) && trial >= now - 24 * 60 * 60 * 1000 && trial <= soon;
