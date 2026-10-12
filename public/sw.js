@@ -1,5 +1,5 @@
-const CACHE = "instox-static-v3";
-const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/brand/wordmark.png", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE = "instox-static-v4";
+const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/brand/wordmark.png", "/brand/logo.png", "/icons/icon-192.png", "/icons/icon-512.png"];
 const STATIC_EXT = /\.(?:png|svg|ico|webp|woff2)$/i;
 
 self.addEventListener("install", (event) => {

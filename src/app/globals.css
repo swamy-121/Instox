@@ -142,6 +142,113 @@ body {
   }
 }
 
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 78% 52% at 50% 38%, rgba(2, 115, 50, 0.14), rgba(2, 115, 50, 0) 70%),
+    #f4fbf7;
+  color: #013316;
+}
+
+.splash-logo {
+  display: flex;
+  height: 33%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-logo-img {
+  height: auto;
+  width: min(86vw, 340px);
+}
+
+.splash-hero {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 1.25rem 12vh;
+}
+
+.splash-tagline {
+  margin: 0.35rem 0 0;
+  max-width: 16rem;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #4f6b5e;
+}
+
+.splash-progress {
+  position: absolute;
+  right: 22%;
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+  left: 22%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(2, 115, 50, 0.14);
+}
+
+.splash-progress-fill,
+.splash-progress-indeterminate {
+  display: block;
+  height: 100%;
+  background: #027332;
+}
+
+.splash-progress-fill {
+  width: 100%;
+  transform: scaleX(1);
+  transform-origin: left center;
+  animation: splash-progress 2.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.splash-progress-indeterminate {
+  width: 38%;
+  border-radius: inherit;
+  animation: splash-slide 1.15s ease-in-out infinite;
+}
+
+.splash-rise {
+  animation: splash-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.splash-rise-delay {
+  animation-delay: 90ms;
+}
+
+@keyframes splash-rise {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes splash-slide {
+  0% { transform: translateX(-130%); }
+  100% { transform: translateX(320%); }
+}
+
 @keyframes confetti-fall {
   0% { transform: translateY(-12px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(280px) rotate(220deg); opacity: 0; }

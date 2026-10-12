@@ -18,35 +18,62 @@ export function StockAvatar({ symbol, className = "h-11 w-11 text-xs" }: { symbo
 }
 
 export function SplashArt() {
+  const rawId = useId().replace(/:/g, "");
+  const bull = `bull-${rawId}`;
+  const bars = `bars-${rawId}`;
+  const arrow = `arrow-${rawId}`;
+  const glow = `glow-${rawId}`;
   return (
-    <svg viewBox="0 0 360 210" className="mt-4 h-56 w-full max-w-sm" aria-hidden="true">
-      <line x1="24" y1="186" x2="336" y2="186" stroke="#D3E3DB" strokeWidth="3" strokeLinecap="round" />
-      <g stroke="#027332" strokeWidth="2">
-        <line x1="48" y1="112" x2="48" y2="172" />
-        <line x1="80" y1="92" x2="80" y2="166" />
-        <line x1="112" y1="74" x2="112" y2="160" />
-        <line x1="144" y1="56" x2="144" y2="152" />
-        <line x1="176" y1="42" x2="176" y2="146" />
+    <svg viewBox="0 0 400 250" className="h-auto w-full max-w-[420px]" aria-hidden="true">
+      <defs>
+        <linearGradient id={bull} x1="0.05" y1="0" x2="0.9" y2="1">
+          <stop offset="0%" stopColor="#C8F6D4" />
+          <stop offset="24%" stopColor="#5ED48A" />
+          <stop offset="58%" stopColor="#027332" />
+          <stop offset="100%" stopColor="#014F22" />
+        </linearGradient>
+        <linearGradient id={bars} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor="#025A28" />
+          <stop offset="100%" stopColor="#8FE3A4" />
+        </linearGradient>
+        <linearGradient id={arrow} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#8FE3A4" />
+          <stop offset="100%" stopColor="#027332" />
+        </linearGradient>
+        <radialGradient id={glow} cx="62%" cy="46%" r="46%">
+          <stop offset="0%" stopColor="#027332" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#027332" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="240" cy="132" rx="150" ry="72" fill={`url(#${glow})`} />
+      <ellipse cx="255" cy="214" rx="108" ry="8" fill="#027332" opacity="0.12" />
+      <g>
+        <line x1="34" y1="196" x2="34" y2="162" stroke="#1C9A4C" strokeWidth="2" strokeLinecap="round" />
+        <rect x="25" y="170" width="18" height="26" rx="4" fill={`url(#${bars})`} />
+        <line x1="66" y1="196" x2="66" y2="142" stroke="#1C9A4C" strokeWidth="2" strokeLinecap="round" />
+        <rect x="57" y="152" width="18" height="44" rx="4" fill={`url(#${bars})`} />
+        <line x1="98" y1="196" x2="98" y2="116" stroke="#027332" strokeWidth="2" strokeLinecap="round" />
+        <rect x="89" y="128" width="18" height="68" rx="4" fill={`url(#${bars})`} />
+        <line x1="130" y1="196" x2="130" y2="90" stroke="#027332" strokeWidth="2" strokeLinecap="round" />
+        <rect x="121" y="104" width="18" height="92" rx="4" fill="#14924A" />
+        <line x1="162" y1="196" x2="162" y2="66" stroke="#025A28" strokeWidth="2.2" strokeLinecap="round" />
+        <rect x="153" y="82" width="18" height="114" rx="4" fill="#027332" />
       </g>
-      <rect x="40" y="128" width="16" height="30" rx="2" fill="#027332" />
-      <rect x="72" y="108" width="16" height="40" rx="2" fill="#0F7A45" />
-      <rect x="104" y="90" width="16" height="48" rx="2" fill="#027332" />
-      <rect x="136" y="72" width="16" height="56" rx="2" fill="#0194A8" />
-      <rect x="168" y="58" width="16" height="64" rx="2" fill="#027332" />
-      <ellipse cx="246" cy="132" rx="74" ry="36" fill="#027332" />
-      <path d="M292 112c22-10 40-2 48 16 2 16-12 28-30 24-12-10-18-22-18-40Z" fill="#027332" />
-      <ellipse cx="332" cy="108" rx="28" ry="20" fill="#025A28" />
-      <ellipse cx="354" cy="116" rx="12" ry="8" fill="#013316" />
-      <circle cx="340" cy="102" r="3.2" fill="#fff" />
-      <circle cx="341" cy="102" r="1.5" fill="#013316" />
-      <path d="M316 92c-8-26 10-40 20-30" fill="none" stroke="#013316" strokeWidth="5" strokeLinecap="round" />
-      <path d="M328 86c4-28 24-32 26-16" fill="none" stroke="#013316" strokeWidth="5" strokeLinecap="round" />
-      <path d="M308 100c-8-10-4-18 4-16" fill="#025A28" />
-      <rect x="196" y="156" width="14" height="30" rx="5" fill="#025A28" />
-      <rect x="222" y="160" width="14" height="26" rx="5" fill="#025A28" />
-      <rect x="262" y="158" width="14" height="28" rx="5" fill="#025A28" />
-      <rect x="288" y="154" width="14" height="32" rx="5" fill="#025A28" />
-      <path d="M174 124c-18 6-22 26-8 34" fill="none" stroke="#027332" strokeWidth="6" strokeLinecap="round" />
+      <path d="M26 154 C 64 146, 100 108, 138 58" fill="none" stroke={`url(#${arrow})`} strokeWidth="7" strokeLinecap="round" />
+      <path d="M124 40 L170 18 L146 70 Z" fill="#027332" />
+      <g transform="translate(128,8)">
+        <path
+          fill={`url(#${bull})`}
+          d="M 18 72 C 4 60 6 36 26 34 C 32 20 50 18 56 34 C 50 52 36 64 42 80 C 28 92 14 108 28 126 L 48 126 L 52 92 C 66 100 78 96 82 110 L 78 156 L 100 156 L 106 104 C 132 114 166 110 186 98 L 180 156 L 204 156 L 210 104 C 226 118 252 100 266 80 C 280 64 268 50 250 58 C 242 38 264 20 280 36 C 298 20 318 34 310 56 C 328 48 348 64 334 84 C 324 102 302 106 286 94 C 276 112 248 124 224 114 C 216 100 202 92 192 88 C 176 68 146 52 116 58 C 88 64 64 78 52 72 C 40 54 24 56 20 72 Z"
+        />
+        <path d="M64 56 C108 40 160 46 198 68" fill="none" stroke="#fff" strokeWidth="11" strokeLinecap="round" opacity="0.3" />
+        <path d="M176 50 C166 24 184 6 200 24" fill="none" stroke="#F7FBF8" strokeWidth="4.5" strokeLinecap="round" />
+        <path d="M214 44 C230 18 258 14 262 38" fill="none" stroke="#F7FBF8" strokeWidth="4.5" strokeLinecap="round" />
+        <circle cx="286" cy="74" r="6.2" fill="#fff" />
+        <circle cx="288.2" cy="74" r="3.1" fill="#013316" />
+        <circle cx="289.3" cy="72.7" r="1.15" fill="#fff" />
+        <ellipse cx="326" cy="82" rx="4.4" ry="2.8" fill="#013316" opacity="0.62" />
+      </g>
     </svg>
   );
 }

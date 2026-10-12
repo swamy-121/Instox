@@ -1,87 +1,78 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { SplashArt } from "@/components/illustrations";
-import { Wordmark } from "@/components/wordmark";
 import { apiFetch } from "@/lib/api-client";
+
+const SPLASH_TAGLINE = "Smart Trading Ideas for a Smarter You";
 
 export function BrandSplash({
   label = "Loading Instox",
-  onSkip,
+  advance = false,
 }: {
   label?: string;
-  onSkip?: () => void;
+  advance?: boolean;
 }) {
-  const skipRef = useRef<HTMLButtonElement>(null);
-  const [headline, setHeadline] = useState<string | null>(null);
-  const [copyError, setCopyError] = useState<string | null>(null);
+  const [headline, setHeadline] = useState(SPLASH_TAGLINE);
 
   useEffect(() => {
-    skipRef.current?.focus();
     apiFetch<{ records: { id: string; title: string }[] }>("/api/v1/content/contentDocs").then((result) => {
-      if (!result.ok) {
-        setCopyError(result.message);
-        return;
-      }
-      setHeadline(result.data.records.find((row) => row.id === "splash")?.title ?? "");
+      if (!result.ok) return;
+      const title = result.data.records.find((row) => row.id === "splash")?.title?.trim();
+      if (title) setHeadline(title);
     });
   }, []);
 
   return (
-    <div
-      className="brand-surface fixed inset-0 z-50 flex flex-col"
-      role={onSkip ? "dialog" : "status"}
-      aria-label="inStox"
-      aria-live={onSkip ? undefined : "polite"}
-    >
-      <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Wordmark className="h-auto w-[min(88vw,520px)]" />
-        <SplashArt />
-        {headline ? <p className="mt-6 max-w-xs text-center text-base font-medium text-ink">{headline}</p> : null}
-        {headline === "" ? <p className="mt-6 text-sm text-muted">Splash copy has not been published.</p> : null}
-        {copyError ? <p className="mt-6 text-sm text-loss" role="alert">{copyError}</p> : null}
-        <span className="sr-only">{label}</span>
+    <div className="splash-screen" role="status" aria-label="inStox">
+      <div className="splash-logo splash-rise">
+        {/* The official file scales by CSS width. next/image locks the intrinsic size. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/logo.png"
+          width={1544}
+          height={465}
+          alt="inStox, Instant Trading Ideas"
+          className="splash-logo-img"
+        />
       </div>
-      {onSkip ? (
-        <div className="flex justify-end px-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
-          <button
-            ref={skipRef}
-            type="button"
-            className="rounded-full border border-line bg-canvas px-5 py-2 text-sm font-medium text-ink shadow-card"
-            onClick={onSkip}
-          >
-            Skip
-          </button>
-        </div>
-      ) : null}
+      <div className="splash-hero splash-rise splash-rise-delay">
+        <SplashArt />
+        <p className="splash-tagline">{headline}</p>
+      </div>
+      <div className="splash-progress" aria-hidden="true">
+        <span className={advance ? "splash-progress-fill" : "splash-progress-indeterminate"} />
+      </div>
+      <span className="sr-only">{label}</span>
     </div>
   );
 }
 
 const SPLASH_KEY = "instox-splash";
+const SPLASH_MS = 2800;
 
 export function SplashGate({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    if (sessionStorage.getItem(SPLASH_KEY) === "skip") setVisible(false);
-  }, []);
+    if (sessionStorage.getItem(SPLASH_KEY) === "skip") {
+      setVisible(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      sessionStorage.setItem(SPLASH_KEY, "skip");
+      setVisible(false);
+      router.push("/onboarding");
+    }, SPLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [router]);
 
   return (
     <>
       {children}
-      {visible ? (
-        <BrandSplash
-          label="inStox"
-          onSkip={() => {
-            sessionStorage.setItem(SPLASH_KEY, "skip");
-            setVisible(false);
-            router.push("/onboarding");
-          }}
-        />
-      ) : null}
+      {visible ? <BrandSplash label="inStox" advance /> : null}
     </>
   );
 }
