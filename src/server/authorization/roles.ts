@@ -55,6 +55,10 @@ export function canManageOperations(roles: readonly Role[]): boolean {
   return hasAnyRole(roles, ["admin", "super_admin"]);
 }
 
+export function canManageCrm(roles: readonly Role[]): boolean {
+  return hasAnyRole(roles, ["support", "admin", "super_admin"]);
+}
+
 export function canManageIntegrations(roles: readonly Role[]): boolean {
   return roles.includes("super_admin");
 }

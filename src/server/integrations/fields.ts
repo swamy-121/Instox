@@ -1,6 +1,6 @@
 import schemaFile from "../../../config/integrations.json";
 
-export const INTEGRATION_GROUPS = ["payments", "razorpay", "cashfree", "aliceblue", "fcm", "sms"] as const;
+export const INTEGRATION_GROUPS = ["payments", "razorpay", "cashfree", "aliceblue", "fcm", "sms", "voice"] as const;
 export type IntegrationGroup = (typeof INTEGRATION_GROUPS)[number];
 
 export type IntegrationChoice = {

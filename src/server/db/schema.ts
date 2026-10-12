@@ -465,6 +465,112 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: text("updated_at"),
 });
 
+export const crmContacts = pgTable(
+  "crm_contacts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id"),
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    stage: text("stage").notNull(),
+    planId: text("plan_id"),
+    renewalAt: text("renewal_at"),
+    trialEndsAt: text("trial_ends_at"),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("crm_contacts_user_idx").on(table.userId),
+    index("crm_contacts_stage_idx").on(table.stage),
+    index("crm_contacts_plan_idx").on(table.planId),
+    index("crm_contacts_trial_idx").on(table.trialEndsAt),
+    index("crm_contacts_phone_idx").on(table.phone),
+  ],
+);
+
+export const crmNotes = pgTable(
+  "crm_notes",
+  {
+    id: text("id").primaryKey(),
+    contactId: text("contact_id").notNull(),
+    authorId: text("author_id").notNull(),
+    body: text("body").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("crm_notes_contact_idx").on(table.contactId, table.createdAt)],
+);
+
+export const crmReminders = pgTable(
+  "crm_reminders",
+  {
+    id: text("id").primaryKey(),
+    contactId: text("contact_id").notNull(),
+    authorId: text("author_id").notNull(),
+    body: text("body").notNull(),
+    dueAt: text("due_at").notNull(),
+    doneAt: text("done_at"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("crm_reminders_contact_idx").on(table.contactId, table.dueAt)],
+);
+
+export const crmActivities = pgTable(
+  "crm_activities",
+  {
+    id: text("id").primaryKey(),
+    contactId: text("contact_id").notNull(),
+    kind: text("kind").notNull(),
+    summary: text("summary").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("crm_activities_contact_idx").on(table.contactId, table.createdAt)],
+);
+
+export const voiceCampaigns = pgTable(
+  "voice_campaigns",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    language: text("language").notNull(),
+    voice: text("voice").notNull(),
+    prompt: text("prompt").notNull(),
+    providerAgentId: text("provider_agent_id"),
+    createdBy: text("created_by").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("voice_campaigns_created_idx").on(table.createdAt)],
+);
+
+export const voiceCalls = pgTable(
+  "voice_calls",
+  {
+    id: text("id").primaryKey(),
+    campaignId: text("campaign_id").notNull(),
+    contactId: text("contact_id").notNull(),
+    provider: text("provider").notNull(),
+    providerCallId: text("provider_call_id"),
+    status: text("status").notNull(),
+    durationSeconds: integer("duration_seconds"),
+    recordingUrl: text("recording_url"),
+    transcript: text("transcript"),
+    simulated: boolean("simulated").notNull().default(false),
+    startedAt: text("started_at"),
+    endedAt: text("ended_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("voice_calls_contact_idx").on(table.contactId),
+    index("voice_calls_campaign_idx").on(table.campaignId),
+    uniqueIndex("voice_calls_provider_idx").on(table.provider, table.providerCallId),
+  ],
+);
+
 export const integrationSecrets = pgTable("integration_secrets", {
   fieldKey: text("field_key").primaryKey(),
   iv: text("iv").notNull(),

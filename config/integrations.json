@@ -89,6 +89,30 @@
         },
         { "key": "NEXT_PUBLIC_FIREBASE_VAPID_KEY", "group": "fcm", "label": "Web push key", "secret": true }
       ]
+    },
+    {
+      "id": "voice",
+      "title": "Voice",
+      "lede": "Bolna places calls in Telugu, Hindi, and English. Vapi is the other option. With no key, campaigns are simulated.",
+      "test": "voice",
+      "fields": [
+        {
+          "key": "VOICE_PROVIDER",
+          "group": "voice",
+          "label": "Voice provider",
+          "secret": false,
+          "options": [
+            { "value": "", "label": "Automatic" },
+            { "value": "bolna", "label": "Bolna" },
+            { "value": "vapi", "label": "Vapi" },
+            { "value": "dev", "label": "Dev simulator" }
+          ]
+        },
+        { "key": "BOLNA_API_KEY", "group": "voice", "label": "Bolna API key", "secret": true },
+        { "key": "VAPI_API_KEY", "group": "voice", "label": "Vapi API key", "secret": true },
+        { "key": "VAPI_PHONE_NUMBER_ID", "group": "voice", "label": "Vapi phone number id", "secret": false },
+        { "key": "VOICE_WEBHOOK_SECRET", "group": "voice", "label": "Webhook secret", "secret": true }
+      ]
     }
   ]
 }

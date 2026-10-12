@@ -17,6 +17,7 @@ export async function probeIntegration(group: IntegrationGroup, fetchImpl: Fetch
   if (group === "aliceblue") return probeAlice(value(fields, "ALICEBLUE_APP_CODE"), value(fields, "ALICEBLUE_API_SECRET"), fetchImpl);
   if (group === "fcm") return probeFcm(value(fields, "NEXT_PUBLIC_FIREBASE_VAPID_KEY"));
   if (group === "sms") return probeSms(value(fields, "APITXT_AUTHKEY"));
+  if (group === "voice") return probeVoice(value(fields, "VOICE_PROVIDER"), value(fields, "BOLNA_API_KEY"), value(fields, "VAPI_API_KEY"));
   return { ok: true, message: "The payment provider is saved. Remote checkout stays off." };
 }
 
@@ -81,6 +82,18 @@ function probeSms(authkey: string): ProbeResult {
   }
   if (authkey.length < 8) return { ok: false, message: "That APITxT key looks too short." };
   return { ok: true, message: "The APITxT key is saved. Phone codes are sent without a DLT template." };
+}
+
+function probeVoice(provider: string, bolnaKey: string, vapiKey: string): ProbeResult {
+  if (provider === "dev" || (!provider && !bolnaKey && !vapiKey)) {
+    return { ok: true, message: "No voice key is set, so campaigns are simulated and written to the CRM." };
+  }
+  if (provider === "vapi" || (!provider && vapiKey && !bolnaKey)) {
+    if (vapiKey.length < 8) return { ok: false, message: "That Vapi key looks too short." };
+    return { ok: true, message: "The Vapi key is saved. Calls use a natural voice and can be interrupted." };
+  }
+  if (bolnaKey.length < 8) return { ok: false, message: "That Bolna key looks too short." };
+  return { ok: true, message: "The Bolna key is saved. Calls use a natural voice and can be interrupted." };
 }
 
 function probeFcm(vapidKey: string): ProbeResult {

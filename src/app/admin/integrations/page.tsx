@@ -49,9 +49,11 @@ function Body() {
     const enums: Record<string, string> = {};
     for (const tab of INTEGRATION_TABS) {
       for (const field of tab.fields) {
-        if (field.secret || !field.options) continue;
+        if (field.secret) continue;
         const saved = next.find((view) => view.key === field.key)?.value ?? "";
-        enums[field.key] = field.options.some((option) => option.value === saved) ? saved : (field.options[0]?.value ?? "");
+        enums[field.key] = field.options
+          ? (field.options.some((option) => option.value === saved) ? saved : (field.options[0]?.value ?? ""))
+          : saved;
       }
     }
     setDrafts(enums);

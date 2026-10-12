@@ -1,6 +1,6 @@
 import { AppError } from "@/lib/errors";
 import { requireActor, type Actor } from "@/server/auth/actor";
-import { canManageIntegrations, canManageOperations } from "@/server/authorization/roles";
+import { canManageCrm, canManageIntegrations, canManageOperations } from "@/server/authorization/roles";
 import { assertRecentAuth } from "@/server/authorization/session-policy";
 
 export async function requireOperations(request: Request, options?: { recent?: boolean }): Promise<Actor> {
@@ -9,6 +9,14 @@ export async function requireOperations(request: Request, options?: { recent?: b
     throw new AppError(403, "FORBIDDEN", "You cannot change operations settings.");
   }
   if (options?.recent) assertRecentAuth(actor.authTime, Date.now());
+  return actor;
+}
+
+export async function requireCrm(request: Request): Promise<Actor> {
+  const actor = await requireActor(request);
+  if (!canManageCrm(actor.roles)) {
+    throw new AppError(403, "FORBIDDEN", "CRM is limited to support and administrators.");
+  }
   return actor;
 }
 

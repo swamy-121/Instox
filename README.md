@@ -39,7 +39,7 @@ Seeded premium tips stay locked for the free user. Sign in with the premium memb
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Unit tests, including API authorization checks on an in-memory Postgres |
-| `npm run db:migrate` | Apply `drizzle/0000_init.sql` |
+| `npm run db:migrate` | Apply `drizzle/0000_init.sql` and `drizzle/0001_crm_voice.sql` |
 | `npm run seed` | Idempotent users, tips, plans, quotes, news, help, shop, and watchlist rows |
 
 CI runs lint, typecheck, unit tests, the migration against Postgres, and `npm run build`.
@@ -119,7 +119,7 @@ Firebase is optional and is only used to send push:
 - `PAYMENTS_MODE` stays `test`. Remote checkout stays off.
 - `MARKET_DATA_LICENSED` stays false until redistribution rights are decided.
 
-A super admin can enter these on Integrations. That page has tabs for Payments, SMS, Market data, and Push. Payments has a gateway list for Razorpay and Cashfree, and it shows only the keys for the gateway you pick. The same names still work as environment fallbacks when the saved field is empty:
+A super admin can enter these on Integrations. That page has tabs for Payments, SMS, Market data, Push, and Voice. Payments has a gateway list for Razorpay and Cashfree, and it shows only the keys for the gateway you pick. Voice uses Bolna for Telugu, Hindi, and English, with Vapi as the other provider. With no key, call campaigns are simulated. Support and admin use the CRM and those campaigns. The same names still work as environment fallbacks when the saved field is empty:
 
 - `APITXT_AUTHKEY`, the APITxT key for phone codes. Texts are sent without a DLT template. Leave it empty, or set `SMS_PROVIDER=dev`, and the code is written to the server log.
 - Firebase web push certificate (`NEXT_PUBLIC_FIREBASE_VAPID_KEY`). This is the FCM key, not a separate VAPID private key.

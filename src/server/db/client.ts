@@ -31,8 +31,14 @@ export async function closeDb(): Promise<void> {
   database = null;
 }
 
+const MIGRATION_IDS = ["0000_init", "0001_crm_voice"] as const;
+
+function readMigration(id: (typeof MIGRATION_IDS)[number]): string {
+  return readFileSync(join(process.cwd(), `drizzle/${id}.sql`), "utf8");
+}
+
 export function migrationSql(): string {
-  return readFileSync(join(process.cwd(), "drizzle/0000_init.sql"), "utf8");
+  return MIGRATION_IDS.map((id) => readMigration(id)).join("\n");
 }
 
 export async function migrateDatabase(): Promise<void> {
@@ -42,12 +48,14 @@ export async function migrateDatabase(): Promise<void> {
   }
   const sql = postgres(url, { max: 1 });
   try {
-    const applied = await sql<{ id: string }[]>`
-      SELECT id FROM schema_migrations WHERE id = '0000_init'
-    `.catch(() => []);
-    if (applied.length > 0) return;
-    await sql.unsafe(migrationSql());
-    await sql`INSERT INTO schema_migrations (id) VALUES ('0000_init') ON CONFLICT (id) DO NOTHING`;
+    for (const id of MIGRATION_IDS) {
+      const applied = await sql<{ id: string }[]>`
+        SELECT id FROM schema_migrations WHERE id = ${id}
+      `.catch(() => []);
+      if (applied.length > 0) continue;
+      await sql.unsafe(readMigration(id));
+      await sql`INSERT INTO schema_migrations (id) VALUES (${id}) ON CONFLICT (id) DO NOTHING`;
+    }
   } finally {
     await sql.end({ timeout: 5 });
   }

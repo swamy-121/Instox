@@ -49,7 +49,7 @@ describe("integration secrets", () => {
   });
 
   it("builds the integrations form from the config schema", () => {
-    expect(INTEGRATION_TABS.map((tab) => tab.title)).toEqual(["Payments", "SMS", "Market data", "Push"]);
+    expect(INTEGRATION_TABS.map((tab) => tab.title)).toEqual(["Payments", "SMS", "Market data", "Push", "Voice"]);
     const payments = INTEGRATION_TABS[0];
     if (!payments) throw new Error("Payments tab is missing.");
     expect(payments.selector?.options.map((option) => option.label)).toEqual(["Razorpay", "Cashfree"]);
