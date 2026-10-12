@@ -236,7 +236,7 @@ function Editor({ collection }: { collection: string }) {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-ink">{spec.title}</h1>
-      <p className="text-sm text-muted">Records are stored in Firestore. Saving again with the same id replaces that row.</p>
+      <p className="text-sm text-muted">Records are stored in the database. Saving again with the same id replaces that row.</p>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {message ? <p className="text-sm text-ink" role="status">{message}</p> : null}
       {!records && !error ? <LoadingState label="Loading records" /> : null}

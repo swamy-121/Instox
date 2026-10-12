@@ -116,7 +116,7 @@ function Body() {
     <form onSubmit={(event) => void save(event)}>
       <AdminTitle
         title="Integrations"
-        lede="Secrets are encrypted in Firestore and are not sent back to this browser. Leave a box blank to keep the saved value. Firebase project settings and the Admin service account stay in the server environment."
+        lede="Secrets are encrypted in the database and are not sent back to this browser. Leave a box blank to keep the saved value. Firebase project settings and the Admin service account stay in the server environment."
         action={<button className="btn-primary" type="submit" disabled={busy}>{busy ? "Saving" : "Save"}</button>}
       />
       {!encryptionReady ? (

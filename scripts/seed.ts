@@ -3,7 +3,7 @@ import compliance from "../config/compliance.json";
 import features from "../config/features.json";
 import plans from "../config/plans.json";
 import { hashPassword } from "../src/server/auth/password";
-import { migrateDatabase, getDb } from "../src/server/db/client";
+import { closeDb, getDb, migrateDatabase } from "../src/server/db/client";
 import {
   auditLogs,
   entitlements as entitlementTable,
@@ -509,9 +509,10 @@ async function main() {
 
   await seedCatalog();
   console.log("Seeded Postgres.");
+  await closeDb();
 }
 
 main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : "Seed failed");
-  process.exit(1);
+  void closeDb().finally(() => process.exit(1));
 });
