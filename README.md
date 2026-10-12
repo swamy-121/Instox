@@ -83,9 +83,15 @@ Tip alerts use Firebase Cloud Messaging. The browser stores an FCM device token,
 
 Admin screens ADM-06 through ADM-11 cover instruments, screener flags, users, plans and manual entitlements, orders and reconciliation, and referrals.
 
-## Not built yet
+## Research slice
 
-Shop, advanced charts, the strategy builder, and richer backtesting are still out of this slice.
+The shop reads `config/shop.json`. Prices are placeholders. An order is held, nothing is charged, and premium is not granted. Fulfilment and refunds are not configured.
+
+Charts draw sample daily candles with an EMA overlay and say they are not live.
+
+Strategy drafts use RSI, EMA, or CPR rules. They version on edit and cannot publish a tip.
+
+Backtests are labeled Hypothetical. Fees and slippage come from `config/backtest.json`. Losing trades stay in the result.
 
 The sample instrument list is not an exchange master.
 
@@ -100,7 +106,7 @@ These still block a real launch. The product owner approved starting this build 
 - DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off.
 - DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual. Insights read those reasons.
 - DEC-007 Referral threshold and reward. The ledger exists. Entitlement grants from referrals stay off.
-- DEC-008 Shop scope. Not built.
+- DEC-008 Shop scope. The catalogue is a placeholder. Fulfilment, shipping, and refunds are not approved.
 - DEC-009 Email/SMS notification channels. FCM consent and token storage are built. The web push certificate and Admin credentials are empty, so nothing is sent.
 - DEC-010 Named support and grievance contact. The about page says this is unassigned.
 

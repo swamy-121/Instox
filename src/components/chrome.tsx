@@ -29,6 +29,9 @@ export function PublicHeader() {
           <Link href="/pricing" className="hover:text-primary">
             Pricing
           </Link>
+          <Link href="/shop" className="hover:text-primary">
+            Shop
+          </Link>
           <Link href="/about" className="hover:text-primary">
             About
           </Link>
@@ -53,6 +56,7 @@ export function PublicFooter() {
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <Link href="/pricing" className="hover:text-ink">Pricing</Link>
+          <Link href="/shop" className="hover:text-ink">Shop</Link>
           <Link href="/about" className="hover:text-ink">About</Link>
           <Link href="/disclaimer" className="hover:text-ink">Risk disclosure</Link>
         </div>
