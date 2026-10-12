@@ -2,10 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { SplashArt } from "@/components/illustrations";
-import { apiFetch } from "@/lib/api-client";
-
-const SPLASH_TAGLINE = "Smart Trading Ideas for a Smarter You";
 
 export function BrandSplash({
   label = "Loading Instox",
@@ -14,37 +10,27 @@ export function BrandSplash({
   label?: string;
   advance?: boolean;
 }) {
-  const [headline, setHeadline] = useState(SPLASH_TAGLINE);
-
-  useEffect(() => {
-    apiFetch<{ records: { id: string; title: string }[] }>("/api/v1/content/contentDocs").then((result) => {
-      if (!result.ok) return;
-      const title = result.data.records.find((row) => row.id === "splash")?.title?.trim();
-      if (title) setHeadline(title);
-    });
-  }, []);
-
   return (
-    <div className="splash-screen" role="status" aria-label="inStox">
-      <div className="splash-logo splash-rise">
-        {/* The official file scales by CSS width. next/image locks the intrinsic size. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/brand/logo.png"
-          width={1544}
-          height={465}
-          alt="inStox, Instant Trading Ideas"
-          className="splash-logo-img"
-        />
+    <div className="splash-screen" role="status" aria-label="Loading Market Insights">
+      <div className="splash-frame">
+        <picture>
+          <source srcSet="/brand/splash.avif" type="image/avif" />
+          <source srcSet="/brand/splash.webp" type="image/webp" />
+          {/* The artwork is a full-bleed file. next/image would crop it to a fixed box. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/splash.png"
+            width={853}
+            height={1844}
+            alt=""
+            className="splash-photo"
+          />
+        </picture>
+        <div className="splash-bar" aria-hidden="true">
+          <span className={advance ? "splash-bar-fill" : "splash-bar-indeterminate"} />
+        </div>
       </div>
-      <div className="splash-hero splash-rise splash-rise-delay">
-        <SplashArt />
-        <p className="splash-tagline">{headline}</p>
-      </div>
-      <div className="splash-progress" aria-hidden="true">
-        <span className={advance ? "splash-progress-fill" : "splash-progress-indeterminate"} />
-      </div>
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label}. Loading Market Insights.</span>
     </div>
   );
 }

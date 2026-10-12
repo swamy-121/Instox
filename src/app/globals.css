@@ -146,97 +146,74 @@ body {
   position: fixed;
   inset: 0;
   z-index: 80;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 78% 52% at 50% 38%, rgba(2, 115, 50, 0.14), rgba(2, 115, 50, 0) 70%),
-    #f4fbf7;
-  color: #013316;
+  background: #f8fcfa;
+  background-image: linear-gradient(180deg, #f8fcfa 0%, #f4fbf7 36%, #d9f5e6 68%, #8fd4ae 86%, #127a45 100%);
 }
 
-.splash-logo {
-  display: flex;
-  height: 33%;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-}
-
-.splash-logo-img {
-  height: auto;
-  width: min(86vw, 340px);
-}
-
-.splash-hero {
-  display: flex;
-  width: 100%;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 0 1.25rem 12vh;
-}
-
-.splash-tagline {
-  margin: 0.35rem 0 0;
-  max-width: 16rem;
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 500;
-  line-height: 1.45;
-  color: #4f6b5e;
-}
-
-.splash-progress {
+.splash-frame {
   position: absolute;
-  right: 22%;
-  bottom: max(1.5rem, env(safe-area-inset-bottom));
-  left: 22%;
-  height: 3px;
+  left: 50%;
+  top: 50%;
+  aspect-ratio: 853 / 1844;
+  width: 100%;
+  height: auto;
+  translate: -50% -50%;
+}
+
+@media (max-aspect-ratio: 853 / 1844) {
+  .splash-frame {
+    width: auto;
+    height: 100%;
+  }
+}
+
+.splash-photo {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  background: #f8fcfa;
+  animation: splash-photo-in 280ms ease-out both;
+}
+
+.splash-bar {
+  position: absolute;
+  left: 24.3845%;
+  top: 82.7549%;
+  width: 51.1137%;
+  height: 0.705%;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(2, 115, 50, 0.14);
+  background: #cde9db;
 }
 
-.splash-progress-fill,
-.splash-progress-indeterminate {
+.splash-bar-fill,
+.splash-bar-indeterminate {
   display: block;
   height: 100%;
-  background: #027332;
+  background: #044c19;
 }
 
-.splash-progress-fill {
+.splash-bar-fill {
   width: 100%;
   transform: scaleX(1);
   transform-origin: left center;
   animation: splash-progress 2.8s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-.splash-progress-indeterminate {
-  width: 38%;
+.splash-bar-indeterminate {
+  width: 36%;
   border-radius: inherit;
   animation: splash-slide 1.15s ease-in-out infinite;
 }
 
-.splash-rise {
-  animation: splash-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.splash-rise-delay {
-  animation-delay: 90ms;
-}
-
-@keyframes splash-rise {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+@keyframes splash-photo-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes splash-progress {
