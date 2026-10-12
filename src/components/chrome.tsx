@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Wordmark } from "@/components/wordmark";
 
 const MEMBER_LINKS = [
   { href: "/home", label: "Home" },
@@ -14,19 +15,19 @@ const MEMBER_LINKS = [
 
 export function PublicHeader() {
   return (
-    <header className="border-b border-white/10 bg-navy text-white">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          Instox
+    <header className="brand-surface border-b border-line">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+        <Link href="/" aria-label="inStox" className="inline-flex shrink-0 items-center">
+          <Wordmark decorative />
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-4 text-sm text-ink">
           <Link href="/pricing" className="hover:underline">
             Pricing
           </Link>
           <Link href="/about" className="hover:underline">
             About
           </Link>
-          <Link href="/sign-in" className="rounded-full bg-primary px-3 py-1.5 font-medium text-white">
+          <Link href="/sign-in" className="rounded-full bg-ink px-3 py-1.5 font-medium text-white hover:bg-ink-hover">
             Sign in
           </Link>
         </nav>

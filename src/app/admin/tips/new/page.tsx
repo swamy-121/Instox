@@ -48,7 +48,7 @@ function NewTip() {
   return (
     <div>
       <h1 className="text-2xl font-semibold">New draft</h1>
-      {error ? <p className="mt-3 text-sm text-danger" role="alert">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-ink" role="alert">{error}</p> : null}
       <div className="mt-4">
         <TipForm initial={emptyTipForm()} fields={fields} busy={busy} submitLabel="Save draft" onSubmit={(form) => void submit(form)} />
       </div>

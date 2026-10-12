@@ -98,7 +98,7 @@ function Review() {
         <span className="label">Reason</span>
         <input className="field" value={reason} onChange={(event) => setReason(event.target.value)} />
       </label>
-      {error ? <p className="mt-3 text-sm text-danger" role="alert">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-ink" role="alert">{error}</p> : null}
       <button type="button" className="btn-primary mt-4" onClick={() => setOpen(true)} disabled={tip.status !== "in_review"}>
         Publish
       </button>

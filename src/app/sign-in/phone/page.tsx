@@ -144,7 +144,7 @@ export default function PhoneSignInPage() {
           </button>
         </form>
       )}
-      {error ? <p className="mt-4 text-sm text-danger" role="alert">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-ink" role="alert">{error}</p> : null}
     </main>
   );
 }

@@ -81,7 +81,7 @@ The sample instrument list is not an exchange master.
 
 These still block a real launch. The product owner approved starting this build anyway. The decisions themselves are not closed.
 
-- DEC-001 Brand palette and logo. The UI uses navy `#0D1B2A` and green `#0F7A45` until design signs off.
+- DEC-001 Brand palette and logo. Resolved from the product splash. The wordmark uses ink `#0A2C30`, sky blue `#2FAAFC`, and underline `#3DAAB7` on white. Interface text stays on ink. Links use `#227CB8` so small text meets WCAG AA. The screenshot tagline `#D9DADA` is too light, so tagline text uses `#5A6E71`. Profit `#0F7A45` and loss `#B42318` are used only for gain and loss.
 - DEC-002 Plan price, tax, billing, cancellation, and refunds. Config only, marked unapproved.
 - DEC-003 SEBI / legal operating model. Paid stock-specific tips should stay off until counsel writes that down. Penny-stock publish is disabled in config.
 - DEC-004 Market-data vendor and redistribution rights. Only the mock adapter is wired.

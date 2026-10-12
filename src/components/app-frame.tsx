@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { BrandSplash } from "@/components/brand";
 import { BottomNav, DesktopNav } from "@/components/chrome";
-import { ErrorState, LoadingState, PermissionDenied } from "@/components/states";
+import { ErrorState, PermissionDenied } from "@/components/states";
+import { Wordmark } from "@/components/wordmark";
 import { useAuth } from "@/features/auth/auth-provider";
 import { canAccessAdmin } from "@/server/authorization/roles";
 
@@ -27,7 +29,7 @@ export function AppFrame({
     }
   }, [admin, requireAuth, router, state]);
 
-  if (state.status === "loading") return <div className="mx-auto max-w-3xl px-4 py-8"><LoadingState /></div>;
+  if (state.status === "loading") return <BrandSplash label="Loading Instox" />;
 
   if (requireAuth || admin) {
     if (state.status === "unconfigured") {
@@ -72,7 +74,7 @@ export function AppFrame({
       );
     }
     if (state.status === "ready" && !state.me.profileComplete) {
-      return <div className="mx-auto max-w-3xl px-4 py-8"><LoadingState label="Opening profile" /></div>;
+      return <BrandSplash label="Opening profile" />;
     }
     if (admin && state.status === "ready" && !canAccessAdmin(state.me.roles)) {
       return (
@@ -87,9 +89,9 @@ export function AppFrame({
 
   return (
     <div className="mx-auto min-h-screen max-w-5xl px-4 pb-24 pt-4 md:pb-10">
-      <header className="mb-6 flex items-center justify-between gap-4">
-        <Link href={signedIn ? "/home" : "/"} className="text-lg font-semibold text-navy">
-          Instox
+      <header className="brand-surface -mx-4 mb-6 flex items-center justify-between gap-4 border-b border-line px-4 py-3">
+        <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
+          <Wordmark decorative />
         </Link>
         {signedIn && !admin ? <DesktopNav /> : null}
         {admin ? (

@@ -107,11 +107,11 @@ function TipDesk() {
           </Link>
         ) : null}
       </div>
-      {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
+      {error ? <p className="text-sm text-ink" role="alert">{error}</p> : null}
       <label className="block">
         <span className="label">Reason</span>
         <input className="field" value={reason} onChange={(event) => setReason(event.target.value)} />
-        {fields.reason ? <span className="text-sm text-danger">{fields.reason}</span> : null}
+        {fields.reason ? <span className="text-sm text-ink">{fields.reason}</span> : null}
       </label>
       {editable ? (
         <TipForm key={tip.version} initial={formFromTip(tip)} fields={fields} busy={busy} submitLabel="Save changes" onSubmit={(form) => void save(form)} />

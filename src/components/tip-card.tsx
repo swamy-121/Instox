@@ -7,6 +7,12 @@ function isOpen(tip: TipView): tip is OpenTipView {
   return tip.locked === false;
 }
 
+function statusTone(reason: string | null | undefined) {
+  if (reason === "target_hit") return "text-profit";
+  if (reason === "stop_loss_hit") return "text-loss";
+  return "text-ink";
+}
+
 export function TipCard({ tip }: { tip: TipView }) {
   const when = tip.publishedAt ?? tip.updatedAt;
   return (
@@ -18,7 +24,7 @@ export function TipCard({ tip }: { tip: TipView }) {
         </div>
         <span className="rounded-full bg-canvas px-2 py-1 text-xs font-medium text-ink">{tip.side}</span>
       </div>
-      <p className="mt-3 text-sm text-ink">
+      <p className={`mt-3 text-sm ${statusTone(isOpen(tip) ? tip.closeReason : null)}`}>
         Status: {statusLabel(tip.status, isOpen(tip) ? tip.closeReason : null)}
       </p>
       <p className="mt-1 text-sm text-muted">Updated {new Date(when).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>

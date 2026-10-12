@@ -14,6 +14,12 @@ function isOpen(tip: TipView): tip is OpenTipView {
   return tip.locked === false;
 }
 
+function statusTone(reason: string | null | undefined) {
+  if (reason === "target_hit") return "text-profit";
+  if (reason === "stop_loss_hit") return "text-loss";
+  return "text-ink";
+}
+
 export default function TipDetailPage() {
   return (
     <AppFrame>
@@ -52,7 +58,9 @@ function Detail() {
       <p className="text-xs font-medium uppercase tracking-wide text-muted">{CATEGORY_LABELS[tip.category]}</p>
       <h1 className="mt-1 text-2xl font-semibold tabular-nums">{tip.symbol}</h1>
       <p className="mt-2 text-sm">Side: {tip.side}</p>
-      <p className="text-sm">Status: {statusLabel(tip.status, isOpen(tip) ? tip.closeReason : null)}</p>
+      <p className={`text-sm ${statusTone(isOpen(tip) ? tip.closeReason : null)}`}>
+        Status: {statusLabel(tip.status, isOpen(tip) ? tip.closeReason : null)}
+      </p>
       <p className="text-sm text-muted">Timeframe: {tip.timeframe}</p>
       <p className="text-sm text-muted">Published: {tip.publishedAt ? new Date(tip.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "Not published"}</p>
       {tip.locked ? (

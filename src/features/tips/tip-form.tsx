@@ -142,7 +142,7 @@ export function TipForm({
               <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
             ))}
           </select>
-          {fieldError.symbol ? <span className="text-sm text-danger">{fieldError.symbol}</span> : null}
+          {fieldError.symbol ? <span className="text-sm text-ink">{fieldError.symbol}</span> : null}
         </label>
         <label>
           <span className="label">Category</span>
@@ -151,7 +151,7 @@ export function TipForm({
               <option key={category} value={category}>{CATEGORY_LABELS[category]}</option>
             ))}
           </select>
-          {fieldError.category ? <span className="text-sm text-danger">{fieldError.category}</span> : null}
+          {fieldError.category ? <span className="text-sm text-ink">{fieldError.category}</span> : null}
         </label>
         <label>
           <span className="label">Side</span>
@@ -170,22 +170,22 @@ export function TipForm({
         <label>
           <span className="label">Entry</span>
           <input className="field tabular-nums" inputMode="decimal" value={form.entryMin} onChange={(event) => set("entryMin", event.target.value)} />
-          {fieldError.entryMin ? <span className="text-sm text-danger">{fieldError.entryMin}</span> : null}
+          {fieldError.entryMin ? <span className="text-sm text-ink">{fieldError.entryMin}</span> : null}
         </label>
         <label>
           <span className="label">Entry max, optional</span>
           <input className="field tabular-nums" inputMode="decimal" value={form.entryMax} onChange={(event) => set("entryMax", event.target.value)} />
-          {fieldError.entryMax ? <span className="text-sm text-danger">{fieldError.entryMax}</span> : null}
+          {fieldError.entryMax ? <span className="text-sm text-ink">{fieldError.entryMax}</span> : null}
         </label>
         <label>
           <span className="label">Stop loss</span>
           <input className="field tabular-nums" inputMode="decimal" value={form.stopLoss} onChange={(event) => set("stopLoss", event.target.value)} />
-          {fieldError.stopLoss ? <span className="text-sm text-danger">{fieldError.stopLoss}</span> : null}
+          {fieldError.stopLoss ? <span className="text-sm text-ink">{fieldError.stopLoss}</span> : null}
         </label>
         <label>
           <span className="label">Timeframe</span>
           <input className="field" value={form.timeframe} onChange={(event) => set("timeframe", event.target.value)} />
-          {fieldError.timeframe ? <span className="text-sm text-danger">{fieldError.timeframe}</span> : null}
+          {fieldError.timeframe ? <span className="text-sm text-ink">{fieldError.timeframe}</span> : null}
         </label>
         {(["t1", "t2", "t3"] as const).map((key) => (
           <label key={key}>
@@ -194,13 +194,13 @@ export function TipForm({
           </label>
         ))}
       </div>
-      {fieldError.targets ? <p className="text-sm text-danger">{fieldError.targets}</p> : null}
+      {fieldError.targets ? <p className="text-sm text-ink">{fieldError.targets}</p> : null}
       {showDerivative ? (
         <div className="grid gap-3 md:grid-cols-2">
           <label>
             <span className="label">Expiry</span>
             <input className="field" placeholder="YYYY-MM-DD" value={form.expiry} onChange={(event) => set("expiry", event.target.value)} />
-            {fieldError.expiry ? <span className="text-sm text-danger">{fieldError.expiry}</span> : null}
+            {fieldError.expiry ? <span className="text-sm text-ink">{fieldError.expiry}</span> : null}
           </label>
           {form.category === "options" ? (
             <>
@@ -211,22 +211,22 @@ export function TipForm({
                   <option value="CE">CE</option>
                   <option value="PE">PE</option>
                 </select>
-                {fieldError.optionType ? <span className="text-sm text-danger">{fieldError.optionType}</span> : null}
+                {fieldError.optionType ? <span className="text-sm text-ink">{fieldError.optionType}</span> : null}
               </label>
               <label>
                 <span className="label">Strike</span>
                 <input className="field" value={form.strikePrice} onChange={(event) => set("strikePrice", event.target.value)} />
-                {fieldError.strikePrice ? <span className="text-sm text-danger">{fieldError.strikePrice}</span> : null}
+                {fieldError.strikePrice ? <span className="text-sm text-ink">{fieldError.strikePrice}</span> : null}
               </label>
               <label>
                 <span className="label">Underlying</span>
                 <input className="field" value={form.underlying} onChange={(event) => set("underlying", event.target.value)} />
-                {fieldError.underlying ? <span className="text-sm text-danger">{fieldError.underlying}</span> : null}
+                {fieldError.underlying ? <span className="text-sm text-ink">{fieldError.underlying}</span> : null}
               </label>
               <label>
                 <span className="label">Lot size</span>
                 <input className="field" value={form.lotSize} onChange={(event) => set("lotSize", event.target.value)} />
-                {fieldError.lotSize ? <span className="text-sm text-danger">{fieldError.lotSize}</span> : null}
+                {fieldError.lotSize ? <span className="text-sm text-ink">{fieldError.lotSize}</span> : null}
               </label>
             </>
           ) : null}
@@ -235,7 +235,7 @@ export function TipForm({
       <label>
         <span className="label">Rationale</span>
         <textarea className="field min-h-32" value={form.thesis} onChange={(event) => set("thesis", event.target.value)} />
-        {fieldError.thesis ? <span className="text-sm text-danger">{fieldError.thesis}</span> : null}
+        {fieldError.thesis ? <span className="text-sm text-ink">{fieldError.thesis}</span> : null}
       </label>
       <button className="btn-primary" type="submit" disabled={busy}>
         {busy ? "Saving" : submitLabel}

@@ -4,15 +4,15 @@
 
 :root {
   color-scheme: light;
-  --background: #f3f6f4;
-  --foreground: #0d1b2a;
+  --background: #f4f8f8;
+  --foreground: #0a2c30;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --background: #0d1b2a;
-    --foreground: #e8eef2;
+    --background: #071e21;
+    --foreground: #f4fbfc;
   }
 }
 
@@ -22,22 +22,55 @@ body {
   color: var(--foreground);
 }
 
+.brand-surface {
+  background-color: #ffffff;
+  color: #0a2c30;
+}
+
 @media (prefers-color-scheme: dark) {
   .card,
   .bg-white {
-    background-color: #15283a;
+    background-color: #12383c;
   }
   .text-ink {
-    color: #e8eef2;
+    color: #f4fbfc;
   }
   .text-muted {
-    color: #b7c3ce;
+    color: #c5d5d8;
+  }
+  .text-primary {
+    color: #7ec8f8;
+  }
+  .text-profit {
+    color: #5fcb8a;
+  }
+  .text-loss {
+    color: #ff8b82;
   }
   .border-line {
-    border-color: #2a4154;
+    border-color: #1e4a50;
   }
   .bg-canvas {
-    background-color: #0f2233;
+    background-color: #0c2a2e;
+  }
+  .focus-visible\:outline-primary:focus-visible {
+    outline-color: #7ec8f8;
+  }
+  .brand-surface {
+    background-color: #ffffff;
+    color: #0a2c30;
+  }
+  .brand-surface .text-ink {
+    color: #0a2c30;
+  }
+  .brand-surface .text-muted {
+    color: #5a6e71;
+  }
+  .brand-surface .text-primary {
+    color: #227cb8;
+  }
+  .brand-surface .border-line {
+    border-color: #d5e3e6;
   }
 }
 
@@ -46,7 +79,7 @@ body {
     @apply rounded-card border border-line bg-white p-4 shadow-card;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center rounded-xl border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;

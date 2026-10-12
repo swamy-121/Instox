@@ -3,7 +3,9 @@
 import { GoogleAuthProvider, signInWithCustomToken, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
 import { useState } from "react";
-import { ErrorState, LoadingState } from "@/components/states";
+import { BrandSplash } from "@/components/brand";
+import { ErrorState } from "@/components/states";
+import { Wordmark } from "@/components/wordmark";
 import { useAuth, useSignedInRedirect } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { getClientAuth } from "@/lib/firebase-client";
@@ -70,7 +72,7 @@ export default function SignInPage() {
     }
   }
 
-  if (state.status === "loading") return <main className="mx-auto max-w-md px-4 py-10"><LoadingState label="Checking session" /></main>;
+  if (state.status === "loading") return <BrandSplash label="Checking session" />;
   if (state.status === "unconfigured") {
     return (
       <main className="mx-auto max-w-md px-4 py-10">
@@ -81,8 +83,8 @@ export default function SignInPage() {
 
   return (
     <main className="mx-auto max-w-md px-4 py-10">
-      <Link href="/" className="text-sm text-muted">
-        Instox
+      <Link href="/" aria-label="inStox" className="inline-flex">
+        <Wordmark decorative />
       </Link>
       <h1 className="mt-4 text-3xl font-semibold text-navy">Sign in</h1>
       <p className="mt-2 text-sm text-muted">
@@ -102,7 +104,7 @@ export default function SignInPage() {
           {busy ? "Waiting" : "Continue with Google"}
         </button>
       </div>
-      {message ? <p className="mt-4 text-sm text-danger" role="alert">{message}</p> : null}
+      {message ? <p className="mt-4 text-sm text-ink" role="alert">{message}</p> : null}
       {emulator ? (
         <section className="mt-8">
           <h2 className="text-sm font-semibold">Emulator users</h2>

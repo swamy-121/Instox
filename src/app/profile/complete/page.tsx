@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ErrorState, LoadingState } from "@/components/states";
+import { BrandSplash } from "@/components/brand";
+import { ErrorState } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 
@@ -40,7 +41,7 @@ export default function ProfileCompletePage() {
     router.replace("/home");
   }
 
-  if (state.status === "loading") return <main className="mx-auto max-w-md px-4 py-10"><LoadingState /></main>;
+  if (state.status === "loading") return <BrandSplash label="Loading profile" />;
   if (state.status !== "ready") {
     return (
       <main className="mx-auto max-w-md px-4 py-10">
@@ -58,7 +59,7 @@ export default function ProfileCompletePage() {
         <div>
           <label className="label" htmlFor="name">Name</label>
           <input id="name" className="field" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
-          {fields.displayName ? <p className="mt-1 text-sm text-danger">{fields.displayName}</p> : null}
+          {fields.displayName ? <p className="mt-1 text-sm text-ink">{fields.displayName}</p> : null}
         </div>
         <div>
           <label className="label" htmlFor="tz">Timezone</label>
@@ -74,8 +75,8 @@ export default function ProfileCompletePage() {
             I have read the <Link href="/disclaimer" className="underline">risk disclosure</Link> and understand tips are not a promise of returns.
           </span>
         </label>
-        {fields.consentAccepted ? <p className="text-sm text-danger">{fields.consentAccepted}</p> : null}
-        {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
+        {fields.consentAccepted ? <p className="text-sm text-ink">{fields.consentAccepted}</p> : null}
+        {error ? <p className="text-sm text-ink" role="alert">{error}</p> : null}
         <button className="btn-primary w-full" type="submit" disabled={busy}>
           {busy ? "Saving" : "Continue"}
         </button>

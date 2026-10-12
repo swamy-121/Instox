@@ -1,9 +1,12 @@
 "use client";
 
+import { Wordmark } from "@/components/wordmark";
+
 export function LoadingState({ label = "Loading" }: { label?: string }) {
   return (
     <div role="status" className="space-y-3" aria-live="polite">
       <span className="sr-only">{label}</span>
+      <Wordmark decorative className="h-7 w-auto" />
       <div className="h-24 animate-pulse rounded-card bg-white" />
       <div className="h-24 animate-pulse rounded-card bg-white" />
     </div>
@@ -29,8 +32,8 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div role="alert" className="rounded-card border border-danger/30 bg-white p-5">
-      <h2 className="text-base font-semibold text-danger">Something went wrong</h2>
+    <div role="alert" className="rounded-card border border-line bg-white p-5">
+      <h2 className="text-base font-semibold text-ink">Something went wrong</h2>
       <p className="mt-2 text-sm text-ink">{message}</p>
       {requestId ? <p className="mt-2 text-xs text-muted">Request {requestId}</p> : null}
       {onRetry ? (

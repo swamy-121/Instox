@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { SplashGate } from "@/components/brand";
 import { PublicFooter, PublicHeader } from "@/components/chrome";
 
 export default function LandingPage() {
   return (
-    <>
+    <SplashGate>
       <PublicHeader />
       <main className="mx-auto max-w-5xl px-4 py-10">
         <p className="text-sm font-medium text-primary">Market tips, written and reviewed by people</p>
@@ -35,6 +36,6 @@ export default function LandingPage() {
         </section>
       </main>
       <PublicFooter />
-    </>
+    </SplashGate>
   );
 }

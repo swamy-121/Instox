@@ -5,17 +5,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        navy: "#0D1B2A",
+        navy: "#0A2C30",
         primary: {
-          DEFAULT: "#0F7A45",
-          dark: "#0B5C34",
-          soft: "#E6F5ED",
+          DEFAULT: "#227CB8",
+          dark: "#1D6A9D",
+          soft: "#E5F4FE",
         },
-        ink: "#0D1B2A",
-        muted: "#5C6B7A",
-        line: "#D5E0DA",
-        canvas: "#F3F6F4",
-        danger: "#B42318",
+        ink: {
+          DEFAULT: "#0A2C30",
+          hover: "#1A3C40",
+        },
+        muted: "#5A6E71",
+        line: "#D5E3E6",
+        canvas: "#F4F8F8",
+        profit: "#0F7A45",
+        loss: "#B42318",
         warning: "#9A6700",
       },
       borderRadius: {
@@ -25,7 +29,7 @@ const config: Config = {
         sans: ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(13, 27, 42, 0.06)",
+        card: "0 1px 2px rgba(10, 44, 48, 0.06)",
       },
     },
   },
