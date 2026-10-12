@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState } from "@/components/states";
+import { Chip, PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
 
 type Trade = {
@@ -72,22 +73,22 @@ function BacktestBody() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Backtest</h1>
-        <p className="mt-1 text-sm text-muted">Hypothetical EMA cross on sample candles. Fees and slippage come from config. Losing trades stay in the list.</p>
-      </div>
-      <form className="card flex flex-wrap items-end gap-3" onSubmit={(event) => void run(event)}>
-        <label className="text-sm">
+      <PageHeader title="Backtest" lede="Hypothetical EMA cross on sample candles. Fees and slippage come from config. Losing trades stay in the list." />
+      <form className="card flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => void run(event)}>
+        <label className="block flex-1">
           <span className="label">Symbol</span>
           <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} />
         </label>
-        <button className="btn-primary" type="submit" disabled={busy}>Run hypothetical test</button>
+        <button className="btn-primary w-full sm:w-auto" type="submit" disabled={busy}>Run hypothetical test</button>
       </form>
       {error ? <ErrorState message={error} requestId={requestId} /> : null}
       {result ? (
         <section className="space-y-3">
           <div className="card text-sm">
-            <p className="font-semibold">{result.label}. {result.dataLabel}. Live: {result.live ? "yes" : "no"}.</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-semibold text-ink">{result.label}. {result.dataLabel}.</p>
+              <Chip>Hypothetical</Chip>
+            </div>
             <p className="mt-2">{result.note}</p>
             <p className="mt-2 text-muted">
               {result.version} · fee {result.feeBps} bps · slippage {result.slippageBps} bps · gains {result.gains} · losses {result.losses} · net{" "}

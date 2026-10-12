@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
+import { PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
 
 type Rule = { indicator: "rsi" | "ema" | "cpr"; operator: string; value?: number };
@@ -58,10 +59,7 @@ function StrategiesBody() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Strategy builder</h1>
-        <p className="mt-1 text-sm text-muted">Rules stay in draft and version when you change them. Saving a strategy does not publish a tip.</p>
-      </div>
+      <PageHeader title="Strategy builder" lede="Rules stay in draft and version when you change them. Saving a strategy does not publish a tip." />
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!rows && !error ? <LoadingState /> : null}
       {rows && rows.length === 0 ? <EmptyState title="No strategies" body="Create a draft rule. It will not be published." /> : null}

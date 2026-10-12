@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { ErrorState } from "@/components/states";
+import { Chip, PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
 
 type Point = { closeTime: string; open: number; high: number; low: number; close: number; ema: number | null };
@@ -40,21 +41,21 @@ function ChartsBody() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Charts</h1>
-        <p className="mt-1 text-sm text-muted">Daily sample candles with an EMA overlay. This is not a live chart.</p>
-      </div>
-      <form className="card flex flex-wrap items-end gap-3" onSubmit={(event) => void load(event)}>
-        <label className="text-sm">
+      <PageHeader title="Charts" lede="Daily sample candles with an EMA overlay. This is not a live chart." />
+      <form className="card flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => void load(event)}>
+        <label className="block flex-1">
           <span className="label">Symbol</span>
           <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} />
         </label>
-        <button className="btn-primary" type="submit" disabled={busy}>Load sample chart</button>
+        <button className="btn-primary w-full sm:w-auto" type="submit" disabled={busy}>Load sample chart</button>
       </form>
       {error ? <ErrorState message={error} requestId={requestId} /> : null}
       {chart ? (
         <section className="card space-y-3">
-          <p className="text-sm">{chart.dataLabel}. Live: {chart.live ? "yes" : "no"}. {chart.notice}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm leading-6 text-ink">{chart.dataLabel}. {chart.notice}</p>
+            <Chip>Sample</Chip>
+          </div>
           <CandleChart candles={chart.candles} />
           <table className="w-full text-left text-sm">
             <thead>

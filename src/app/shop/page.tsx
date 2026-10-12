@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PublicFooter, PublicHeader } from "@/components/chrome";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
+import { Chip, PageHeader } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { formatInr } from "@/lib/money";
@@ -56,10 +57,7 @@ export default function ShopPage() {
     <>
       <PublicHeader />
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-10">
-        <h1 className="text-3xl font-semibold text-navy">Shop</h1>
-        <p className="max-w-2xl text-sm text-muted">
-          Prices are configuration placeholders. Fulfilment and refunds are not approved, so an order is held and nothing is charged.
-        </p>
+        <PageHeader title="Shop" lede="Prices are configuration placeholders. Fulfilment and refunds are not approved, so an order is held and nothing is charged." />
         {error ? <ErrorState message={error} onRetry={load} /> : null}
         {!catalog && !error ? <LoadingState label="Loading catalogue" /> : null}
         {catalog && catalog.products.length === 0 ? <EmptyState title="No products" body="The catalogue is empty." /> : null}
@@ -67,9 +65,12 @@ export default function ShopPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {catalog?.products.map((product) => (
             <article key={product.id} className="card">
-              <h2 className="text-lg font-semibold">{product.name}</h2>
-              <p className="mt-2 text-sm text-muted">{product.description}</p>
-              <p className="mt-4 text-2xl font-semibold tabular-nums">{formatInr(product.priceMinor)}</p>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-semibold text-ink">{product.name}</h2>
+                <Chip>{product.approved ? "Approved" : "Unapproved"}</Chip>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-muted">{product.description}</p>
+              <p className="mt-4 text-2xl font-semibold tabular-nums tracking-tight text-ink">{formatInr(product.priceMinor)}</p>
               <p className="text-xs text-muted">
                 Approved {product.approved ? "yes" : "no"} · fulfilment {product.fulfillment}
               </p>
