@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { ConfirmDialog, ErrorState, LoadingState } from "@/components/states";
+import { Chip, PageHeader } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-provider";
 import { formFromTip, TipForm, toTipPayload, type TipFormValue } from "@/features/tips/tip-form";
 import { apiFetch } from "@/lib/api-client";
@@ -97,21 +98,25 @@ function TipDesk() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm text-muted">Version {tip.version}</p>
-        <h1 className="text-2xl font-semibold">{tip.symbol}</h1>
-        <p className="text-sm">Status: {statusLabel(tip.status, tip.closeReason)}</p>
-        {tip.status === "in_review" && publisher ? (
-          <Link href={`/admin/tips/${tip.id}/review`} className="btn-primary mt-3">
+      <PageHeader
+        title={tip.symbol}
+        lede={`Version ${tip.version}. ${statusLabel(tip.status, tip.closeReason)}.`}
+        action={tip.status === "in_review" && publisher ? (
+          <Link href={`/admin/tips/${tip.id}/review`} className="btn-primary">
             Review and publish
           </Link>
-        ) : null}
+        ) : undefined}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Chip tone="info">{tip.side}</Chip>
+        <Chip>{tip.accessTier}</Chip>
+        <Chip>{tip.category.replaceAll("_", " ")}</Chip>
       </div>
       {error ? <p className="text-sm text-ink" role="alert">{error}</p> : null}
-      <label className="block">
+      <label className="card block">
         <span className="label">Reason</span>
-        <input className="field" value={reason} onChange={(event) => setReason(event.target.value)} />
-        {fields.reason ? <span className="text-sm text-ink">{fields.reason}</span> : null}
+        <input className="field" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why this change" />
+        {fields.reason ? <span className="mt-2 block text-sm text-ink">{fields.reason}</span> : null}
       </label>
       {editable ? (
         <TipForm key={tip.version} initial={formFromTip(tip)} fields={fields} busy={busy} submitLabel="Save changes" onSubmit={(form) => void save(form)} />
@@ -146,16 +151,16 @@ function TipDesk() {
         </label>
       ) : null}
       <section>
-        <h2 className="text-lg font-semibold">Event timeline</h2>
+        <h2 className="text-base font-semibold text-ink">Event timeline</h2>
         {events.length === 0 ? <p className="mt-2 text-sm text-muted">No events yet.</p> : null}
         <ol className="mt-3 space-y-3">
           {events.map((event) => (
             <li key={event.id} className="card text-sm">
-              <p className="font-medium">{event.eventType.replaceAll("_", " ")}</p>
-              <p>State: {event.oldStatus ?? "none"} to {event.newStatus ?? "same"}</p>
-              <p>Version: {event.oldVersion ?? "none"} to {event.newVersion ?? "same"}</p>
-              <p>Reason: {event.reason}</p>
-              <p className="text-muted">Actor {event.actorUid} · {new Date(event.occurredAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
+              <p className="font-semibold capitalize text-ink">{event.eventType.replaceAll("_", " ")}</p>
+              <p className="mt-2 text-ink">State: {event.oldStatus ?? "none"} to {event.newStatus ?? "same"}</p>
+              <p className="text-ink">Version: {event.oldVersion ?? "none"} to {event.newVersion ?? "same"}</p>
+              <p className="text-ink">Reason: {event.reason}</p>
+              <p className="mt-2 text-xs text-muted">Actor {event.actorUid} · {new Date(event.occurredAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
             </li>
           ))}
         </ol>

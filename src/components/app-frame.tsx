@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { BrandSplash } from "@/components/brand";
 import { BottomNav, DesktopNav } from "@/components/chrome";
@@ -9,6 +9,13 @@ import { ErrorState, PermissionDenied } from "@/components/states";
 import { Wordmark } from "@/components/wordmark";
 import { useAuth } from "@/features/auth/auth-provider";
 import { canAccessAdmin } from "@/server/authorization/roles";
+
+const ADMIN_LINKS = [
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/tips", label: "Tips" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/audit", label: "Audit" },
+];
 
 export function AppFrame({
   children,
@@ -34,17 +41,17 @@ export function AppFrame({
   if (requireAuth || admin) {
     if (state.status === "unconfigured") {
       return (
-        <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mx-auto max-w-md px-4 py-16">
           <ErrorState message="Firebase is not configured. Copy .env.example to .env.local and start the emulators." />
         </div>
       );
     }
     if (state.status === "signed_out") {
       return (
-        <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mx-auto max-w-md px-4 py-16">
           <div className="card">
             <h1 className="text-lg font-semibold">Sign in required</h1>
-            <p className="mt-2 text-sm text-muted">This page is available after you sign in.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">This page is available after you sign in.</p>
             <Link href="/sign-in" className="btn-primary mt-4">
               Sign in
             </Link>
@@ -54,14 +61,14 @@ export function AppFrame({
     }
     if (state.status === "error") {
       return (
-        <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mx-auto max-w-md px-4 py-16">
           <ErrorState message={state.message} />
         </div>
       );
     }
     if (state.status === "ready" && state.me.status !== "active") {
       return (
-        <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mx-auto max-w-md px-4 py-16">
           <PermissionDenied
             message={
               state.me.status === "disabled"
@@ -78,34 +85,66 @@ export function AppFrame({
     }
     if (admin && state.status === "ready" && !canAccessAdmin(state.me.roles)) {
       return (
-        <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mx-auto max-w-md px-4 py-16">
           <PermissionDenied message="Your account does not include an admin role." />
         </div>
       );
     }
   }
 
+  if (admin) return <AdminShell>{children}</AdminShell>;
+
   const signedIn = state.status === "ready";
 
   return (
-    <div className="mx-auto min-h-screen max-w-5xl px-4 pb-24 pt-4 md:pb-10">
-      <header className="brand-surface -mx-4 mb-6 flex items-center justify-between gap-4 border-b border-line px-4 py-3">
-        <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
-          <Wordmark decorative />
-        </Link>
-        {signedIn && !admin ? <DesktopNav /> : null}
-        {admin ? (
-          <nav className="flex flex-wrap gap-3 text-sm" aria-label="Admin">
-            <Link href="/admin">Overview</Link>
-            <Link href="/admin/tips">Tips</Link>
-            <Link href="/admin/users">Users</Link>
-            <Link href="/admin/audit">Audit</Link>
-            <Link href="/home">App</Link>
-          </nav>
-        ) : null}
+    <div className="min-h-screen bg-canvas">
+      <header className="brand-surface sticky top-0 z-30 border-b border-line">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
+          <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
+            <Wordmark decorative className="h-9 w-auto" />
+          </Link>
+          {signedIn ? <DesktopNav /> : null}
+        </div>
       </header>
-      {children}
-      {signedIn && !admin ? <BottomNav /> : null}
+      <main className="mx-auto w-full max-w-5xl px-4 py-6 pb-24 md:pb-10">{children}</main>
+      {signedIn ? <BottomNav /> : null}
+    </div>
+  );
+}
+
+function AdminShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  return (
+    <div className="min-h-screen bg-canvas md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="brand-surface border-b border-line md:sticky md:top-0 md:h-screen md:border-b-0 md:border-r">
+        <div className="flex h-16 items-center justify-between px-4">
+          <Link href="/admin" aria-label="inStox admin" className="inline-flex items-center">
+            <Wordmark decorative className="h-8 w-auto" />
+          </Link>
+          <Link href="/home" className="text-sm font-medium text-primary md:hidden">
+            App
+          </Link>
+        </div>
+        <nav className="flex gap-2 overflow-x-auto px-3 pb-3 md:flex-col md:overflow-visible md:px-3 md:pb-6" aria-label="Admin">
+          {ADMIN_LINKS.map((link) => {
+            const active = link.href === "/admin" ? pathname === "/admin" : pathname === link.href || pathname.startsWith(`${link.href}/`);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`shrink-0 rounded-xl px-3 py-2 text-sm font-medium ${active ? "bg-primary-soft text-primary" : "text-ink hover:bg-canvas"}`}
+                aria-current={active ? "page" : undefined}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+          <Link href="/home" className="mt-2 hidden rounded-xl px-3 py-2 text-sm font-medium text-muted hover:bg-canvas hover:text-ink md:block">
+            Back to app
+          </Link>
+        </nav>
+      </aside>
+      <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8 md:py-8">{children}</div>
     </div>
   );
 }

@@ -75,43 +75,45 @@ export default function SignInPage() {
   if (state.status === "loading") return <BrandSplash label="Checking session" />;
   if (state.status === "unconfigured") {
     return (
-      <main className="mx-auto max-w-md px-4 py-10">
+      <main className="mx-auto max-w-md px-4 py-16">
         <ErrorState message="Firebase is not configured. Copy .env.example to .env.local and set NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true for local auth." />
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-md px-4 py-10">
-      <Link href="/" aria-label="inStox" className="inline-flex">
-        <Wordmark decorative />
-      </Link>
-      <h1 className="mt-4 text-3xl font-semibold text-navy">Sign in</h1>
-      <p className="mt-2 text-sm text-muted">
-        Use a phone code or Google. Read the <Link href="/disclaimer" className="underline">risk disclosure</Link> before you rely on any tip.
-      </p>
-      {state.status === "error" ? <div className="mt-4"><ErrorState message={state.message} /></div> : null}
-      {state.status === "ready" && state.emailConflict ? (
-        <p className="mt-4 text-sm text-warning" role="status">
-          Another account already uses this email. The accounts were not merged.
-        </p>
-      ) : null}
-      <div className="mt-6 space-y-3">
-        <Link href="/sign-in/phone" className="btn-primary w-full">
-          Continue with phone
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
+      <div className="card p-6">
+        <Link href="/" aria-label="inStox" className="inline-flex">
+          <Wordmark decorative className="h-9 w-auto" />
         </Link>
-        <button type="button" className="btn-secondary w-full" onClick={() => void google()} disabled={busy}>
-          {busy ? "Waiting" : "Continue with Google"}
-        </button>
+        <h1 className="mt-6 text-2xl font-semibold tracking-tight text-ink">Sign in</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          Use a phone code or Google. Read the <Link href="/disclaimer" className="text-primary hover:underline">risk disclosure</Link> before you rely on any tip.
+        </p>
+        {state.status === "error" ? <div className="mt-4"><ErrorState message={state.message} /></div> : null}
+        {state.status === "ready" && state.emailConflict ? (
+          <p className="mt-4 text-sm text-warning" role="status">
+            Another account already uses this email. The accounts were not merged.
+          </p>
+        ) : null}
+        <div className="mt-6 space-y-3">
+          <Link href="/sign-in/phone" className="btn-primary w-full">
+            Continue with phone
+          </Link>
+          <button type="button" className="btn-secondary w-full" onClick={() => void google()} disabled={busy}>
+            {busy ? "Waiting" : "Continue with Google"}
+          </button>
+        </div>
+        {message ? <p className="mt-4 text-sm text-ink" role="alert">{message}</p> : null}
       </div>
-      {message ? <p className="mt-4 text-sm text-ink" role="alert">{message}</p> : null}
       {emulator ? (
-        <section className="mt-8">
-          <h2 className="text-sm font-semibold">Emulator users</h2>
-          <p className="mt-1 text-xs text-muted">Local only. These buttons call the Auth emulator. They are hidden when the emulator flag is off.</p>
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-ink">Emulator users</h2>
+          <p className="mt-1 text-xs leading-5 text-muted">Local only. These buttons call the Auth emulator. They are hidden when the emulator flag is off.</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {DEV_USERS.map(([uid, label]) => (
-              <button key={uid} type="button" className="btn-secondary" disabled={busy} onClick={() => void devSignIn(uid)}>
+              <button key={uid} type="button" className="btn-quiet" disabled={busy} onClick={() => void devSignIn(uid)}>
                 {label}
               </button>
             ))}

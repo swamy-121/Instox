@@ -23,13 +23,13 @@ const config: Config = {
         warning: "#9A6700",
       },
       borderRadius: {
-        card: "14px",
+        card: "16px",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(10, 44, 48, 0.06)",
+        card: "0 1px 2px rgba(10, 44, 48, 0.04), 0 8px 24px rgba(10, 44, 48, 0.04)",
       },
     },
   },

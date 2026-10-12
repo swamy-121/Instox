@@ -3,34 +3,39 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { HomeIcon, InsightsIcon, ProfileIcon, ScreenerIcon, TipsIcon } from "@/components/icons";
 import { Wordmark } from "@/components/wordmark";
 
 const MEMBER_LINKS = [
-  { href: "/home", label: "Home" },
-  { href: "/tips", label: "Tips" },
-  { href: "/screener", label: "Screener" },
-  { href: "/insights", label: "Insights" },
-  { href: "/profile", label: "Profile" },
+  { href: "/home", label: "Home", icon: HomeIcon },
+  { href: "/tips", label: "Tips", icon: TipsIcon },
+  { href: "/screener", label: "Screener", icon: ScreenerIcon },
+  { href: "/insights", label: "Insights", icon: InsightsIcon },
+  { href: "/profile", label: "Profile", icon: ProfileIcon },
 ];
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function PublicHeader() {
   return (
-    <header className="brand-surface border-b border-line">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+    <header className="brand-surface sticky top-0 z-30 border-b border-line">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <Link href="/" aria-label="inStox" className="inline-flex shrink-0 items-center">
-          <Wordmark decorative />
+          <Wordmark decorative className="h-9 w-auto" />
         </Link>
-        <nav className="flex items-center gap-4 text-sm text-ink">
-          <Link href="/pricing" className="hover:underline">
+        <nav className="hidden items-center gap-6 text-sm text-ink md:flex">
+          <Link href="/pricing" className="hover:text-primary">
             Pricing
           </Link>
-          <Link href="/about" className="hover:underline">
+          <Link href="/about" className="hover:text-primary">
             About
           </Link>
-          <Link href="/sign-in" className="rounded-full bg-ink px-3 py-1.5 font-medium text-white hover:bg-ink-hover">
-            Sign in
-          </Link>
         </nav>
+        <Link href="/sign-in" className="btn-primary">
+          Sign in
+        </Link>
       </div>
     </header>
   );
@@ -38,21 +43,20 @@ export function PublicHeader() {
 
 export function PublicFooter() {
   return (
-    <footer className="mt-12 border-t border-line px-4 py-8 text-sm text-muted">
-      <div className="mx-auto flex max-w-5xl flex-wrap gap-4">
-        <Link href="/disclaimer" className="hover:underline">
-          Risk disclosure
-        </Link>
-        <Link href="/about" className="hover:underline">
-          About
-        </Link>
-        <Link href="/pricing" className="hover:underline">
-          Pricing
-        </Link>
+    <footer className="border-t border-line bg-white px-4 py-10 text-sm text-muted">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div>
+          <Wordmark decorative className="h-8 w-auto" />
+          <p className="mt-3 max-w-sm leading-6">
+            Tips are manually written information. Instox does not place trades and does not promise returns.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link href="/pricing" className="hover:text-ink">Pricing</Link>
+          <Link href="/about" className="hover:text-ink">About</Link>
+          <Link href="/disclaimer" className="hover:text-ink">Risk disclosure</Link>
+        </div>
       </div>
-      <p className="mx-auto mt-4 max-w-5xl">
-        Tips are manually written information. Instox does not place trades and does not promise returns.
-      </p>
     </footer>
   );
 }
@@ -60,17 +64,21 @@ export function PublicFooter() {
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white md:hidden" aria-label="Primary">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur md:hidden" aria-label="Primary" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {MEMBER_LINKS.map((link) => {
-          const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+          const active = isActive(pathname, link.href);
+          const Icon = link.icon;
           return (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className={`flex h-14 items-center justify-center text-xs font-medium ${active ? "text-primary" : "text-muted"}`}
+                className={`flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-primary" : "text-muted"}`}
                 aria-current={active ? "page" : undefined}
               >
+                <span className={`flex h-7 w-7 items-center justify-center rounded-full ${active ? "bg-primary-soft" : ""}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
                 {link.label}
               </Link>
             </li>
@@ -84,11 +92,16 @@ export function BottomNav() {
 export function DesktopNav() {
   const pathname = usePathname();
   return (
-    <nav className="hidden gap-5 text-sm md:flex" aria-label="Primary">
+    <nav className="hidden items-center gap-1 text-sm md:flex" aria-label="Primary">
       {MEMBER_LINKS.map((link) => {
-        const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+        const active = isActive(pathname, link.href);
         return (
-          <Link key={link.href} href={link.href} className={active ? "font-semibold text-primary" : "text-ink"} aria-current={active ? "page" : undefined}>
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`rounded-full px-3 py-1.5 ${active ? "bg-primary-soft font-semibold text-primary" : "text-ink hover:bg-canvas"}`}
+            aria-current={active ? "page" : undefined}
+          >
             {link.label}
           </Link>
         );

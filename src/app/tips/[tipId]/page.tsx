@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
+import { LockIcon } from "@/components/icons";
 import { ErrorState, LoadingState, PermissionDenied } from "@/components/states";
+import { Chip, PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
 import { CATEGORY_LABELS, statusLabel } from "@/lib/labels";
 import { formatPrice } from "@/lib/money";
@@ -12,12 +14,6 @@ import type { OpenTipView, TipView } from "@/server/tips/present";
 
 function isOpen(tip: TipView): tip is OpenTipView {
   return tip.locked === false;
-}
-
-function statusTone(reason: string | null | undefined) {
-  if (reason === "target_hit") return "text-profit";
-  if (reason === "stop_loss_hit") return "text-loss";
-  return "text-ink";
 }
 
 export default function TipDetailPage() {
@@ -53,39 +49,81 @@ function Detail() {
   if (error) return <ErrorState message={error.message} requestId={error.requestId} onRetry={load} />;
   if (!tip) return <LoadingState label="Loading tip" />;
 
+  const reason = isOpen(tip) ? tip.closeReason : null;
+
   return (
-    <article className="card">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{CATEGORY_LABELS[tip.category]}</p>
-      <h1 className="mt-1 text-2xl font-semibold tabular-nums">{tip.symbol}</h1>
-      <p className="mt-2 text-sm">Side: {tip.side}</p>
-      <p className={`text-sm ${statusTone(isOpen(tip) ? tip.closeReason : null)}`}>
-        Status: {statusLabel(tip.status, isOpen(tip) ? tip.closeReason : null)}
+    <article>
+      <PageHeader title={tip.symbol} lede={`${CATEGORY_LABELS[tip.category]} · ${tip.timeframe}`} />
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Chip tone="info">{tip.side}</Chip>
+        <Chip tone={reason === "target_hit" ? "profit" : reason === "stop_loss_hit" ? "loss" : "neutral"}>
+          {statusLabel(tip.status, reason)}
+        </Chip>
+        {tip.accessTier === "premium" ? <Chip tone="info">Premium</Chip> : <Chip>Free</Chip>}
+      </div>
+      <p className="text-xs text-muted">
+        Published {tip.publishedAt ? new Date(tip.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "not yet"}
       </p>
-      <p className="text-sm text-muted">Timeframe: {tip.timeframe}</p>
-      <p className="text-sm text-muted">Published: {tip.publishedAt ? new Date(tip.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "Not published"}</p>
-      {tip.locked ? (
-        <div className="mt-6 rounded-xl border border-line bg-canvas p-4">
-          <h2 className="font-semibold">Premium tip</h2>
-          <p className="mt-2 text-sm text-muted">
-            Entry, stop, targets, and rationale are not included in this response. Upgrade is a placeholder until payments and the legal review are approved.
-          </p>
-          <Link href="/pricing" className="btn-primary mt-4">
-            View pricing
-          </Link>
-        </div>
-      ) : (
-        <div className="mt-6 space-y-2 text-sm tabular-nums">
-          <p>Entry {formatPrice(tip.entryMin)}{tip.entryMax ? ` to ${formatPrice(tip.entryMax)}` : ""}</p>
-          <p>Stop loss {formatPrice(tip.stopLoss)}</p>
-          {tip.targets.map((target) => (
-            <p key={target.label}>{target.label} {formatPrice(target.price)}</p>
-          ))}
-          {tip.optionType ? <p>Option {tip.optionType} strike {tip.strikePrice} expiry {tip.expiry}</p> : null}
-          <h2 className="pt-2 font-semibold">Rationale</h2>
-          <p className="whitespace-pre-wrap font-sans">{tip.thesis}</p>
-          <p className="text-xs text-muted">Risk disclosure {tip.riskDisclosureVersion}</p>
-        </div>
-      )}
+      {tip.locked ? <PremiumLock /> : <OpenLevels tip={tip} />}
     </article>
+  );
+}
+
+function PremiumLock() {
+  return (
+    <div className="relative mt-6 overflow-hidden rounded-card border border-line bg-white shadow-card">
+      <div className="pointer-events-none select-none space-y-3 p-4 blur-md" aria-hidden="true">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="h-16 rounded-xl bg-canvas" />
+          <div className="h-16 rounded-xl bg-canvas" />
+          <div className="h-16 rounded-xl bg-canvas" />
+        </div>
+        <div className="h-4 w-2/3 rounded bg-line" />
+        <div className="h-4 w-1/2 rounded bg-line" />
+        <div className="h-20 rounded-xl bg-canvas" />
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/75 px-6 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary">
+          <LockIcon />
+        </span>
+        <h2 className="mt-3 text-lg font-semibold text-ink">Premium idea</h2>
+        <p className="mt-1 max-w-xs text-sm leading-6 text-muted">
+          Entry, stop, targets, and the write-up stay on the server until a plan is active.
+        </p>
+        <Link href="/pricing" className="btn-primary mt-4">
+          View plans
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function OpenLevels({ tip }: { tip: OpenTipView }) {
+  const levels = [
+    ["Entry", formatPrice(tip.entryMin)],
+    ["Stop", formatPrice(tip.stopLoss)],
+    ...tip.targets.map((target) => [target.label, formatPrice(target.price)] as const),
+  ];
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {levels.map(([label, value]) => (
+          <div key={label} className="card p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-ink">{value}</p>
+          </div>
+        ))}
+      </div>
+      {tip.optionType ? (
+        <p className="text-sm text-muted">
+          {tip.optionType} {tip.strikePrice} · expiry {tip.expiry} · lot {tip.lotSize}
+        </p>
+      ) : null}
+      <section className="card">
+        <h2 className="text-sm font-semibold text-ink">Rationale</h2>
+        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{tip.thesis}</p>
+        <p className="mt-4 text-xs text-muted">Risk disclosure {tip.riskDisclosureVersion}</p>
+      </section>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { TipCard } from "@/components/tip-card";
+import { PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import type { TipView } from "@/server/tips/present";
@@ -54,16 +55,15 @@ function TipsBody() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Tips</h1>
-      <p className="mt-1 text-sm text-muted">Free tips show prices. Premium tips stay locked unless the server says your plan is active.</p>
+      <PageHeader title="Tips" lede="Free tips show prices. Premium tips stay locked unless the server says your plan is active." />
       <form
-        className="mt-4 grid gap-3 md:grid-cols-4"
+        className="card grid gap-4 sm:grid-cols-2"
         onSubmit={(event) => {
           event.preventDefault();
           setApplied({ category, accessTier, q });
         }}
       >
-        <label className="text-sm">
+        <label>
           <span className="label">Category</span>
           <select className="field" value={category} onChange={(event) => setCategory(event.target.value)}>
             <option value="">All</option>
@@ -72,7 +72,7 @@ function TipsBody() {
             ))}
           </select>
         </label>
-        <label className="text-sm">
+        <label>
           <span className="label">Access</span>
           <select className="field" value={accessTier} onChange={(event) => setAccessTier(event.target.value)}>
             <option value="">All</option>
@@ -80,13 +80,15 @@ function TipsBody() {
             <option value="premium">Premium</option>
           </select>
         </label>
-        <label className="text-sm md:col-span-2">
+        <label className="sm:col-span-2">
           <span className="label">Symbol search</span>
           <input className="field" value={q} onChange={(event) => setQ(event.target.value)} placeholder="RELIANCE" />
         </label>
-        <button className="btn-primary md:col-span-4" type="submit">Apply filters</button>
+        <div className="sm:col-span-2">
+          <button className="btn-primary w-full sm:w-auto" type="submit">Apply filters</button>
+        </div>
       </form>
-      <div className="mt-6 space-y-3">
+      <div className="mt-4 space-y-3">
         {error?.code === "FORBIDDEN" || error?.code === "ACCOUNT_DISABLED" ? <PermissionDenied message={error.message} /> : null}
         {error && error.code !== "FORBIDDEN" && error.code !== "ACCOUNT_DISABLED" ? (
           <ErrorState message={error.message} requestId={error.requestId} onRetry={() => void load(null, true)} />

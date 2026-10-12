@@ -127,14 +127,14 @@ export function TipForm({
 
   return (
     <form
-      className="space-y-4"
+      className="card space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit({ ...form, accessTier: tier });
       }}
     >
       <p className="text-xs text-muted">{instrumentFile.label}</p>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <label>
           <span className="label">Symbol</span>
           <select className="field" value={form.symbol} onChange={(event) => set("symbol", event.target.value)}>
@@ -196,7 +196,7 @@ export function TipForm({
       </div>
       {fieldError.targets ? <p className="text-sm text-ink">{fieldError.targets}</p> : null}
       {showDerivative ? (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <label>
             <span className="label">Expiry</span>
             <input className="field" placeholder="YYYY-MM-DD" value={form.expiry} onChange={(event) => set("expiry", event.target.value)} />
