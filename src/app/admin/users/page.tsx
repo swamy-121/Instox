@@ -120,13 +120,13 @@ function Users() {
 
   return (
     <div>
-      <AdminTitle title="Users" lede="Manage Instox users and their accounts." />
+      <AdminTitle title="Users" lede="Accounts, roles, and whether a plan is active." />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AdminTabs
           tabs={[
-            { id: "all", label: "All Users", count: counts.all },
-            { id: "free", label: "Free Users", count: counts.free },
-            { id: "premium", label: "Premium Users", count: counts.premium },
+            { id: "all", label: "All", count: counts.all },
+            { id: "free", label: "Free", count: counts.free },
+            { id: "premium", label: "Premium", count: counts.premium },
           ]}
           value={tab}
           onChange={(id) => {
@@ -157,7 +157,7 @@ function Users() {
         <div className="card mt-4 overflow-x-auto">
           <table className="w-full min-w-[48rem] text-left text-sm">
             <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+              <tr className="border-b border-line text-xs text-muted">
                 <th className="px-3 py-3 font-medium">Name</th>
                 <th className="px-3 py-3 font-medium">Phone</th>
                 <th className="px-3 py-3 font-medium">Plan</th>

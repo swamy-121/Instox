@@ -1,6 +1,5 @@
 "use client";
 
-import { IndianRupee, Lightbulb, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AdminTitle, changeLabel } from "@/components/admin-ui";
@@ -26,7 +25,7 @@ type Model = {
   categories: Array<{ category: string; count: number }>;
 };
 
-const COLORS = ["#027332", "#0194A8", "#7DCEA0", "#0F7A45", "#F0B429", "#8E6BB8", "#E8772E", "#4F6B5E"];
+const COLORS = ["#027332", "#4F6B5E", "#9BB8A8", "#025A28", "#013316"];
 
 function isoDay(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -84,10 +83,10 @@ export function DashboardView({ title, lede }: { title: string; lede: string }) 
 
   const cards = model
     ? [
-        { label: "Total Users", value: model.totalUsers.toLocaleString("en-IN"), change: model.usersChangePct, icon: Users },
-        { label: "Premium Users", value: model.premiumUsers.toLocaleString("en-IN"), change: model.premiumChangePct, icon: TrendingUp },
-        { label: "Total Revenue", value: formatInr(model.revenueMinor), change: model.revenueChangePct, icon: IndianRupee },
-        { label: "Total Tips", value: model.totalTips.toLocaleString("en-IN"), change: model.tipsChangePct, icon: Lightbulb },
+        { label: "Users", value: model.totalUsers.toLocaleString("en-IN"), change: model.usersChangePct },
+        { label: "Premium", value: model.premiumUsers.toLocaleString("en-IN"), change: model.premiumChangePct },
+        { label: "Revenue", value: formatInr(model.revenueMinor), change: model.revenueChangePct },
+        { label: "Ideas", value: model.totalTips.toLocaleString("en-IN"), change: model.tipsChangePct },
       ]
     : [];
 
@@ -125,26 +124,20 @@ export function DashboardView({ title, lede }: { title: string; lede: string }) 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => {
               const change = changeLabel(card.change);
-              const Icon = card.icon;
               return (
-                <article key={card.label} className="card flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted">{card.label}</p>
-                    <p className="mt-2 text-2xl font-semibold tabular-nums text-ink">{card.value}</p>
-                    <p className={`mt-2 text-xs font-semibold ${change.up === null ? "text-muted" : change.up ? "text-profit" : "text-loss"}`}>
-                      {change.text}
-                    </p>
-                  </div>
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </span>
+                <article key={card.label} className="card">
+                  <p className="text-sm text-muted">{card.label}</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{card.value}</p>
+                  <p className={`mt-1 text-xs font-medium ${change.up === null ? "text-muted" : change.up ? "text-profit" : "text-loss"}`}>
+                    {change.text}
+                  </p>
                 </article>
               );
             })}
           </div>
           <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
             <section className="card">
-              <h2 className="text-base font-semibold text-ink">User Growth</h2>
+              <h2 className="text-sm font-semibold text-ink">Signups</h2>
               <p className="text-xs text-muted">Free and premium signups, with recorded order totals on the line.</p>
               {charts && model.growth.length > 0 ? (
                 <div className="mt-4 h-72">
@@ -169,7 +162,7 @@ export function DashboardView({ title, lede }: { title: string; lede: string }) 
               )}
             </section>
             <section className="card">
-              <h2 className="text-base font-semibold text-ink">Tips by Category</h2>
+              <h2 className="text-sm font-semibold text-ink">Ideas by category</h2>
               {charts && model.categories.length > 0 ? (
                 <div className="mt-2 h-72">
                   <ResponsiveContainer width="100%" height="100%">
@@ -180,7 +173,7 @@ export function DashboardView({ title, lede }: { title: string; lede: string }) 
                         nameKey="name"
                         innerRadius={58}
                         outerRadius={86}
-                        paddingAngle={2}
+                        paddingAngle={0}
                       >
                         {model.categories.map((entry, index) => (
                           <Cell key={entry.category} fill={COLORS[index % COLORS.length]} />

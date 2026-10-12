@@ -20,9 +20,9 @@ export function LoadingState({ label = "Loading" }: { label?: string }) {
 
 export function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-card border border-dashed border-line bg-white px-6 py-10 text-center shadow-card">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">{body}</p>
+    <div className="rounded-lg border border-line bg-white px-4 py-4">
+      <h2 className="text-sm font-semibold text-ink">{title}</h2>
+      <p className="mt-1 max-w-md text-sm leading-6 text-muted">{body}</p>
     </div>
   );
 }
@@ -80,7 +80,7 @@ export function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
-        className="w-full max-w-md rounded-card bg-white p-5 shadow-card"
+        className="w-full max-w-md rounded-lg border border-line bg-white p-5"
       >
         <h2 id="confirm-title" className="text-lg font-semibold text-ink">
           {title}

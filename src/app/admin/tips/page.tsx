@@ -82,8 +82,8 @@ function TipsDesk() {
     <div>
       <AdminTitle
         title="Trading Tips"
-        lede="Manage and publish trading tips for Instox users."
-        action={<Link href="/admin/tips/new" className="btn-primary">Add New Tip</Link>}
+        lede="Drafts, review, and published ideas."
+        action={<Link href="/admin/tips/new" className="btn-primary">New idea</Link>}
       />
       <AdminTabs
         tabs={TABS}
@@ -103,7 +103,7 @@ function TipsDesk() {
           <div className="card overflow-x-auto">
             <table className="w-full min-w-[52rem] text-left text-sm">
               <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+                <tr className="border-b border-line text-xs text-muted">
                   <th className="px-3 py-3 font-medium">Symbol</th>
                   <th className="px-3 py-3 font-medium">Type</th>
                   <th className="px-3 py-3 font-medium">Category</th>

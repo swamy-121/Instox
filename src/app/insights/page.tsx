@@ -110,7 +110,7 @@ function Stat({ label, value, tone = "ink" }: { label: string; value: string; to
   const color = statColor(tone);
   return (
     <div className="card">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="text-xs font-medium text-muted">{label}</p>
       <p className={`mt-2 text-2xl font-semibold tabular-nums tracking-tight ${color}`}>{value}</p>
     </div>
   );

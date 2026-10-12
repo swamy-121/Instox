@@ -160,7 +160,7 @@ function CrmList() {
 
 function StageButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
-    <button type="button" role="tab" aria-selected={active} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-primary text-white" : "bg-white text-ink ring-1 ring-line"}`} onClick={onClick}>
+    <button type="button" role="tab" aria-selected={active} className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium ${active ? "bg-primary text-white" : "border border-line bg-white text-ink"}`} onClick={onClick}>
       {label}
     </button>
   );

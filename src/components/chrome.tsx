@@ -143,7 +143,7 @@ export function ServiceWorkerRegistration() {
   if (!updateReady) return null;
 
   return (
-    <div className="fixed inset-x-4 bottom-20 z-50 rounded-card border border-line bg-white p-4 shadow-card md:bottom-4 md:left-auto md:right-4 md:w-80">
+    <div className="fixed inset-x-4 bottom-20 z-50 rounded-lg border border-line bg-white p-4 md:bottom-4 md:left-auto md:right-4 md:w-80">
       <p className="text-sm text-ink">A new version is ready.</p>
       <button
         type="button"

@@ -58,7 +58,7 @@ function NewsBody() {
           <li key={row.id} className="card flex gap-3">
             <NewsThumb category={row.category} />
             <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">{row.category}</p>
+              <p className="text-xs font-medium text-muted">{row.category}</p>
               <h2 className="mt-1 font-semibold text-ink">{row.title}</h2>
               <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted">{row.summary}</p>
             </div>

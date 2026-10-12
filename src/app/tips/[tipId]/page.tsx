@@ -108,7 +108,7 @@ function WatchButton({ symbol }: { symbol: string }) {
 
 function PremiumLock() {
   return (
-    <div className="relative mt-6 overflow-hidden rounded-card border border-line bg-white shadow-card">
+    <div className="relative mt-6 overflow-hidden rounded-lg border border-line bg-white">
       <div className="pointer-events-none select-none space-y-3 p-4 blur-md" aria-hidden="true">
         <div className="grid grid-cols-3 gap-2">
           <div className="h-16 rounded-xl bg-canvas" />
@@ -146,7 +146,7 @@ function OpenLevels({ tip }: { tip: OpenTipView }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {levels.map(([label, value]) => (
           <div key={label} className="card p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+            <p className="text-xs font-medium text-muted">{label}</p>
             <p className="mt-1 text-lg font-semibold tabular-nums text-ink">{value}</p>
           </div>
         ))}

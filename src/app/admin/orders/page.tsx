@@ -101,7 +101,7 @@ function Body() {
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[48rem] text-left text-sm">
             <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+              <tr className="border-b border-line text-xs text-muted">
                 <th className="px-3 py-3 font-medium">Order</th>
                 <th className="px-3 py-3 font-medium">User</th>
                 <th className="px-3 py-3 font-medium">Plan</th>

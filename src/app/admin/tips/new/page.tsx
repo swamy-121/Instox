@@ -75,7 +75,7 @@ function NewTip() {
 
   return (
     <div>
-      <AdminTitle title="Add New Trading Tip" lede="Create and publish a new trading tip." />
+      <AdminTitle title="New idea" lede="Saves a draft. Publishers can also publish from this form." />
       {error ? <p className="mb-3 text-sm text-ink" role="alert">{error}</p> : null}
       <TipForm
         initial={emptyTipForm()}

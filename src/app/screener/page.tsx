@@ -77,13 +77,13 @@ function ScreenerBody() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Screener</h1>
+      <h1 className="text-xl font-semibold text-ink">Screener</h1>
       <div className="flex gap-2 overflow-x-auto">
         {TABS.map((item) => (
           <button
             key={item.id}
             type="button"
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold ${tab === item.id ? "bg-primary text-white" : "bg-primary-soft text-primary"}`}
+            className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium ${tab === item.id ? "bg-primary text-white" : "border border-line bg-white text-ink"}`}
             onClick={() => setTab(item.id)}
           >
             {item.label}
@@ -103,7 +103,7 @@ function ScreenerBody() {
       {rows.length > 0 ? (
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-muted">
+            <thead className="text-xs text-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Symbol</th>
                 <th className="px-4 py-3 font-medium">LTP</th>

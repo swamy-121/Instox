@@ -14,7 +14,7 @@ export function AdminTitle({
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-xl font-semibold text-ink">{title}</h1>
         {lede ? <p className="mt-1 text-sm text-muted">{lede}</p> : null}
       </div>
       {action}

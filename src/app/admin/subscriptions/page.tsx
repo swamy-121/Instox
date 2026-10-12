@@ -86,7 +86,7 @@ function Body() {
 
   return (
     <div>
-      <AdminTitle title="Subscriptions" lede="Manage subscription plans and payments." />
+      <AdminTitle title="Subscriptions" lede="Plan entitlements already on accounts." />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AdminTabs
           tabs={[
@@ -110,7 +110,7 @@ function Body() {
         <div className="card mt-4 overflow-x-auto">
           <table className="w-full min-w-[52rem] text-left text-sm">
             <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+              <tr className="border-b border-line text-xs text-muted">
                 <th className="px-3 py-3 font-medium">Name</th>
                 <th className="px-3 py-3 font-medium">Phone</th>
                 <th className="px-3 py-3 font-medium">Plan</th>

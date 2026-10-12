@@ -28,13 +28,13 @@ const config: Config = {
         warning: "#9A6700",
       },
       borderRadius: {
-        card: "16px",
+        card: "8px",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(1, 51, 22, 0.04), 0 10px 28px rgba(1, 51, 22, 0.08)",
+        card: "0 1px 2px rgba(1, 51, 22, 0.04)",
       },
     },
   },

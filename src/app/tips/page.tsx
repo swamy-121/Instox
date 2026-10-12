@@ -77,17 +77,17 @@ function TipsBody() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Trading ideas</h1>
+      <h1 className="text-xl font-semibold text-ink">Trading ideas</h1>
       <div className="flex gap-2 overflow-x-auto">
         {GROUPS.map((item) => (
-          <button key={item.id} type="button" className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${group === item.id ? "bg-primary text-white" : "bg-canvas text-ink"}`} onClick={() => setGroup(item.id)}>
+          <button key={item.id} type="button" className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium ${group === item.id ? "bg-primary text-white" : "border border-line bg-white text-ink"}`} onClick={() => setGroup(item.id)}>
             {item.label}
           </button>
         ))}
       </div>
       <div className="flex gap-2 overflow-x-auto">
         {DURATIONS.map((item) => (
-          <button key={item.id} type="button" className={`shrink-0 rounded-full border px-3 py-1.5 text-sm ${duration === item.id ? "border-primary bg-primary-soft text-primary" : "border-line text-ink"}`} onClick={() => setDuration(item.id)}>
+          <button key={item.id} type="button" className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium ${duration === item.id ? "border-primary bg-primary text-white" : "border-line bg-white text-ink"}`} onClick={() => setDuration(item.id)}>
             {item.label}
           </button>
         ))}
