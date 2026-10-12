@@ -31,6 +31,12 @@ type Result = {
   trades: Trade[];
 };
 
+function outcomeTone(outcome: string) {
+  if (outcome === "gain") return "text-profit";
+  if (outcome === "loss") return "text-loss";
+  return "text-ink";
+}
+
 export default function BacktestPage() {
   return (
     <AppFrame requireAuth>
@@ -94,9 +100,10 @@ function BacktestBody() {
             <ul className="space-y-2">
               {result.trades.map((trade) => (
                 <li key={`${trade.entryTime}-${trade.exitTime}`} className="card text-sm">
-                  <p className="font-medium">{trade.outcome}</p>
+                  <p className={`font-medium ${outcomeTone(trade.outcome)}`}>{trade.outcome}</p>
                   <p className="tabular-nums text-muted">
-                    {trade.entryPrice} to {trade.exitPrice} · gross {trade.grossReturnPct}% · net {trade.netReturnPct}%
+                    {trade.entryPrice} to {trade.exitPrice} · gross {trade.grossReturnPct}% · net{" "}
+                    <span className={outcomeTone(trade.outcome)}>{trade.netReturnPct}%</span>
                   </p>
                 </li>
               ))}

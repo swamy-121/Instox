@@ -106,10 +106,10 @@ function CandleChart({ candles }: { candles: Point[] }) {
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full rounded-xl bg-canvas" role="img" aria-label="Sample candle chart">
       {candles.map((candle, index) => (
-        <line key={candle.closeTime} x1={xAt(index)} x2={xAt(index)} y1={yAt(candle.high)} y2={yAt(candle.low)} stroke="#0D1B2A" strokeWidth="1" />
+        <line key={candle.closeTime} x1={xAt(index)} x2={xAt(index)} y1={yAt(candle.high)} y2={yAt(candle.low)} stroke="#0A2C30" strokeWidth="1" />
       ))}
-      <path d={closePath} fill="none" stroke="#0F7A45" strokeWidth="2" />
-      {emaPath ? <path d={emaPath} fill="none" stroke="#8A5A00" strokeWidth="1.5" /> : null}
+      <path d={closePath} fill="none" stroke="#227CB8" strokeWidth="2" />
+      {emaPath ? <path d={emaPath} fill="none" stroke="#3DAAB7" strokeWidth="1.5" /> : null}
     </svg>
   );
 }
