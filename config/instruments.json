@@ -1,0 +1,13 @@
+{
+  "source": "sample",
+  "label": "Sample instrument list. Not an exchange master and not a licensed feed.",
+  "instruments": [
+    { "symbol": "RELIANCE", "segment": "equity", "tickSize": 0.05, "eligible": true },
+    { "symbol": "TCS", "segment": "equity", "tickSize": 0.05, "eligible": true },
+    { "symbol": "HDFCBANK", "segment": "equity", "tickSize": 0.05, "eligible": true },
+    { "symbol": "INFY", "segment": "equity", "tickSize": 0.05, "eligible": true },
+    { "symbol": "SBIN", "segment": "equity", "tickSize": 0.05, "eligible": true },
+    { "symbol": "NIFTY", "segment": "futures", "tickSize": 0.05, "eligible": true },
+    { "symbol": "BANKNIFTY", "segment": "options", "tickSize": 0.05, "eligible": true }
+  ]
+}

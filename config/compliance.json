@@ -1,0 +1,14 @@
+{
+  "riskDisclosureVersion": "2026-10-11-draft",
+  "pennyStockPublishEnabled": false,
+  "consentVersion": "2026-10-11-draft",
+  "prohibitedClaims": [
+    "guaranteed return",
+    "guaranteed returns",
+    "sure shot",
+    "assured profit",
+    "risk free",
+    "risk-free",
+    "100% accuracy"
+  ]
+}
