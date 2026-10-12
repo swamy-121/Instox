@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
 
@@ -48,20 +48,17 @@ function Body() {
         <h1 className="text-xl font-semibold text-ink">Notifications</h1>
         <Link href="/settings" className="text-sm font-medium text-primary">Preferences</Link>
       </div>
-      <div className="flex flex-wrap items-end gap-2">
-        <label>
-          <span className="label">Status</span>
-          <select className="field w-36" value={list.search.get("status") ?? ""} aria-label="Status" onChange={(event) => list.set({ status: event.target.value })}>
-            <option value="">Any status</option>
-            <option value="sent">Sent</option>
-            <option value="failed">Failed</option>
-            <option value="queued">Queued</option>
-          </select>
-        </label>
-        <div className="min-w-[12rem] flex-1">
-          <ListBar placeholder="Title or message" showDates />
-        </div>
-      </div>
+      <ListToolbar
+        placeholder="Title or message"
+        filters={[
+          { kind: "select", name: "status", label: "Status", empty: "Any status", options: [
+            { value: "sent", label: "Sent" },
+            { value: "failed", label: "Failed" },
+            { value: "queued", label: "Queued" },
+          ] },
+          { kind: "dates" },
+        ]}
+      />
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!alerts && !error ? <LoadingState label="Loading notifications" /> : null}
       {alerts && alerts.length === 0 ? <EmptyState title="No alerts" body="Alerts sent to this account's devices show up here." /> : null}

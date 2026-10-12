@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { Chip, PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
@@ -70,29 +70,22 @@ function InsightsBody() {
         lede={`Last ${days} Asia/Kolkata calendar days. Unresolved tips are not counted as wins.`}
         action={<Link href="/pulse" className="text-sm font-medium text-primary">Pulse</Link>}
       />
-      <div className="flex flex-wrap items-end gap-2">
-        <label>
-          <span className="label">Window</span>
-          <select className="field w-36" value={days} aria-label="Window" onChange={(event) => list.set({ days: event.target.value === "30" ? null : event.target.value })}>
-            <option value="7">7 days</option>
-            <option value="30">30 days</option>
-            <option value="90">90 days</option>
-          </select>
-        </label>
-        <label>
-          <span className="label">Outcome</span>
-          <select className="field w-40" value={list.search.get("outcome") ?? ""} aria-label="Outcome" onChange={(event) => list.set({ outcome: event.target.value })}>
-            <option value="">Any outcome</option>
-            <option value="win">Win</option>
-            <option value="loss">Loss</option>
-            <option value="unresolved">Unresolved</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </label>
-        <div className="min-w-[12rem] flex-1">
-          <ListBar placeholder="Symbol" />
-        </div>
-      </div>
+      <ListToolbar
+        placeholder="Symbol"
+        filters={[
+          { kind: "select", name: "days", label: "Window", allowEmpty: false, options: [
+            { value: "30", label: "30 days" },
+            { value: "7", label: "7 days" },
+            { value: "90", label: "90 days" },
+          ] },
+          { kind: "select", name: "outcome", label: "Outcome", empty: "Any outcome", options: [
+            { value: "win", label: "Win" },
+            { value: "loss", label: "Loss" },
+            { value: "unresolved", label: "Unresolved" },
+            { value: "cancelled", label: "Cancelled" },
+          ] },
+        ]}
+      />
       {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}
       {!report && !error ? <LoadingState label="Loading insights" /> : null}
       {report ? (

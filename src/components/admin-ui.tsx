@@ -32,7 +32,7 @@ export function AdminTabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
+    <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
       {tabs.map((tab) => {
         const active = tab.id === value;
         return (
@@ -41,7 +41,7 @@ export function AdminTabs({
             type="button"
             role="tab"
             aria-selected={active}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-primary text-white" : "bg-white text-ink ring-1 ring-line hover:bg-canvas"}`}
+            className={`h-8 shrink-0 rounded-full px-3 text-sm font-medium ${active ? "bg-primary text-white" : "bg-white text-ink ring-1 ring-line hover:bg-canvas"}`}
             onClick={() => onChange(tab.id)}
           >
             {tab.label}

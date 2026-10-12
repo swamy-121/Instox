@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -65,12 +65,14 @@ function AuditLog() {
       <h1 className="text-xl font-semibold text-ink">Reports</h1>
       <p className="mt-1 text-sm text-muted">Audit log of role changes, tip actions, and account requests.</p>
       <div className="mt-4">
-        <ListBar placeholder="Action, actor, or target" showDates fields={["action"]} extra={
-          <label>
-            <span className="label">Action</span>
-            <input className="field w-44" name="action" key={list.search.get("action") ?? ""} defaultValue={list.search.get("action") ?? ""} placeholder="tip.publish" aria-label="Action" />
-          </label>
-        } />
+        <ListToolbar
+          desktop="inline"
+          placeholder="Action, actor, or target"
+          filters={[
+            { kind: "text", name: "action", label: "Action", placeholder: "tip.publish" },
+            { kind: "dates" },
+          ]}
+        />
       </div>
       {error?.code === "FORBIDDEN" ? <div className="mt-4"><PermissionDenied message={error.message} /></div> : null}
       {error && error.code !== "FORBIDDEN" ? <div className="mt-4"><ErrorState message={error.message} onRetry={load} /></div> : null}

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTitle, Pill } from "@/components/admin-ui";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -200,20 +200,14 @@ function CallList() {
   return (
     <section className="space-y-3">
       <h2 className="text-base font-semibold text-ink">Calls</h2>
-      <div className="flex flex-wrap items-end gap-2">
-        <label>
-          <span className="label">Status</span>
-          <select className="field w-40" value={list.search.get("status") ?? ""} aria-label="Call status" onChange={(event) => list.set({ status: event.target.value })}>
-            <option value="">Any status</option>
-            {["queued", "ringing", "in_progress", "completed", "failed", "no_answer"].map((item) => (
-              <option key={item} value={item}>{item.replaceAll("_", " ")}</option>
-            ))}
-          </select>
-        </label>
-        <div className="min-w-[16rem] flex-1">
-          <ListBar placeholder="Name or phone" showDates />
-        </div>
-      </div>
+      <ListToolbar
+        desktop="inline"
+        placeholder="Name or phone"
+        filters={[
+          { kind: "select", name: "status", label: "Status", empty: "Any status", options: ["queued", "ringing", "in_progress", "completed", "failed", "no_answer"].map((item) => ({ value: item, label: item.replaceAll("_", " ") })) },
+          { kind: "dates" },
+        ]}
+      />
       {error ? <ErrorState message={error} onRetry={() => setRetry((value) => value + 1)} /> : null}
       {!calls && !error ? <LoadingState label="Loading calls" /> : null}
       {calls && calls.length === 0 ? <p className="text-sm text-muted">No calls match.</p> : null}

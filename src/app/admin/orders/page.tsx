@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTitle, Pill } from "@/components/admin-ui";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { OperationsGate } from "@/components/operations-gate";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
@@ -102,19 +102,15 @@ function Body() {
   return (
     <div>
       <AdminTitle title="Orders" lede="Recorded payment orders. You can mark one refunded, disputed, or failed. That does not mark it paid and does not grant premium. A refund or dispute revokes a payment entitlement from that order. Reconciliation does not change orders." />
-      <div className="mb-4 flex flex-wrap items-end gap-2">
-        <label>
-          <span className="label">Status</span>
-          <select className="field w-44" value={list.search.get("status") ?? ""} aria-label="Status" onChange={(event) => list.set({ status: event.target.value })}>
-            <option value="">Any status</option>
-            {["created", "checkout_pending", "paid_verified", "failed", "refunded", "disputed"].map((item) => (
-              <option key={item} value={item}>{item.replaceAll("_", " ")}</option>
-            ))}
-          </select>
-        </label>
-        <div className="min-w-[16rem] flex-1">
-          <ListBar placeholder="Order, user, or plan" showDates />
-        </div>
+      <div className="mb-4">
+        <ListToolbar
+          desktop="inline"
+          placeholder="Order, user, or plan"
+          filters={[
+            { kind: "select", name: "status", label: "Status", empty: "Any status", options: ["created", "checkout_pending", "paid_verified", "failed", "refunded", "disputed"].map((item) => ({ value: item, label: item.replaceAll("_", " ") })) },
+            { kind: "dates" },
+          ]}
+        />
       </div>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!orders && !error ? <LoadingState /> : null}

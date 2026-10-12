@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTabs, AdminTitle, Pill } from "@/components/admin-ui";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -86,17 +86,15 @@ function TipsDesk() {
         value={category}
         onChange={(id) => list.set({ category: id || null })}
       />
-      <div className="mt-3 flex flex-wrap items-end gap-2">
-        <label>
-          <span className="label">Status</span>
-          <select className="field w-40" value={list.search.get("status") ?? ""} aria-label="Status" onChange={(event) => list.set({ status: event.target.value })}>
-            <option value="">Any status</option>
-            {TIP_STATUSES.map((item) => <option key={item} value={item}>{statusLabel(item, null)}</option>)}
-          </select>
-        </label>
-        <div className="min-w-[16rem] flex-1">
-          <ListBar placeholder="Symbol" showDates />
-        </div>
+      <div className="mt-3">
+        <ListToolbar
+          desktop="inline"
+          placeholder="Symbol"
+          filters={[
+            { kind: "select", name: "status", label: "Status", empty: "Any status", options: TIP_STATUSES.map((item) => ({ value: item, label: statusLabel(item, null) })) },
+            { kind: "dates" },
+          ]}
+        />
       </div>
       {notice ? <p className="mt-3 text-sm text-ink" role="status">{notice}</p> : null}
       <div className="mt-4">

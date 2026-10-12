@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { Chip, ChipRow, ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { TipCard, type TipQuote } from "@/components/tip-card";
 import { apiFetch } from "@/lib/api-client";
@@ -65,35 +65,29 @@ function TipsBody() {
   }, [list.search]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <h1 className="text-xl font-semibold text-ink">Trading ideas</h1>
-      <div className="flex gap-2 overflow-x-auto">
+      <ChipRow label="Segment">
         {GROUPS.map((item) => (
-          <button key={item.id} type="button" className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium ${segment === item.id ? "bg-primary text-white" : "border border-line bg-white text-ink"}`} onClick={() => list.set({ segment: item.id === "all" ? null : item.id })}>
+          <Chip key={item.id} active={segment === item.id} onClick={() => list.set({ segment: item.id === "all" ? null : item.id })}>
             {item.label}
-          </button>
+          </Chip>
         ))}
-      </div>
-      <div className="flex gap-2 overflow-x-auto">
+      </ChipRow>
+      <ChipRow label="Duration">
         {DURATIONS.map((item) => (
-          <button key={item.id} type="button" className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium ${duration === item.id ? "border-primary bg-primary text-white" : "border-line bg-white text-ink"}`} onClick={() => list.set({ duration: item.id === "all" ? null : item.id })}>
+          <Chip key={item.id} active={duration === item.id} onClick={() => list.set({ duration: item.id === "all" ? null : item.id })}>
             {item.label}
-          </button>
+          </Chip>
         ))}
-      </div>
-      <div className="flex flex-wrap items-end gap-2">
-        <label>
-          <span className="label">Side</span>
-          <select className="field w-32" value={list.search.get("side") ?? ""} aria-label="Side" onChange={(event) => list.set({ side: event.target.value })}>
-            <option value="">Any</option>
-            <option value="BUY">Buy</option>
-            <option value="SELL">Sell</option>
-          </select>
-        </label>
-        <div className="min-w-[12rem] flex-1">
-          <ListBar placeholder="Symbol" showDates />
-        </div>
-      </div>
+      </ChipRow>
+      <ListToolbar
+        placeholder="Symbol"
+        filters={[
+          { kind: "select", name: "side", label: "Side", empty: "Any side", options: [{ value: "BUY", label: "Buy" }, { value: "SELL", label: "Sell" }] },
+          { kind: "dates" },
+        ]}
+      />
       {error?.code === "FORBIDDEN" || error?.code === "ACCOUNT_DISABLED" ? <PermissionDenied message={error.message} /> : null}
       {error && error.code !== "FORBIDDEN" && error.code !== "ACCOUNT_DISABLED" ? (
         <ErrorState message={error.message} requestId={error.requestId} onRetry={load} />

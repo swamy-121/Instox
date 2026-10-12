@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { StockAvatar } from "@/components/illustrations";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { Chip, ChipRow, ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
@@ -77,26 +77,16 @@ function ScreenerBody() {
   const rows = screen?.results ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <h1 className="text-xl font-semibold text-ink">Screener</h1>
-      <div className="flex gap-2 overflow-x-auto">
+      <ChipRow label="Scan">
         {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium ${tab === item.id ? "bg-primary text-white" : "border border-line bg-white text-ink"}`}
-            onClick={() => list.set({ tab: item.id })}
-          >
+          <Chip key={item.id} active={tab === item.id} onClick={() => list.set({ tab: item.id })}>
             {item.label}
-          </button>
+          </Chip>
         ))}
-      </div>
-      <ListBar placeholder="Symbol" fields={["rsiLt"]} extra={
-        <label className="w-36">
-          <span className="label">RSI below</span>
-          <input className="field tabular-nums" name="rsiLt" inputMode="decimal" key={list.search.get("rsiLt") ?? ""} defaultValue={list.search.get("rsiLt") ?? ""} placeholder="40" aria-label="RSI below" />
-        </label>
-      } />
+      </ChipRow>
+      <ListToolbar placeholder="Symbol" filters={[{ kind: "text", name: "rsiLt", label: "RSI below", placeholder: "40" }]} />
       {loading ? <LoadingState label="Running screener" /> : null}
       {error ? <ErrorState message={error} requestId={requestId} onRetry={() => load()} /> : null}
       {screen && rows.length === 0 ? <EmptyState title="No matches" body="No symbol passed this scan." /> : null}

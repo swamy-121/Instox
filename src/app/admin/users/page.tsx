@@ -4,7 +4,7 @@ import { Eye, Pencil, Trash2 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTabs, AdminTitle, Pill } from "@/components/admin-ui";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { ConfirmDialog, EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -107,30 +107,28 @@ function Users() {
   }
 
   const plan = list.search.get("plan") ?? "all";
-  const status = list.search.get("status") ?? "";
 
   return (
     <div>
       <AdminTitle title="Users" lede="Accounts, roles, and whether a plan is active." />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <AdminTabs
-          tabs={[
-            { id: "all", label: "All", count: counts.all },
-            { id: "free", label: "Free", count: counts.free },
-            { id: "premium", label: "Premium", count: counts.premium },
-          ]}
-          value={plan}
-          onChange={(id) => list.set({ plan: id === "all" ? null : id })}
-        />
-        <select className="field h-10 w-44" value={status} aria-label="Status" onChange={(event) => list.set({ status: event.target.value })}>
-          <option value="">Any status</option>
-          {USER_STATUSES.map((item) => (
-            <option key={item} value={item}>{item}</option>
-          ))}
-        </select>
-      </div>
+      <AdminTabs
+        tabs={[
+          { id: "all", label: "All", count: counts.all },
+          { id: "free", label: "Free", count: counts.free },
+          { id: "premium", label: "Premium", count: counts.premium },
+        ]}
+        value={plan}
+        onChange={(id) => list.set({ plan: id === "all" ? null : id })}
+      />
       <div className="mt-3">
-        <ListBar placeholder="Name, phone, or email" showDates />
+        <ListToolbar
+          desktop="inline"
+          placeholder="Name, phone, or email"
+          filters={[
+            { kind: "select", name: "status", label: "Status", empty: "Any status", options: USER_STATUSES.map((item) => ({ value: item, label: item.replaceAll("_", " ") })) },
+            { kind: "dates" },
+          ]}
+        />
       </div>
       {error ? <div className="mt-4"><ErrorState message={error} onRetry={load} /></div> : null}
       {loading && users.length === 0 ? <div className="mt-4"><LoadingState label="Loading users" /></div> : null}

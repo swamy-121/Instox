@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { StockAvatar } from "@/components/illustrations";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
@@ -76,7 +76,7 @@ function Body() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold text-ink">Watchlist</h1>
-      <ListBar placeholder="Symbol" />
+      <ListToolbar placeholder="Symbol" />
       <form className="flex gap-2" onSubmit={(event) => void add(event)}>
         <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} placeholder="Symbol" aria-label="Symbol" />
         <button className="btn-primary shrink-0" type="submit">Add symbol</button>

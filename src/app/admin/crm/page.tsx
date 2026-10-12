@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTitle, Pill } from "@/components/admin-ui";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { Chip, ChipRow, ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -44,9 +44,6 @@ function CrmList() {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const stage = list.search.get("stage") ?? "";
-  const plan = list.search.get("plan") ?? "";
-  const trialEnding = list.search.get("trialEnding") === "1";
-  const churned = list.search.get("churned") === "1";
 
   function load() {
     apiFetch<{ contacts: Contact[]; plans: string[]; total: number }>(`/api/v1/admin/crm?${list.queryString(["stage", "plan", "trialEnding", "churned", "q", "kind", "tag", "from", "to"])}`).then((result) => {
@@ -90,43 +87,26 @@ function CrmList() {
   return (
     <div className="space-y-4">
       <AdminTitle title="CRM" lede="Leads and customers, with the pipeline New, Contacted, Trial, Paid, and Churned." />
-      <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Pipeline">
-        <StageButton active={stage === ""} onClick={() => list.set({ stage: null, churned: null })} label="All" />
+      <ChipRow label="Pipeline">
+        <Chip active={stage === ""} onClick={() => list.set({ stage: null, churned: null })}>All</Chip>
         {CRM_STAGES.map((item) => (
-          <StageButton key={item} active={stage === item} onClick={() => list.set({ stage: item, churned: null })} label={CRM_STAGE_LABELS[item]} />
+          <Chip key={item} active={stage === item} onClick={() => list.set({ stage: item, churned: null })}>
+            {CRM_STAGE_LABELS[item]}
+          </Chip>
         ))}
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="block">
-          <span className="label">Plan</span>
-          <select className="field w-40" value={plan} aria-label="Plan" onChange={(event) => list.set({ plan: event.target.value })}>
-            <option value="">Any plan</option>
-            {plans.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <label className="block">
-          <span className="label">Kind</span>
-          <select className="field w-36" value={list.search.get("kind") ?? ""} aria-label="Kind" onChange={(event) => list.set({ kind: event.target.value })}>
-            <option value="">Lead or customer</option>
-            <option value="lead">Lead</option>
-            <option value="customer">Customer</option>
-          </select>
-        </label>
-        <label className="inline-flex items-center gap-2 pb-2 text-sm text-ink">
-          <input type="checkbox" checked={trialEnding} onChange={(event) => list.set({ trialEnding: event.target.checked ? "1" : null })} />
-          Trial ending
-        </label>
-        <label className="inline-flex items-center gap-2 pb-2 text-sm text-ink">
-          <input type="checkbox" checked={churned} onChange={(event) => list.set({ churned: event.target.checked ? "1" : null, stage: event.target.checked ? "churned" : stage || null })} />
-          Churned
-        </label>
-      </div>
-      <ListBar placeholder="Name, phone, or tag" showDates fields={["tag"]} extra={
-        <label>
-          <span className="label">Tag</span>
-          <input className="field w-36" name="tag" key={list.search.get("tag") ?? ""} defaultValue={list.search.get("tag") ?? ""} placeholder="renewal" aria-label="Tag" />
-        </label>
-      } />
+      </ChipRow>
+      <ListToolbar
+        desktop="inline"
+        placeholder="Name, phone, or tag"
+        filters={[
+          { kind: "select", name: "plan", label: "Plan", empty: "Any plan", options: plans.map((item) => ({ value: item, label: item })) },
+          { kind: "select", name: "kind", label: "Kind", empty: "Lead or customer", options: [{ value: "lead", label: "Lead" }, { value: "customer", label: "Customer" }] },
+          { kind: "text", name: "tag", label: "Tag", placeholder: "renewal" },
+          { kind: "dates" },
+          { kind: "check", name: "trialEnding", label: "Trial ending" },
+          { kind: "check", name: "churned", label: "Churned" },
+        ]}
+      />
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!contacts && !error ? <LoadingState label="Loading CRM" /> : null}
       {contacts && contacts.length === 0 ? <EmptyState title="No people" body="Add a lead, or the member list will appear here after the first load." /> : null}
@@ -170,10 +150,3 @@ function CrmList() {
   );
 }
 
-function StageButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button type="button" role="tab" aria-selected={active} className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium ${active ? "bg-primary text-white" : "border border-line bg-white text-ink"}`} onClick={onClick}>
-      {label}
-    </button>
-  );
-}

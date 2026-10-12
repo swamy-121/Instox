@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTabs, AdminTitle, Pill } from "@/components/admin-ui";
-import { ListBar, ListPager, useListQuery } from "@/components/list-bar";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -96,17 +96,15 @@ function Body() {
         value={tab}
         onChange={(id) => list.set({ status: id === "all" ? null : id })}
       />
-      <div className="mt-3 flex flex-wrap items-end gap-2">
-        <label>
-          <span className="label">Plan</span>
-          <select className="field w-44" value={list.search.get("plan") ?? ""} aria-label="Plan" onChange={(event) => list.set({ plan: event.target.value })}>
-            <option value="">Any plan</option>
-            {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
-          </select>
-        </label>
-        <div className="min-w-[16rem] flex-1">
-          <ListBar placeholder="Name or phone" showDates />
-        </div>
+      <div className="mt-3">
+        <ListToolbar
+          desktop="inline"
+          placeholder="Name or phone"
+          filters={[
+            { kind: "select", name: "plan", label: "Plan", empty: "Any plan", options: plans.map((plan) => ({ value: plan.id, label: plan.name })) },
+            { kind: "dates" },
+          ]}
+        />
       </div>
       {error ? <div className="mt-4"><ErrorState message={error} onRetry={load} /></div> : null}
       {loading && rows.length === 0 ? <div className="mt-4"><LoadingState /></div> : null}
