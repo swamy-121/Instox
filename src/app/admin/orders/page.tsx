@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { AdminTitle, Pill } from "@/components/admin-ui";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { OperationsGate } from "@/components/operations-gate";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
@@ -30,14 +31,18 @@ export default function AdminOrdersPage() {
   return (
     <AppFrame admin>
       <OperationsGate>
-        <Body />
+        <Suspense fallback={<LoadingState label="Loading orders" />}>
+          <Body />
+        </Suspense>
       </OperationsGate>
     </AppFrame>
   );
 }
 
 function Body() {
+  const list = useListQuery();
   const [orders, setOrders] = useState<Order[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [statusReason, setStatusReason] = useState("");
@@ -46,18 +51,21 @@ function Body() {
   const [message, setMessage] = useState<string | null>(null);
 
   function load() {
-    apiFetch<{ orders: Order[] }>("/api/v1/admin/orders").then((result) => {
+    apiFetch<{ orders: Order[]; total: number }>(`/api/v1/admin/orders?${list.queryString(["q", "status", "from", "to"])}`).then((result) => {
       if (!result.ok) {
         setError(result.message);
         return;
       }
+      setError(null);
       setOrders(result.data.orders);
+      setTotal(result.data.total);
     });
   }
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.search]);
 
   async function reconcile(event: React.FormEvent) {
     event.preventDefault();
@@ -94,6 +102,16 @@ function Body() {
   return (
     <div>
       <AdminTitle title="Orders" lede="Recorded payment orders. You can mark one refunded, disputed, or failed. That does not mark it paid and does not grant premium. A refund or dispute revokes a payment entitlement from that order. Reconciliation does not change orders." />
+      <div className="mb-4">
+        <ListToolbar
+          desktop="inline"
+          placeholder="Order, user, or plan"
+          filters={[
+            { kind: "select", name: "status", label: "Status", empty: "Any status", options: ["created", "checkout_pending", "paid_verified", "failed", "refunded", "disputed"].map((item) => ({ value: item, label: item.replaceAll("_", " ") })) },
+            { kind: "dates" },
+          ]}
+        />
+      </div>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!orders && !error ? <LoadingState /> : null}
       {orders && orders.length === 0 ? <EmptyState title="No orders" body="Checkout orders will show here." /> : null}
@@ -101,7 +119,7 @@ function Body() {
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[48rem] text-left text-sm">
             <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+              <tr className="border-b border-line text-xs text-muted">
                 <th className="px-3 py-3 font-medium">Order</th>
                 <th className="px-3 py-3 font-medium">User</th>
                 <th className="px-3 py-3 font-medium">Plan</th>
@@ -142,6 +160,7 @@ function Body() {
           </table>
         </div>
       ) : null}
+      {orders ? <ListPager total={total} page={list.page} pageSize={list.pageSize} /> : null}
       <form className="card mt-4 space-y-3" onSubmit={(event) => { event.preventDefault(); }}>
         <h2 className="font-semibold text-ink">Status reason</h2>
         <p className="text-sm text-muted">Required when you save a refund, dispute, or failure.</p>

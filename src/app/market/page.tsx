@@ -79,14 +79,14 @@ function MarketBody() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Market overview</h1>
+      <h1 className="text-xl font-semibold text-ink">Market overview</h1>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!payload && !error ? <LoadingState label="Loading market" /> : null}
       {payload && indices.length === 0 ? <EmptyState title="No market data" body="Add index rows before this overview can draw." /> : null}
       <div className="grid grid-cols-2 gap-3">
         {indices.map((row) => (
-          <article key={row.symbol} className={`rounded-xl p-4 shadow-card ${row.changePct >= 0 ? "bg-[#E7F6EE]" : "bg-[#FDECEC]"}`}>
-            <p className="text-xs font-semibold text-muted">{row.symbol}</p>
+          <article key={row.symbol} className="rounded-lg border border-line bg-white p-3">
+            <p className="text-xs font-medium text-muted">{row.symbol}</p>
             <p className="mt-1 font-semibold tabular-nums text-ink">{formatPrice(row.last)}</p>
             <p className={`text-sm font-semibold tabular-nums ${row.changePct >= 0 ? "text-profit" : "text-loss"}`}>
               {row.changePct >= 0 ? "+" : ""}

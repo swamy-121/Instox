@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { AdminTabs, AdminTitle, Pager, Pill, usePage } from "@/components/admin-ui";
+import { AdminTabs, AdminTitle, Pill } from "@/components/admin-ui";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
@@ -38,22 +39,26 @@ function when(value: string): string {
 export default function SubscriptionsPage() {
   return (
     <AppFrame admin>
-      <Body />
+      <Suspense fallback={<LoadingState label="Loading subscriptions" />}>
+        <Body />
+      </Suspense>
     </AppFrame>
   );
 }
 
 function Body() {
   const { state } = useAuth();
+  const list = useListQuery();
   const [rows, setRows] = useState<Subscription[]>([]);
+  const [plans, setPlans] = useState<Array<{ id: string; name: string }>>([]);
+  const [counts, setCounts] = useState({ all: 0, active: 0, expired: 0, cancelled: 0 });
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("all");
-  const [q, setQ] = useState("");
 
   function load() {
     setLoading(true);
-    apiFetch<{ subscriptions: Subscription[] }>("/api/v1/admin/subscriptions").then((result) => {
+    apiFetch<{ subscriptions: Subscription[]; counts: typeof counts; plans: Array<{ id: string; name: string }>; total: number }>(`/api/v1/admin/subscriptions?${list.queryString(["q", "status", "plan", "from", "to"])}`).then((result) => {
       setLoading(false);
       if (!result.ok) {
         setError(result.message);
@@ -61,56 +66,54 @@ function Body() {
       }
       setError(null);
       setRows(result.data.subscriptions);
+      setCounts(result.data.counts);
+      setPlans(result.data.plans);
+      setTotal(result.data.total);
     });
   }
 
   useEffect(() => {
     if (state.status === "ready") load();
-  }, [state.status]);
-
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      if (tab !== "all" && bucket(row.status) !== tab) return false;
-      if (!q.trim()) return true;
-      const hay = `${row.displayName} ${row.phoneNumber ?? ""} ${row.planName}`.toLowerCase();
-      return hay.includes(q.trim().toLowerCase());
-    });
-  }, [q, rows, tab]);
-  const pager = usePage(filtered, 8);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status, list.search]);
 
   if (state.status === "ready" && !canViewUsers(state.me.roles)) {
     return <PermissionDenied message="Subscriptions are limited to support and administrators." />;
   }
 
-  const count = (id: string) => (id === "all" ? rows.length : rows.filter((row) => bucket(row.status) === id).length);
+  const tab = list.search.get("status") || "all";
 
   return (
     <div>
-      <AdminTitle title="Subscriptions" lede="Manage subscription plans and payments." />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <AdminTabs
-          tabs={[
-            { id: "all", label: "All", count: count("all") },
-            { id: "active", label: "Active", count: count("active") },
-            { id: "expired", label: "Expired", count: count("expired") },
-            { id: "cancelled", label: "Cancelled", count: count("cancelled") },
+      <AdminTitle title="Subscriptions" lede="Plan entitlements already on accounts." />
+      <AdminTabs
+        tabs={[
+          { id: "all", label: "All", count: counts.all },
+          { id: "active", label: "Active", count: counts.active },
+          { id: "expired", label: "Expired", count: counts.expired },
+          { id: "cancelled", label: "Cancelled", count: counts.cancelled },
+        ]}
+        value={tab}
+        onChange={(id) => list.set({ status: id === "all" ? null : id })}
+      />
+      <div className="mt-3">
+        <ListToolbar
+          desktop="inline"
+          placeholder="Name or phone"
+          filters={[
+            { kind: "select", name: "plan", label: "Plan", empty: "Any plan", options: plans.map((plan) => ({ value: plan.id, label: plan.name })) },
+            { kind: "dates" },
           ]}
-          value={tab}
-          onChange={(id) => {
-            setTab(id);
-            pager.setPage(1);
-          }}
         />
-        <input className="field h-10 w-64" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search by name or phone" aria-label="Search subscriptions" />
       </div>
       {error ? <div className="mt-4"><ErrorState message={error} onRetry={load} /></div> : null}
       {loading && rows.length === 0 ? <div className="mt-4"><LoadingState /></div> : null}
-      {!loading && filtered.length === 0 ? <div className="mt-4"><EmptyState title="No subscriptions" body="Entitlement records will show up here." /></div> : null}
-      {filtered.length > 0 ? (
+      {!loading && rows.length === 0 ? <div className="mt-4"><EmptyState title="No subscriptions" body="Entitlement records will show up here." /></div> : null}
+      {rows.length > 0 ? (
         <div className="card mt-4 overflow-x-auto">
           <table className="w-full min-w-[52rem] text-left text-sm">
             <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+              <tr className="border-b border-line text-xs text-muted">
                 <th className="px-3 py-3 font-medium">Name</th>
                 <th className="px-3 py-3 font-medium">Phone</th>
                 <th className="px-3 py-3 font-medium">Plan</th>
@@ -121,7 +124,7 @@ function Body() {
               </tr>
             </thead>
             <tbody>
-              {pager.slice.map((row) => {
+              {rows.map((row) => {
                 const group = bucket(row.status);
                 return (
                   <tr key={row.uid} className="border-b border-line last:border-0">
@@ -141,9 +144,9 @@ function Body() {
               })}
             </tbody>
           </table>
-          <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
         </div>
       ) : null}
+      {!loading && !error ? <ListPager total={total} page={list.page} pageSize={list.pageSize} /> : null}
     </div>
   );
 }

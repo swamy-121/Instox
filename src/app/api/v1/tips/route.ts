@@ -3,8 +3,9 @@ import { AppError } from "@/lib/errors";
 import { requireActor } from "@/server/auth/actor";
 import { viewerTier } from "@/server/authorization/entitlements";
 import { apiOk, withApi } from "@/server/http";
+import { readPage } from "@/lib/list-page";
 import { presentTip } from "@/server/tips/present";
-import { listPublishedTips } from "@/server/tips/repo";
+import { listPublishedTips, listPublishedTipsPage } from "@/server/tips/repo";
 import type { Actor } from "@/server/auth/actor";
 
 async function optionalActor(request: Request): Promise<Actor | null> {
@@ -33,6 +34,29 @@ export async function GET(request: Request): Promise<Response> {
       throw new AppError(400, "VALIDATION_ERROR", "Unknown access tier.", { accessTier: "Use free or premium." });
     }
     const q = url.searchParams.get("q")?.trim().slice(0, 32) || undefined;
+    const tier = viewerTier(actor?.entitlement ?? null);
+    const paging = readPage(url.searchParams);
+    if (paging.paged) {
+      const result = await listPublishedTipsPage({
+        category,
+        accessTier,
+        q,
+        segment: url.searchParams.get("segment") ?? undefined,
+        duration: url.searchParams.get("duration") ?? undefined,
+        side: url.searchParams.get("side") ?? undefined,
+        from: url.searchParams.get("from"),
+        to: url.searchParams.get("to"),
+        page: paging.page,
+        pageSize: paging.pageSize,
+      });
+      return apiOk({
+        tips: result.tips.map((tip) => presentTip(tip, tier)),
+        viewerTier: tier,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      }, requestId);
+    }
     const result = await listPublishedTips({
       category,
       accessTier,
@@ -41,7 +65,6 @@ export async function GET(request: Request): Promise<Response> {
       cursor: url.searchParams.get("cursor"),
       limit: limitOf(url),
     });
-    const tier = viewerTier(actor?.entitlement ?? null);
     return apiOk(
       {
         tips: result.tips.map((tip) => presentTip(tip, tier)),

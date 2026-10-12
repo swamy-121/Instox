@@ -24,11 +24,17 @@ const memberCopySchema = z
   })
   .strict();
 
+const RETIRED_COPY: Partial<MemberCopy> = {
+  greetingSubtitle: "Let us find your next opportunity",
+  homePicksTitle: "Today's top picks",
+};
+
 export function memberCopyFromValue(value: unknown): MemberCopy {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const merged: Record<string, unknown> = { ...MEMBER_COPY_DEFAULTS };
   for (const key of MEMBER_COPY_KEYS) {
     if (source[key] !== undefined) merged[key] = source[key];
+    if (merged[key] === RETIRED_COPY[key]) merged[key] = MEMBER_COPY_DEFAULTS[key];
   }
   const parsed = memberCopySchema.safeParse(merged);
   return parsed.success ? parsed.data : MEMBER_COPY_DEFAULTS;

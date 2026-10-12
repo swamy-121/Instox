@@ -92,12 +92,12 @@ export default function AdminLoginPage() {
   const blocked = state.status === "ready" && !canAccessAdmin(state.me.roles);
 
   return (
-    <main className="admin-light grid min-h-screen bg-[#e7f6ee] lg:grid-cols-2">
+    <main className="admin-light grid min-h-screen bg-canvas lg:grid-cols-2">
       <section className="flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-card">
-          <Wordmark className="h-14 w-auto" />
-          <h1 className="mt-6 text-2xl font-semibold text-ink">{resetToken ? "Reset password" : "Admin Login"}</h1>
-          <p className="mt-1 text-sm text-muted">{resetToken ? "Choose a new password for this admin account." : "Access your Instox admin panel"}</p>
+        <div className="w-full max-w-md rounded-lg border border-line bg-white p-6">
+          <Wordmark className="h-12 w-auto" />
+          <h1 className="mt-6 text-xl font-semibold text-ink">{resetToken ? "Reset password" : "Admin sign-in"}</h1>
+          <p className="mt-1 text-sm text-muted">{resetToken ? "Choose a new password for this admin account." : "Staff email and password."}</p>
           {blocked ? <p className="mt-4 text-sm text-ink">This sign-in does not include an admin role.</p> : null}
           {resetToken ? (
             <form className="mt-6 space-y-4" onSubmit={(event) => void reset(event)}>
@@ -130,30 +130,15 @@ export default function AdminLoginPage() {
                 <button type="button" className="font-medium text-primary" onClick={() => void forgot()}>Forgot password?</button>
               </div>
               {message ? <p className="text-sm text-ink" role="status">{message}</p> : null}
-              <button className="btn-primary w-full" type="submit" disabled={busy}>{busy ? "Signing in" : "Login"}</button>
+              <button className="btn-primary w-full" type="submit" disabled={busy}>{busy ? "Signing in" : "Sign in"}</button>
             </form>
           )}
         </div>
       </section>
-      <section className="hidden items-center justify-center px-10 lg:flex" aria-hidden="true">
-        <LoginChart />
+      <section className="hidden flex-col justify-end bg-navy px-12 py-16 text-white lg:flex">
+        <p className="text-sm text-white/70">Instox desk</p>
+        <p className="mt-2 max-w-sm text-2xl font-semibold leading-snug">Ideas, accounts, and recorded orders.</p>
       </section>
     </main>
-  );
-}
-
-function LoginChart() {
-  return (
-    <svg viewBox="0 0 420 320" className="w-full max-w-lg">
-      <rect x="24" y="24" width="372" height="272" rx="28" fill="#ffffff" />
-      <path d="M56 220 C 110 210, 140 150, 180 156 C 230 164, 250 90, 300 104 C 340 114, 350 70, 372 78" fill="none" stroke="#027332" strokeWidth="4" />
-      <path d="M56 220 C 110 210, 140 150, 180 156 C 230 164, 250 90, 300 104 C 340 114, 350 70, 372 78 L 372 240 L 56 240 Z" fill="#027332" opacity="0.16" />
-      <rect x="70" y="180" width="28" height="60" rx="6" fill="#8FD19A" />
-      <rect x="114" y="150" width="28" height="90" rx="6" fill="#027332" />
-      <rect x="158" y="168" width="28" height="72" rx="6" fill="#8FD19A" />
-      <rect x="202" y="120" width="28" height="120" rx="6" fill="#027332" />
-      <rect x="246" y="140" width="28" height="100" rx="6" fill="#0194A8" />
-      <rect x="290" y="100" width="28" height="140" rx="6" fill="#027332" />
-    </svg>
   );
 }

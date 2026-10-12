@@ -1,15 +1,7 @@
-import { useId } from "react";
-
-const AVATAR_COLORS = ["#027332", "#0194A8", "#1D4E89", "#B45309", "#7C3AED", "#0F766E", "#9F1239"];
-
-export function StockAvatar({ symbol, className = "h-11 w-11 text-xs" }: { symbol: string; className?: string }) {
-  let hash = 0;
-  for (const char of symbol) hash = (hash * 33 + char.charCodeAt(0)) >>> 0;
-  const color = AVATAR_COLORS[hash % AVATAR_COLORS.length];
+export function StockAvatar({ symbol, className = "h-9 w-9 text-xs" }: { symbol: string; className?: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${className}`}
-      style={{ backgroundColor: color }}
+      className={`inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-canvas font-semibold text-ink ${className}`}
       aria-hidden="true"
     >
       {symbol.slice(0, 2)}
@@ -117,8 +109,6 @@ function ThumbDrop() {
 }
 
 export function AreaChart({ values }: { values: number[] }) {
-  const rawId = useId();
-  const fillId = `area-${rawId.replace(/:/g, "")}`;
   if (values.length < 2) return null;
   const width = 320;
   const height = 150;
@@ -134,39 +124,8 @@ export function AreaChart({ values }: { values: number[] }) {
   const area = `${line} L${width},${height} L0,${height} Z`;
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-40 w-full" role="img" aria-label="Price chart">
-      <defs>
-        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#027332" stopOpacity="0.38" />
-          <stop offset="100%" stopColor="#027332" stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${fillId})`} />
-      <path d={line} fill="none" stroke="#027332" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={area} fill="#027332" opacity="0.08" />
+      <path d={line} fill="none" stroke="#027332" strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
-  );
-}
-
-const CONFETTI = [
-  { left: "8%", color: "#027332", delay: "0s", rotate: "12deg" },
-  { left: "18%", color: "#0194A8", delay: "0.1s", rotate: "-20deg" },
-  { left: "30%", color: "#E8772E", delay: "0.05s", rotate: "40deg" },
-  { left: "42%", color: "#027332", delay: "0.2s", rotate: "-8deg" },
-  { left: "54%", color: "#0F7A45", delay: "0.12s", rotate: "24deg" },
-  { left: "66%", color: "#E8772E", delay: "0.18s", rotate: "-30deg" },
-  { left: "76%", color: "#0194A8", delay: "0.02s", rotate: "16deg" },
-  { left: "88%", color: "#027332", delay: "0.16s", rotate: "-12deg" },
-];
-
-export function Confetti() {
-  return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 h-72 overflow-hidden" aria-hidden="true">
-      {CONFETTI.map((bit) => (
-        <span
-          key={bit.left}
-          className="confetti-bit"
-          style={{ left: bit.left, backgroundColor: bit.color, animationDelay: bit.delay, transform: `rotate(${bit.rotate})` }}
-        />
-      ))}
-    </div>
   );
 }

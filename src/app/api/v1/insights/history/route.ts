@@ -1,4 +1,5 @@
 import { AppError } from "@/lib/errors";
+import { applyPage } from "@/lib/list-page";
 import { requireActor } from "@/server/auth/actor";
 import { viewerTier } from "@/server/authorization/entitlements";
 import { apiOk, withApi } from "@/server/http";
@@ -27,7 +28,17 @@ export async function GET(request: Request): Promise<Response> {
     }));
     const report = buildInsightReport(tips, new Date(), days);
     const tier = viewerTier(actor.entitlement);
-    const rows = report.rows.map((row) => (tier === "free" && row.accessTier === "premium" ? { ...row, symbol: "Premium" } : row));
-    return apiOk({ ...report, rows, viewerTier: tier }, requestId);
+    const url = new URL(request.url);
+    const outcome = url.searchParams.get("outcome") ?? "";
+    const symbol = url.searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const rows = report.rows
+      .map((row) => (tier === "free" && row.accessTier === "premium" ? { ...row, symbol: "Premium" } : row))
+      .filter((row) => {
+        if (outcome && row.outcome !== outcome) return false;
+        if (symbol && !row.symbol.toLowerCase().includes(symbol)) return false;
+        return true;
+      });
+    const window = applyPage(rows, url.searchParams);
+    return apiOk({ ...report, rows: window.items, total: window.total, page: window.page, pageSize: window.pageSize, viewerTier: tier }, requestId);
   });
 }

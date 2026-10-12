@@ -102,9 +102,9 @@ function HomeBody() {
             <Link
               key={row.symbol}
               href={`/market?symbol=${row.symbol}`}
-              className={`rounded-xl p-4 shadow-card ${row.changePct >= 0 ? "bg-[#E7F6EE]" : "bg-[#FDECEC]"}`}
+              className="rounded-lg border border-line bg-white p-3"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">{row.symbol}</p>
+              <p className="text-xs font-medium text-muted">{row.symbol}</p>
               <p className="mt-2 text-lg font-semibold tabular-nums text-ink">{formatPrice(row.last)}</p>
               <p className={`text-sm font-semibold tabular-nums ${row.changePct >= 0 ? "text-profit" : "text-loss"}`}>
                 {row.changePct >= 0 ? "+" : ""}
@@ -122,7 +122,7 @@ function HomeBody() {
             const Icon = ICONS[tile.icon as keyof typeof ICONS] ?? Lightbulb;
             return (
               <Link key={tile.id} href={tile.href} className="flex flex-col items-center gap-2 text-xs font-medium text-ink">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary shadow-card">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-ink">
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 {tile.label}
@@ -132,7 +132,7 @@ function HomeBody() {
         </section>
       ) : null}
       {ads.map((ad) => (
-        <article key={ad.id} className="rounded-xl bg-primary-soft p-4 shadow-card">
+        <article key={ad.id} className="rounded-lg border border-line border-l-2 border-l-primary bg-white p-4">
           <p className="text-sm font-semibold text-ink">{ad.title}</p>
           <p className="mt-1 text-sm leading-6 text-muted">{ad.body}</p>
         </article>

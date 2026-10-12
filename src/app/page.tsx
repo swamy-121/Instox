@@ -21,8 +21,8 @@ export default function LandingPage() {
       <main>
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 md:grid-cols-2 md:py-20">
           <div>
-            <p className="text-sm font-medium text-primary">Instant trading ideas</p>
-            <h1 className="mt-3 max-w-xl text-4xl font-semibold tracking-tight text-ink md:text-5xl md:leading-tight">
+            <p className="text-sm font-medium text-muted">NSE and BSE</p>
+            <h1 className="mt-2 max-w-xl text-3xl font-semibold text-ink md:text-4xl md:leading-tight">
               Indian market ideas, written down with the levels.
             </h1>
             <p className="mt-4 max-w-lg text-base leading-7 text-muted">
@@ -75,9 +75,9 @@ function Illustration() {
     <div className="card p-5">
       <div className="flex items-center justify-between">
         <Wordmark decorative className="h-10 w-auto" />
-        <Chip>Illustration</Chip>
+        <Chip tone="info">Sample</Chip>
       </div>
-      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted">NSE · Equity · 1-3 sessions</p>
+      <p className="mt-4 text-xs font-medium text-muted">NSE · Equity · 1-3 sessions</p>
       <div className="mt-2 flex items-end justify-between gap-3">
         <h2 className="text-3xl font-semibold tracking-tight tabular-nums text-ink">INFY</h2>
         <Chip tone="info">BUY</Chip>
@@ -89,7 +89,7 @@ function Illustration() {
           ["T1", "1,860.00"],
         ].map(([label, value]) => (
           <div key={label} className="rounded-xl bg-canvas px-3 py-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
+            <p className="text-[11px] font-medium text-muted">{label}</p>
             <p className="mt-1 text-sm font-semibold tabular-nums text-ink">{value}</p>
           </div>
         ))}

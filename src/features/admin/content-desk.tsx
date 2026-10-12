@@ -162,7 +162,7 @@ export function ContentDesk({
             <div className="card mt-4 overflow-x-auto">
               <table className="w-full min-w-[40rem] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+                  <tr className="border-b border-line text-xs text-muted">
                     {columns.map((column) => (
                       <th key={column.key} className="px-3 py-3 font-medium">
                         {column.label}

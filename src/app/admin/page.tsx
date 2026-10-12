@@ -6,7 +6,7 @@ import { DashboardView } from "@/features/admin/dashboard-view";
 export default function AdminHomePage() {
   return (
     <AppFrame admin>
-      <DashboardView title="Dashboard" lede="Welcome back. Here is what is happening with Instox." />
+      <DashboardView title="Dashboard" lede="Users, premium accounts, recorded revenue, and ideas in the selected dates." />
     </AppFrame>
   );
 }

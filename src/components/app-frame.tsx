@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  ScrollText,
   Bell,
   Contact,
   CreditCard,
@@ -46,6 +47,7 @@ const ADMIN_LINKS: Array<{ href: string; label: string; icon: typeof LayoutDashb
   { href: "/admin/shop", label: "Shop", icon: ShoppingBag },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/audit", label: "Reports", icon: ScrollText },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/advertisements", label: "Advertisements", icon: Megaphone },
   { href: "/admin/member", label: "Member app", icon: Smartphone },
@@ -173,8 +175,8 @@ function MemberHeader({ signedIn }: { signedIn: boolean }) {
       <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 py-3">
         {home ? (
           <div className="min-w-0">
-            <p className="text-sm text-muted">{config.greetingPrefix}, {name}</p>
-            <p className="text-base font-semibold leading-5 text-ink">{config.greetingSubtitle}</p>
+            <p className="text-base font-semibold text-ink">{config.greetingPrefix}, {name}</p>
+            <p className="text-sm text-muted">{config.greetingSubtitle}</p>
           </div>
         ) : (
           <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
@@ -185,7 +187,7 @@ function MemberHeader({ signedIn }: { signedIn: boolean }) {
           {signedIn ? <DesktopNav /> : null}
           {home ? (
             <>
-              <Link href="/settings" aria-label="Notifications" className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-canvas">
+              <Link href="/notifications" aria-label="Notifications" className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-canvas">
                 <Bell className="h-5 w-5" aria-hidden="true" />
               </Link>
               <Link href="/profile" aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
@@ -309,7 +311,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
               <span className="hidden text-sm font-medium text-ink sm:inline">{name}</span>
             </button>
             {menu ? (
-              <div className="absolute right-0 mt-2 w-40 rounded-xl border border-line bg-white p-1 shadow-card">
+              <div className="absolute right-0 mt-2 w-40 rounded-lg border border-line bg-white p-1">
                 <button
                   type="button"
                   className="w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-canvas"

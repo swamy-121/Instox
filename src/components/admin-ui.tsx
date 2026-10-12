@@ -14,7 +14,7 @@ export function AdminTitle({
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-xl font-semibold text-ink">{title}</h1>
         {lede ? <p className="mt-1 text-sm text-muted">{lede}</p> : null}
       </div>
       {action}
@@ -32,7 +32,7 @@ export function AdminTabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
+    <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
       {tabs.map((tab) => {
         const active = tab.id === value;
         return (
@@ -41,7 +41,7 @@ export function AdminTabs({
             type="button"
             role="tab"
             aria-selected={active}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-primary text-white" : "bg-white text-ink ring-1 ring-line hover:bg-canvas"}`}
+            className={`h-8 shrink-0 rounded-full px-3 text-sm font-medium ${active ? "bg-primary text-white" : "bg-white text-ink ring-1 ring-line hover:bg-canvas"}`}
             onClick={() => onChange(tab.id)}
           >
             {tab.label}

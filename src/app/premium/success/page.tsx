@@ -5,7 +5,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
-import { Confetti } from "@/components/illustrations";
 import { ErrorState, LoadingState } from "@/components/states";
 import { useMemberConfig } from "@/features/app/member-config";
 import { apiFetch } from "@/lib/api-client";
@@ -47,14 +46,13 @@ function Body() {
   }, [orderId]);
 
   return (
-    <div className="relative mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-2 text-center">
-      {order ? <Confetti /> : null}
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-2 text-center">
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!order && !error ? <LoadingState label="Loading order" /> : null}
       {order ? (
         <>
-          <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-white shadow-card">
-            <Check className="h-12 w-12" strokeWidth={3} aria-hidden="true" />
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white">
+            <Check className="h-6 w-6" aria-hidden="true" />
           </span>
           <h1 className="mt-6 text-2xl font-semibold text-ink">{config.paymentSuccessTitle}</h1>
           <p className="mt-2 text-sm text-muted">{config.paymentSuccessBody}</p>

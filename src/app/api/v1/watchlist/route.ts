@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
+import { applyPage } from "@/lib/list-page";
 import { requireActor } from "@/server/auth/actor";
 import { getDb } from "@/server/db/client";
 import { watchlistItems } from "@/server/db/schema";
@@ -11,11 +12,15 @@ const bodySchema = z.object({ symbol: z.string().min(1).max(32) }).strict();
 export async function GET(request: Request): Promise<Response> {
   return withApi(request, "GET /api/v1/watchlist", async ({ requestId }) => {
     const actor = await requireActor(request);
-    const rows = await getDb().select().from(watchlistItems).where(eq(watchlistItems.userId, actor.uid)).limit(50);
+    const url = new URL(request.url);
+    const q = url.searchParams.get("q")?.trim().toUpperCase() ?? "";
+    const rows = await getDb().select().from(watchlistItems).where(eq(watchlistItems.userId, actor.uid));
     const items = rows
       .map((row) => ({ id: row.id, symbol: row.symbol, createdAt: row.createdAt }))
+      .filter((row) => !q || row.symbol.includes(q))
       .sort((a, b) => a.symbol.localeCompare(b.symbol));
-    return apiOk({ items }, requestId);
+    const window = applyPage(items, url.searchParams);
+    return apiOk({ items: window.items, total: window.total, page: window.page, pageSize: window.pageSize }, requestId);
   });
 }
 

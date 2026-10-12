@@ -67,7 +67,7 @@ export default function OnboardingPage() {
           setIndex((value) => value + 1);
         }}
       >
-        {last ? "Get Started" : "Next"}
+        {last ? "Continue" : "Next"}
       </button>
     </main>
   );

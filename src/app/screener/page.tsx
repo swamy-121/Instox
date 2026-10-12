@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { StockAvatar } from "@/components/illustrations";
+import { Chip, ChipRow, ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
@@ -16,6 +17,7 @@ type Row = {
 
 type Screen = {
   results: Row[];
+  total: number;
   skipped: { symbol: string; reason: string }[];
 };
 
@@ -31,23 +33,31 @@ type TabId = (typeof TABS)[number]["id"];
 export default function ScreenerPage() {
   return (
     <AppFrame requireAuth>
-      <ScreenerBody />
+      <Suspense fallback={<LoadingState label="Running screener" />}>
+        <ScreenerBody />
+      </Suspense>
     </AppFrame>
   );
 }
 
 function ScreenerBody() {
-  const [tab, setTab] = useState<TabId>("rsi");
-  const [rsiLt, setRsiLt] = useState("");
+  const list = useListQuery();
+  const tab = (list.search.get("tab") ?? "rsi") as TabId;
   const [screen, setScreen] = useState<Screen | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
 
-  function load(params = "") {
+  function load() {
     setLoading(true);
     setError(null);
-    apiFetch<Screen>(`/api/v1/screener${params}`).then((result) => {
+    const params = new URLSearchParams(list.queryString(["q", "page", "pageSize"]));
+    const rsiLt = list.search.get("rsiLt");
+    if (rsiLt) params.set("rsiLt", rsiLt);
+    if (tab === "ema") params.set("ema", "above");
+    if (tab === "cpr") params.set("cpr", "above");
+    if (tab === "fo") params.set("segment", "fo");
+    apiFetch<Screen>(`/api/v1/screener?${params.toString()}`).then((result) => {
       setLoading(false);
       if (!result.ok) {
         setError(result.message);
@@ -61,49 +71,29 @@ function ScreenerBody() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.search]);
 
-  function apply(event: React.FormEvent) {
-    event.preventDefault();
-    const params = new URLSearchParams();
-    if (rsiLt.trim()) params.set("rsiLt", rsiLt.trim());
-    if (tab === "ema") params.set("ema", "above");
-    if (tab === "cpr") params.set("cpr", "above");
-    const query = params.toString();
-    load(query ? `?${query}` : "");
-  }
-
-  const rows = (screen?.results ?? []).filter((row) => (tab === "fo" ? row.segment !== "equity" : true));
+  const rows = screen?.results ?? [];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Screener</h1>
-      <div className="flex gap-2 overflow-x-auto">
+    <div className="space-y-3">
+      <h1 className="text-xl font-semibold text-ink">Screener</h1>
+      <ChipRow label="Scan">
         {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold ${tab === item.id ? "bg-primary text-white" : "bg-primary-soft text-primary"}`}
-            onClick={() => setTab(item.id)}
-          >
+          <Chip key={item.id} active={tab === item.id} onClick={() => list.set({ tab: item.id })}>
             {item.label}
-          </button>
+          </Chip>
         ))}
-      </div>
-      <form className="flex items-end gap-2" onSubmit={apply}>
-        <label className="min-w-0 flex-1">
-          <span className="label">RSI below</span>
-          <input className="field tabular-nums" inputMode="decimal" value={rsiLt} onChange={(event) => setRsiLt(event.target.value)} placeholder="40" />
-        </label>
-        <button className="btn-primary shrink-0" type="submit">Run screener</button>
-      </form>
+      </ChipRow>
+      <ListToolbar placeholder="Symbol" filters={[{ kind: "text", name: "rsiLt", label: "RSI below", placeholder: "40" }]} />
       {loading ? <LoadingState label="Running screener" /> : null}
       {error ? <ErrorState message={error} requestId={requestId} onRetry={() => load()} /> : null}
       {screen && rows.length === 0 ? <EmptyState title="No matches" body="No symbol passed this scan." /> : null}
       {rows.length > 0 ? (
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-muted">
+            <thead className="text-xs text-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Symbol</th>
                 <th className="px-4 py-3 font-medium">LTP</th>
@@ -127,6 +117,7 @@ function ScreenerBody() {
           </table>
         </div>
       ) : null}
+      {screen && !loading && !error ? <ListPager total={screen.total} page={list.page} pageSize={list.pageSize} /> : null}
     </div>
   );
 }

@@ -156,7 +156,7 @@ function Body() {
 
   return (
     <div>
-      <AdminTitle title="Screener Management" lede="Configure and manage stock screeners." />
+      <AdminTitle title="Screener" lede="Saved screens and the symbols they currently return." />
       <AdminTabs
         tabs={[
           { id: "rsi", label: "RSI Screener" },
@@ -237,7 +237,7 @@ function Body() {
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+                    <tr className="border-b border-line text-xs text-muted">
                       <th className="py-2 font-medium">Symbol</th>
                       <th className="py-2 font-medium">LTP</th>
                       <th className="py-2 font-medium">{tab === "ema" ? "EMA" : "RSI"}</th>

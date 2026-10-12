@@ -12,8 +12,8 @@ export default function ShopAdminPage() {
       <OperationsGate>
         <ContentDesk
           collection="shopProducts"
-          title="Shop Products"
-          lede="Manage digital products for Instox shop."
+          title="Shop"
+          lede="Items shown in the member shop."
           addLabel="Add Product"
           columns={[
             {
@@ -21,7 +21,7 @@ export default function ShopAdminPage() {
               label: "Product",
               render: (row) => (
                 <span className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold text-primary">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-canvas text-sm font-semibold text-ink">
                     {String(row.name ?? "?").slice(0, 1).toUpperCase()}
                   </span>
                   <span>

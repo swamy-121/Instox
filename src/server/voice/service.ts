@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import { createId } from "@/lib/ids";
+import { inDateRange } from "@/lib/list-page";
 import { addActivity, contactsForCampaign } from "@/server/crm/repo";
 import { getDb } from "@/server/db/client";
 import { crmContacts, voiceCalls, voiceCampaigns } from "@/server/db/schema";
@@ -105,6 +106,27 @@ export async function listCampaigns() {
       .filter((call) => call.campaignId === campaign.id)
       .map(presentCall),
   }));
+}
+
+export async function listCalls(filter: { status?: string; q?: string; from?: string | null; to?: string | null }) {
+  const db = getDb();
+  const [calls, contacts] = await Promise.all([
+    db.select().from(voiceCalls).orderBy(desc(voiceCalls.createdAt)),
+    db.select({ id: crmContacts.id, name: crmContacts.name, phone: crmContacts.phone }).from(crmContacts),
+  ]);
+  const byId = new Map(contacts.map((row) => [row.id, row]));
+  const query = filter.q?.trim().toLowerCase() ?? "";
+  return calls
+    .map((row) => {
+      const contact = byId.get(row.contactId);
+      return { ...presentCall(row), name: contact?.name ?? "", phone: contact?.phone ?? null };
+    })
+    .filter((row) => {
+      if (filter.status && row.status !== filter.status) return false;
+      if (!inDateRange(row.createdAt, filter.from ?? null, filter.to ?? null)) return false;
+      if (!query) return true;
+      return `${row.name} ${row.phone ?? ""} ${row.provider} ${row.status}`.toLowerCase().includes(query);
+    });
 }
 
 function presentCall(row: typeof voiceCalls.$inferSelect) {

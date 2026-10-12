@@ -2,17 +2,17 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { AdminTabs, AdminTitle, Pager, Pill, usePage } from "@/components/admin-ui";
+import { AdminTabs, AdminTitle, Pill } from "@/components/admin-ui";
+import { ListPager, ListToolbar, useListQuery } from "@/components/list-bar";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { CATEGORY_LABELS, statusLabel } from "@/lib/labels";
 import { formatPrice } from "@/lib/money";
 import { canEditTips } from "@/server/authorization/roles";
-import { TIP_CATEGORIES, type TipRecord } from "@/types/domain";
+import { TIP_CATEGORIES, TIP_STATUSES, type TipRecord } from "@/types/domain";
 
 const TABS = [
   { id: "", label: "All" },
@@ -34,20 +34,17 @@ export default function AdminTipsPage() {
 
 function TipsDesk() {
   const { state } = useAuth();
-  const search = useSearchParams();
-  const q = search.get("q") ?? "";
-  const [category, setCategory] = useState("");
+  const list = useListQuery();
+  const category = list.search.get("category") ?? "";
   const [tips, setTips] = useState<TipRecord[]>([]);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<{ message: string; code: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const params = new URLSearchParams({ limit: "50" });
-    if (category) params.set("category", category);
-    if (q.trim()) params.set("q", q.trim());
-    const result = await apiFetch<{ tips: TipRecord[] }>(`/api/v1/admin/tips?${params.toString()}`);
+    const result = await apiFetch<{ tips: TipRecord[]; total: number }>(`/api/v1/admin/tips?${list.queryString(["q", "category", "status", "from", "to"])}`);
     setLoading(false);
     if (!result.ok) {
       setError({ message: result.message, code: result.code });
@@ -55,14 +52,13 @@ function TipsDesk() {
     }
     setError(null);
     setTips(result.data.tips);
+    setTotal(result.data.total);
   }
 
   useEffect(() => {
     if (state.status === "ready") void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, q, state.status]);
-
-  const pager = usePage(tips, 8);
+  }, [list.search, state.status]);
 
   if (state.status === "ready" && !canEditTips(state.me.roles)) {
     return <PermissionDenied message="The tip desk is for editors and publishers." />;
@@ -82,17 +78,24 @@ function TipsDesk() {
     <div>
       <AdminTitle
         title="Trading Tips"
-        lede="Manage and publish trading tips for Instox users."
-        action={<Link href="/admin/tips/new" className="btn-primary">Add New Tip</Link>}
+        lede="Drafts, review, and published ideas."
+        action={<Link href="/admin/tips/new" className="btn-primary">New idea</Link>}
       />
       <AdminTabs
         tabs={TABS}
         value={category}
-        onChange={(id) => {
-          setCategory(id);
-          pager.setPage(1);
-        }}
+        onChange={(id) => list.set({ category: id || null })}
       />
+      <div className="mt-3">
+        <ListToolbar
+          desktop="inline"
+          placeholder="Symbol"
+          filters={[
+            { kind: "select", name: "status", label: "Status", empty: "Any status", options: TIP_STATUSES.map((item) => ({ value: item, label: statusLabel(item, null) })) },
+            { kind: "dates" },
+          ]}
+        />
+      </div>
       {notice ? <p className="mt-3 text-sm text-ink" role="status">{notice}</p> : null}
       <div className="mt-4">
         {error?.code === "FORBIDDEN" ? <PermissionDenied message={error.message} /> : null}
@@ -103,7 +106,7 @@ function TipsDesk() {
           <div className="card overflow-x-auto">
             <table className="w-full min-w-[52rem] text-left text-sm">
               <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+                <tr className="border-b border-line text-xs text-muted">
                   <th className="px-3 py-3 font-medium">Symbol</th>
                   <th className="px-3 py-3 font-medium">Type</th>
                   <th className="px-3 py-3 font-medium">Category</th>
@@ -115,7 +118,7 @@ function TipsDesk() {
                 </tr>
               </thead>
               <tbody>
-                {pager.slice.map((tip) => (
+                {tips.map((tip) => (
                   <tr key={tip.id} className="border-b border-line last:border-0">
                     <td className="px-3 py-3 font-semibold text-ink">{tip.symbol}</td>
                     <td className="px-3 py-3">
@@ -144,9 +147,9 @@ function TipsDesk() {
                 ))}
               </tbody>
             </table>
-            <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
           </div>
         ) : null}
+        {!loading && !error ? <ListPager total={total} page={list.page} pageSize={list.pageSize} /> : null}
       </div>
     </div>
   );

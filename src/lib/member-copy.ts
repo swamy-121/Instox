@@ -21,8 +21,8 @@ export type MemberCopy = {
 
 export const MEMBER_COPY_DEFAULTS: MemberCopy = {
   greetingPrefix: "Hi",
-  greetingSubtitle: "Let us find your next opportunity",
-  homePicksTitle: "Today's top picks",
+  greetingSubtitle: "Nifty, Sensex, and today's ideas.",
+  homePicksTitle: "Featured ideas",
   paymentSuccessTitle: "Payment successful",
   paymentSuccessBody: "Your order is saved.",
   paymentSuccessCta: "Go to home",

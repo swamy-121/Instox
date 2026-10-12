@@ -12,7 +12,7 @@ export default function NewsAdminPage() {
         <ContentDesk
           collection="newsArticles"
           title="Market News"
-          lede="Add and manage market news for users."
+          lede="Items on the member news screen."
           addLabel="Add News"
           tabField="category"
           columns={[

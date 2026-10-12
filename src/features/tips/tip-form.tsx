@@ -241,10 +241,10 @@ export function TipForm({
       </label>
       <label className="block">
         <span className="flex items-center justify-between">
-          <span className="label mb-0">Rationale / Analysis</span>
+          <span className="label mb-0">Write-up</span>
           <span className="text-xs tabular-nums text-muted">{form.thesis.length}/2000</span>
         </span>
-        <textarea className="field mt-1.5 min-h-32" maxLength={2000} value={form.thesis} onChange={(event) => set("thesis", event.target.value)} placeholder="Enter your analysis or rationale for this tip" />
+        <textarea className="field mt-1.5 min-h-32" maxLength={2000} value={form.thesis} onChange={(event) => set("thesis", event.target.value)} placeholder="What members should read with this idea" />
         {fieldError.thesis ? <span className="text-sm text-ink">{fieldError.thesis}</span> : null}
       </label>
       <fieldset>
