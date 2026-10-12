@@ -3,14 +3,41 @@
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
-import { TipCard } from "@/components/tip-card";
-import { PageHeader } from "@/components/ui";
+import { TipCard, type TipQuote } from "@/components/tip-card";
 import { apiFetch } from "@/lib/api-client";
-import { CATEGORY_LABELS } from "@/lib/labels";
 import type { TipView } from "@/server/tips/present";
-import { TIP_CATEGORIES } from "@/types/domain";
 
 type Feed = { tips: TipView[]; viewerTier: string };
+
+const GROUPS = [
+  { id: "all", label: "All" },
+  { id: "equity", label: "Equity" },
+  { id: "fo", label: "F&O" },
+  { id: "options", label: "Options" },
+] as const;
+
+const DURATIONS = [
+  { id: "all", label: "All" },
+  { id: "short_term", label: "Short term" },
+  { id: "intraday", label: "Intraday" },
+  { id: "btst", label: "BTST" },
+] as const;
+
+function matchesGroup(tip: TipView, group: (typeof GROUPS)[number]["id"]): boolean {
+  if (group === "all") return true;
+  if (group === "equity") return tip.category === "equity";
+  if (group === "options") return tip.category === "options";
+  return tip.category === "futures" || tip.category === "options";
+}
+
+function matchesDuration(tip: TipView, duration: (typeof DURATIONS)[number]["id"]): boolean {
+  if (duration === "all") return true;
+  if (tip.category === duration) return true;
+  const frame = tip.timeframe.toLowerCase();
+  if (duration === "intraday") return frame.includes("same session");
+  if (duration === "short_term") return frame.includes("week");
+  return false;
+}
 
 export default function TipsPage() {
   return (
@@ -21,86 +48,58 @@ export default function TipsPage() {
 }
 
 function TipsBody() {
-  const [category, setCategory] = useState("");
-  const [accessTier, setAccessTier] = useState("");
-  const [q, setQ] = useState("");
-  const [applied, setApplied] = useState({ category: "", accessTier: "", q: "" });
-  const [tips, setTips] = useState<TipView[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [group, setGroup] = useState<(typeof GROUPS)[number]["id"]>("all");
+  const [duration, setDuration] = useState<(typeof DURATIONS)[number]["id"]>("all");
+  const [tips, setTips] = useState<TipView[] | null>(null);
+  const [quotes, setQuotes] = useState<Map<string, TipQuote>>(new Map());
   const [error, setError] = useState<{ message: string; code: string; requestId?: string } | null>(null);
 
-  async function load(nextCursor: string | null, replace: boolean) {
-    setLoading(true);
+  function load() {
     setError(null);
-    const params = new URLSearchParams({ limit: "10" });
-    if (applied.category) params.set("category", applied.category);
-    if (applied.accessTier) params.set("accessTier", applied.accessTier);
-    if (applied.q) params.set("q", applied.q);
-    if (nextCursor) params.set("cursor", nextCursor);
-    const result = await apiFetch<Feed>(`/api/v1/tips?${params.toString()}`);
-    setLoading(false);
-    if (!result.ok) {
-      setError({ message: result.message, code: result.code, requestId: result.requestId });
-      return;
-    }
-    setTips((current) => (replace ? result.data.tips : [...current, ...result.data.tips]));
-    setCursor(result.nextCursor);
+    Promise.all([
+      apiFetch<Feed>("/api/v1/tips?limit=20"),
+      apiFetch<{ indices: Array<TipQuote & { symbol: string }> }>("/api/v1/market/overview"),
+    ]).then(([feed, market]) => {
+      if (!feed.ok) {
+        setError({ message: feed.message, code: feed.code, requestId: feed.requestId });
+        return;
+      }
+      setTips(feed.data.tips);
+      if (market.ok) setQuotes(new Map(market.data.indices.map((row) => [row.symbol, row])));
+    });
   }
 
   useEffect(() => {
-    void load(null, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applied]);
+    load();
+  }, []);
+
+  const visible = tips?.filter((tip) => matchesGroup(tip, group) && matchesDuration(tip, duration)) ?? [];
 
   return (
-    <div>
-      <PageHeader title="Tips" lede="Free tips show prices. Premium tips stay locked unless the server says your plan is active." />
-      <form
-        className="card grid gap-4 sm:grid-cols-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setApplied({ category, accessTier, q });
-        }}
-      >
-        <label>
-          <span className="label">Category</span>
-          <select className="field" value={category} onChange={(event) => setCategory(event.target.value)}>
-            <option value="">All</option>
-            {TIP_CATEGORIES.map((item) => (
-              <option key={item} value={item}>{CATEGORY_LABELS[item]}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="label">Access</span>
-          <select className="field" value={accessTier} onChange={(event) => setAccessTier(event.target.value)}>
-            <option value="">All</option>
-            <option value="free">Free</option>
-            <option value="premium">Premium</option>
-          </select>
-        </label>
-        <label className="sm:col-span-2">
-          <span className="label">Symbol search</span>
-          <input className="field" value={q} onChange={(event) => setQ(event.target.value)} placeholder="RELIANCE" />
-        </label>
-        <div className="sm:col-span-2">
-          <button className="btn-primary w-full sm:w-auto" type="submit">Apply filters</button>
-        </div>
-      </form>
-      <div className="mt-4 space-y-3">
-        {error?.code === "FORBIDDEN" || error?.code === "ACCOUNT_DISABLED" ? <PermissionDenied message={error.message} /> : null}
-        {error && error.code !== "FORBIDDEN" && error.code !== "ACCOUNT_DISABLED" ? (
-          <ErrorState message={error.message} requestId={error.requestId} onRetry={() => void load(null, true)} />
-        ) : null}
-        {loading && tips.length === 0 ? <LoadingState /> : null}
-        {!loading && !error && tips.length === 0 ? <EmptyState title="No tips match" body="Try another symbol or category, or check back after a tip is published." /> : null}
-        {tips.map((tip) => <TipCard key={tip.id} tip={tip} />)}
-        {cursor ? (
-          <button type="button" className="btn-secondary" onClick={() => void load(cursor, false)} disabled={loading}>
-            {loading ? "Loading" : "Load more"}
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold text-ink">Trading ideas</h1>
+      <div className="flex gap-2 overflow-x-auto">
+        {GROUPS.map((item) => (
+          <button key={item.id} type="button" className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${group === item.id ? "bg-primary text-white" : "bg-canvas text-ink"}`} onClick={() => setGroup(item.id)}>
+            {item.label}
           </button>
-        ) : null}
+        ))}
+      </div>
+      <div className="flex gap-2 overflow-x-auto">
+        {DURATIONS.map((item) => (
+          <button key={item.id} type="button" className={`shrink-0 rounded-full border px-3 py-1.5 text-sm ${duration === item.id ? "border-primary bg-primary-soft text-primary" : "border-line text-ink"}`} onClick={() => setDuration(item.id)}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {error?.code === "FORBIDDEN" || error?.code === "ACCOUNT_DISABLED" ? <PermissionDenied message={error.message} /> : null}
+      {error && error.code !== "FORBIDDEN" && error.code !== "ACCOUNT_DISABLED" ? (
+        <ErrorState message={error.message} requestId={error.requestId} onRetry={load} />
+      ) : null}
+      {!tips && !error ? <LoadingState label="Loading tips" /> : null}
+      {tips && !error && visible.length === 0 ? <EmptyState title="No tips match" body="Try another category, or check back after a tip is published." /> : null}
+      <div className="space-y-3">
+        {visible.map((tip) => <TipCard key={tip.id} tip={tip} quote={quotes.get(tip.symbol) ?? null} />)}
       </div>
     </div>
   );

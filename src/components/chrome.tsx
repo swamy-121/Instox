@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { HomeIcon, MoreIcon, NewsIcon, ScreenerIcon, TipsIcon } from "@/components/icons";
+import { Home, LayoutGrid, Lightbulb, LineChart, Newspaper } from "lucide-react";
 import { Wordmark } from "@/components/wordmark";
 
 const MEMBER_LINKS = [
-  { href: "/home", label: "Home", icon: HomeIcon },
-  { href: "/tips", label: "Tips", icon: TipsIcon },
-  { href: "/screener", label: "Screener", icon: ScreenerIcon },
-  { href: "/news", label: "News", icon: NewsIcon },
-  { href: "/more", label: "More", icon: MoreIcon },
+  { href: "/home", label: "Home", icon: Home },
+  { href: "/tips", label: "Tips", icon: Lightbulb },
+  { href: "/screener", label: "Screener", icon: LineChart },
+  { href: "/news", label: "News", icon: Newspaper },
+  { href: "/more", label: "More", icon: LayoutGrid },
 ];
 
 function isActive(pathname: string, href: string) {

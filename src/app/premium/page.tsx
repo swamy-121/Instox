@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
-import { Chip } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
 import { formatInr } from "@/lib/money";
 
@@ -15,7 +15,6 @@ type Plan = {
   priceMinor: number;
   billingPeriod: string;
   features: string[];
-  approved: boolean;
   listed?: boolean;
   mostPopular?: boolean;
 };
@@ -61,23 +60,28 @@ function Body() {
           </button>
         ))}
       </div>
-      {payload?.note ? <p className="text-sm text-muted">{payload.note}</p> : null}
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!payload && !error ? <LoadingState label="Loading plans" /> : null}
       {payload && plans.length === 0 ? <EmptyState title="No plans" body="Publish a listed plan for this billing period." /> : null}
-      <ul className="space-y-3">
+      <ul className="space-y-4 pt-2">
         {plans.map((plan) => (
-          <li key={plan.id} className="card">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-ink">{plan.name}</h2>
-              {plan.mostPopular ? <Chip tone="info">Most popular</Chip> : null}
-            </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink">{formatInr(plan.priceMinor)}<span className="text-sm font-normal text-muted"> / {plan.billingPeriod}</span></p>
-            <p className="mt-1 text-xs text-muted">{plan.approved ? "Approved" : "Not approved"}</p>
-            <ul className="mt-3 space-y-1 text-sm text-ink">
-              {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
+          <li key={plan.id} className={`card relative ${plan.mostPopular ? "border-2 border-[#E8772E]" : ""}`}>
+            {plan.mostPopular ? (
+              <span className="absolute -top-3 right-4 rounded-full bg-[#E8772E] px-2.5 py-1 text-xs font-semibold text-white">Most popular</span>
+            ) : null}
+            <h2 className="text-lg font-semibold text-ink">{plan.name}</h2>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink">
+              {formatInr(plan.priceMinor)}
+              <span className="text-sm font-normal text-muted"> / {plan.billingPeriod === "monthly" ? "month" : plan.billingPeriod}</span>
+            </p>
+            <ul className="mt-3 space-y-2 text-sm text-ink">
+              {plan.features.map((feature) => (
+                <li key={feature} className="flex items-start gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span>{feature}</span>
+                </li>
+              ))}
             </ul>
-            <p className="mt-2 text-sm text-muted">{plan.description}</p>
             <Link href={`/premium/pay?planId=${plan.id}`} className="btn-primary mt-4 w-full">Choose plan</Link>
           </li>
         ))}

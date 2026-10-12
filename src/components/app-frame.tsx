@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Bell } from "lucide-react";
 import { BrandSplash } from "@/components/brand";
 import { BottomNav, DesktopNav } from "@/components/chrome";
 import { ErrorState, PermissionDenied } from "@/components/states";
@@ -53,7 +54,7 @@ export function AppFrame({
     if (state.status === "unconfigured") {
       return (
         <div className="mx-auto max-w-md px-4 py-16">
-          <ErrorState message="Firebase is not configured. Copy .env.example to .env.local and start the emulators." />
+          <ErrorState message="Sign-in is not available right now." />
         </div>
       );
     }
@@ -108,18 +109,49 @@ export function AppFrame({
   const signedIn = state.status === "ready";
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="brand-surface sticky top-0 z-30 border-b border-line">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
-          <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
-            <Wordmark decorative className="h-12 w-auto" />
-          </Link>
-          {signedIn ? <DesktopNav /> : null}
-        </div>
-      </header>
+    <div className="min-h-screen bg-white">
+      <MemberHeader signedIn={signedIn} />
       <main className="mx-auto w-full max-w-5xl px-4 py-6 pb-24 md:pb-10">{children}</main>
       {signedIn ? <BottomNav /> : null}
     </div>
+  );
+}
+
+function MemberHeader({ signedIn }: { signedIn: boolean }) {
+  const pathname = usePathname();
+  const { state } = useAuth();
+  const home = pathname === "/home" && state.status === "ready";
+  const name = state.status === "ready" ? state.me.displayName || "there" : "there";
+  const initial = name.trim().slice(0, 1).toUpperCase() || "I";
+
+  return (
+    <header className="sticky top-0 z-30 border-b border-line bg-white">
+      <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        {home ? (
+          <div className="min-w-0">
+            <p className="text-sm text-muted">Hi, {name}</p>
+            <p className="text-base font-semibold leading-5 text-ink">Let us find your next opportunity</p>
+          </div>
+        ) : (
+          <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
+            <Wordmark decorative className="h-12 w-auto" />
+          </Link>
+        )}
+        <div className="flex items-center gap-2">
+          {signedIn ? <DesktopNav /> : null}
+          {home ? (
+            <>
+              <Link href="/settings" aria-label="Notifications" className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-canvas">
+                <Bell className="h-5 w-5" aria-hidden="true" />
+              </Link>
+              <Link href="/profile" aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+                {initial}
+              </Link>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </header>
   );
 }
 

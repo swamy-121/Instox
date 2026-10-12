@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OnboardingArt } from "@/components/illustrations";
 import { Wordmark } from "@/components/wordmark";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
@@ -44,9 +45,7 @@ export default function OnboardingPage() {
       {slides && slides.length === 0 ? <div className="mt-8"><EmptyState title="No slides" body="Publish onboarding slides to show this carousel." /></div> : null}
       {slide ? (
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="flex h-40 w-40 items-center justify-center rounded-full bg-primary-soft text-4xl font-semibold text-primary">
-            {slide.icon === "search" ? "S" : slide.icon === "news" ? "N" : "C"}
-          </div>
+          <OnboardingArt icon={slide.icon} />
           <h1 className="mt-8 text-2xl font-semibold text-ink">{slide.title}</h1>
           <p className="mt-3 text-sm leading-6 text-muted">{slide.body}</p>
         </div>

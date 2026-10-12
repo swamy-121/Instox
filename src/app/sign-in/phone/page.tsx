@@ -63,7 +63,7 @@ export default function PhoneSignInPage() {
       const codeName = caught && typeof caught === "object" && "code" in caught ? String(caught.code) : "";
       if (codeName === "auth/too-many-requests") setError("Too many attempts. Wait and try again.");
       else if (codeName === "auth/invalid-phone-number") setError("That phone number was rejected.");
-      else setError("The code could not be sent. On the emulator, check that Auth is running.");
+      else setError("The code could not be sent. Try again in a moment.");
       verifier.current?.clear();
       verifier.current = null;
     } finally {

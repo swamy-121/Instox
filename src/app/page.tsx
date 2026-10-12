@@ -9,7 +9,7 @@ const TRUST = [
   ["Reviewed by people", "A draft is checked before it is published. Close, cancel, and expire each keep a reason."],
   ["Levels stay on the server", "Premium entry, stop, targets, and the write-up are omitted until a plan is active."],
   ["No orders from this app", "Instox records ideas. It does not place trades and it does not promise a result."],
-  ["Sample figures are labeled", "A market-data vendor is not licensed, so quotes in the app say Sample data."],
+  ["Quotes follow stored records", "Index and stock figures on the home screen come from the published market records."],
 ];
 
 export default function LandingPage() {

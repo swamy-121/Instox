@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
-import { Chip, PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { formatInr } from "@/lib/money";
@@ -50,29 +50,22 @@ export default function ShopPage() {
       body: JSON.stringify({ productId }),
     });
     setBusy(false);
-    setMessage(result.ok ? result.data.message : result.message);
+    setMessage(result.ok ? "Order saved." : result.message);
   }
 
   return (
     <AppFrame>
       <div className="space-y-4">
-        <PageHeader title="Shop" lede={catalog?.note || "The catalogue is empty until products are published."} />
+        <PageHeader title="Shop" lede="Courses and tools from the catalogue." />
         {error ? <ErrorState message={error} onRetry={load} /> : null}
         {!catalog && !error ? <LoadingState label="Loading catalogue" /> : null}
         {catalog && catalog.products.length === 0 ? <EmptyState title="No products" body="The catalogue is empty." /> : null}
-        <p className="text-sm text-muted">{catalog?.note}</p>
         <div className="grid gap-4 md:grid-cols-2">
           {catalog?.products.map((product) => (
             <article key={product.id} className="card">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-lg font-semibold text-ink">{product.name}</h2>
-                <Chip>{product.approved ? "Approved" : "Unapproved"}</Chip>
-              </div>
+              <h2 className="text-lg font-semibold text-ink">{product.name}</h2>
               <p className="mt-2 text-sm leading-6 text-muted">{product.description}</p>
               <p className="mt-4 text-2xl font-semibold tabular-nums tracking-tight text-ink">{formatInr(product.priceMinor)}</p>
-              <p className="text-xs text-muted">
-                Approved {product.approved ? "yes" : "no"} · fulfilment {product.fulfillment}
-              </p>
               {state.status === "ready" ? (
                 <button className="btn-secondary mt-4" type="button" disabled={busy} onClick={() => void hold(product.id)}>
                   Hold an order

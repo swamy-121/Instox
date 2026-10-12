@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Check } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
+import { Confetti } from "@/components/illustrations";
 import { ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
-import { formatInr } from "@/lib/money";
 
 type Order = { orderId: string; planId: string; amountMinor: number; currency: string; status: string };
 
@@ -39,23 +40,25 @@ function Body() {
 
   useEffect(() => {
     if (orderId) load();
+    else setError("That order could not be found.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   return (
-    <div className="space-y-4 text-center">
-      <h1 className="text-2xl font-semibold text-ink">Payment recorded</h1>
+    <div className="relative mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-2 text-center">
+      {order ? <Confetti /> : null}
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!order && !error ? <LoadingState label="Loading order" /> : null}
       {order ? (
-        <div className="card text-left">
-          <p className="text-sm text-muted">Order {order.orderId}</p>
-          <p className="mt-2 font-semibold text-ink">{order.planId}</p>
-          <p className="tabular-nums text-ink">{formatInr(order.amountMinor)} {order.currency}</p>
-          <p className="mt-2 text-sm text-muted">Status {order.status}. A placeholder order does not grant premium.</p>
-        </div>
+        <>
+          <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-white shadow-card">
+            <Check className="h-12 w-12" strokeWidth={3} aria-hidden="true" />
+          </span>
+          <h1 className="mt-6 text-2xl font-semibold text-ink">Payment successful</h1>
+          <p className="mt-2 text-sm text-muted">Your order is saved.</p>
+          <Link href="/home" className="btn-primary mt-8 w-full">Go to home</Link>
+        </>
       ) : null}
-      <Link href="/home" className="btn-primary w-full">Go to home</Link>
     </div>
   );
 }

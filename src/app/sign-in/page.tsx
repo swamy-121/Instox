@@ -66,7 +66,7 @@ export default function SignInPage() {
     try {
       await signInWithCustomToken(auth, minted.data.customToken);
     } catch {
-      setMessage("Emulator sign-in failed. Is the Auth emulator running, and has the seed script been run?");
+      setMessage("Sign-in failed. Try again.");
     } finally {
       setBusy(false);
     }
@@ -102,9 +102,7 @@ export default function SignInPage() {
       </div>
       {emulator ? (
         <section className="mt-6">
-          <h2 className="text-sm font-semibold text-ink">Emulator users</h2>
-          <p className="mt-1 text-xs leading-5 text-muted">Local only. These buttons call the Auth emulator. They are hidden when the emulator flag is off.</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {DEV_USERS.map(([uid, label]) => (
               <button key={uid} type="button" className="btn-quiet" disabled={busy} onClick={() => void devSignIn(uid)}>
                 {label}

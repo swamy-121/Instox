@@ -1,60 +1,71 @@
 import Link from "next/link";
-import { LockIcon } from "@/components/icons";
-import { Chip } from "@/components/ui";
-import { CATEGORY_LABELS, statusLabel } from "@/lib/labels";
+import { Lock } from "lucide-react";
+import { StockAvatar } from "@/components/illustrations";
 import { formatPrice } from "@/lib/money";
 import type { OpenTipView, TipView } from "@/server/tips/present";
+
+export type TipQuote = { last: number; changePct: number };
 
 function isOpen(tip: TipView): tip is OpenTipView {
   return tip.locked === false;
 }
 
-function statusTone(reason: string | null | undefined): "profit" | "loss" | "neutral" {
-  if (reason === "target_hit") return "profit";
-  if (reason === "stop_loss_hit") return "loss";
-  return "neutral";
+function targetPrice(tip: OpenTipView, label: string, index: number): number | null {
+  const named = tip.targets.find((target) => target.label.toUpperCase() === label);
+  if (named) return named.price;
+  return tip.targets[index]?.price ?? null;
 }
 
-function whenLabel(iso: string) {
-  return new Date(iso).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+export function TipCard({ tip, quote }: { tip: TipView; quote?: TipQuote | null }) {
+  const open = isOpen(tip);
+  const levels = open
+    ? [
+        ["Entry", tip.entryMin, "text-ink"],
+        ["T1", targetPrice(tip, "T1", 0), "text-profit"],
+        ["T2", targetPrice(tip, "T2", 1), "text-profit"],
+        ["SL", tip.stopLoss, "text-loss"],
+      ] as const
+    : [];
 
-export function TipCard({ tip }: { tip: TipView }) {
-  const when = tip.publishedAt ?? tip.updatedAt;
-  const reason = isOpen(tip) ? tip.closeReason : null;
   return (
-    <Link href={`/tips/${tip.id}`} className="card block transition hover:border-primary/40">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <Chip>{CATEGORY_LABELS[tip.category]}</Chip>
-            <Chip tone="info">{tip.side}</Chip>
-            {tip.accessTier === "premium" ? <Chip tone="info">Premium</Chip> : null}
-          </div>
-          <h2 className="mt-3 text-xl font-semibold tracking-tight tabular-nums text-ink">{tip.symbol}</h2>
-          <p className="mt-1 text-xs text-muted">{tip.timeframe}</p>
+    <Link href={`/tips/${tip.id}`} className="card block">
+      <div className="flex items-center gap-3">
+        <StockAvatar symbol={tip.symbol} />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-ink">{tip.symbol}</p>
+          <p className="text-xs text-muted">{tip.timeframe}</p>
         </div>
-        <Chip tone={statusTone(reason)}>{statusLabel(tip.status, reason)}</Chip>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tip.side === "SELL" ? "bg-[#FDECEC] text-loss" : "bg-primary-soft text-primary"}`}>
+          {tip.side}
+        </span>
       </div>
-      {tip.locked ? (
-        <p className="mt-4 flex items-center gap-2 text-sm font-medium text-primary">
-          <LockIcon className="h-4 w-4" />
+      {quote ? (
+        <div className="mt-3 flex items-end justify-between">
+          <div>
+            <p className="text-xs text-muted">LTP</p>
+            <p className="text-xl font-semibold tabular-nums text-ink">{formatPrice(quote.last)}</p>
+          </div>
+          <p className={`text-sm font-semibold tabular-nums ${quote.changePct >= 0 ? "text-profit" : "text-loss"}`}>
+            {quote.changePct >= 0 ? "+" : ""}
+            {quote.changePct.toFixed(2)}%
+          </p>
+        </div>
+      ) : null}
+      {open ? (
+        <dl className="mt-3 grid grid-cols-4 gap-2 border-t border-line pt-3 text-xs">
+          {levels.map(([label, value, tone]) => (
+            <div key={label}>
+              <dt className="text-muted">{label}</dt>
+              <dd className={`mt-0.5 font-semibold tabular-nums ${tone}`}>{value === null ? "-" : formatPrice(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-3 flex items-center gap-2 border-t border-line pt-3 text-sm font-medium text-primary">
+          <Lock className="h-4 w-4" aria-hidden="true" />
           Levels stay hidden
         </p>
-      ) : (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Chip>Entry {formatPrice(tip.entryMin)}</Chip>
-          <Chip>SL {formatPrice(tip.stopLoss)}</Chip>
-          {tip.targets[0] ? <Chip tone={reason === "target_hit" ? "profit" : "neutral"}>{tip.targets[0].label} {formatPrice(tip.targets[0].price)}</Chip> : null}
-        </div>
       )}
-      <p className="mt-3 text-xs text-muted">Updated {whenLabel(when)}</p>
     </Link>
   );
 }

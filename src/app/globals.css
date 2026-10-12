@@ -82,7 +82,7 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-card border border-line bg-white p-4 shadow-card;
+    @apply rounded-xl border border-line bg-white p-4 shadow-card;
   }
   .btn-primary {
     @apply inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
@@ -111,7 +111,7 @@ body {
   }
   input[type="checkbox"],
   input[type="radio"] {
-    accent-color: #018193;
+    accent-color: #027332;
   }
 }
 
@@ -119,6 +119,20 @@ body {
   select.field {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23F4FBF6' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-12px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(280px) rotate(220deg); opacity: 0; }
+}
+
+.confetti-bit {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  animation: confetti-fall 1.8s ease-in forwards;
 }
 
 .sr-only {

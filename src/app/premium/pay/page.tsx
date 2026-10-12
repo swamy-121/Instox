@@ -76,7 +76,7 @@ function Body() {
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!methods && !error ? <LoadingState label="Loading methods" /> : null}
       {plan ? (
-        <p className="text-sm text-ink">{plan.name} · {formatInr(plan.priceMinor)} · {plan.billingPeriod}. {plan.approved ? "Approved." : "This price is not approved, so checkout stays a placeholder."}</p>
+        <p className="text-sm font-medium text-ink">{plan.name} · {formatInr(plan.priceMinor)} · {plan.billingPeriod}</p>
       ) : methods ? <EmptyState title="Plan not found" body="Choose a plan that is still published." /> : null}
       {methods && methods.length === 0 ? <EmptyState title="No methods" body="Publish a payment method before checkout." /> : null}
       <ul className="space-y-2">
@@ -86,7 +86,6 @@ function Body() {
               <input type="radio" name="method" checked={methodId === method.id} onChange={() => setMethodId(method.id)} />
               <span>
                 <span className="block font-medium text-ink">{method.name}</span>
-                <span className="block text-sm text-muted">{method.detail}</span>
               </span>
             </label>
           </li>
