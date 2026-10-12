@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { HomeIcon, InsightsIcon, ProfileIcon, ScreenerIcon, TipsIcon } from "@/components/icons";
+import { Home, LayoutGrid, Lightbulb, LineChart, Newspaper } from "lucide-react";
 import { Wordmark } from "@/components/wordmark";
 
 const MEMBER_LINKS = [
-  { href: "/home", label: "Home", icon: HomeIcon },
-  { href: "/tips", label: "Tips", icon: TipsIcon },
-  { href: "/screener", label: "Screener", icon: ScreenerIcon },
-  { href: "/insights", label: "Insights", icon: InsightsIcon },
-  { href: "/profile", label: "Profile", icon: ProfileIcon },
+  { href: "/home", label: "Home", icon: Home },
+  { href: "/tips", label: "Tips", icon: Lightbulb },
+  { href: "/screener", label: "Screener", icon: LineChart },
+  { href: "/news", label: "News", icon: Newspaper },
+  { href: "/more", label: "More", icon: LayoutGrid },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -23,11 +23,14 @@ export function PublicHeader() {
     <header className="brand-surface sticky top-0 z-30 border-b border-line">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <Link href="/" aria-label="inStox" className="inline-flex shrink-0 items-center">
-          <Wordmark decorative className="h-9 w-auto" />
+          <Wordmark decorative className="h-12 w-auto" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-ink md:flex">
           <Link href="/pricing" className="hover:text-primary">
             Pricing
+          </Link>
+          <Link href="/shop" className="hover:text-primary">
+            Shop
           </Link>
           <Link href="/about" className="hover:text-primary">
             About
@@ -46,13 +49,14 @@ export function PublicFooter() {
     <footer className="border-t border-line bg-white px-4 py-10 text-sm text-muted">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div>
-          <Wordmark decorative className="h-8 w-auto" />
+          <Wordmark decorative className="h-10 w-auto" />
           <p className="mt-3 max-w-sm leading-6">
             Tips are manually written information. Instox does not place trades and does not promise returns.
           </p>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <Link href="/pricing" className="hover:text-ink">Pricing</Link>
+          <Link href="/shop" className="hover:text-ink">Shop</Link>
           <Link href="/about" className="hover:text-ink">About</Link>
           <Link href="/disclaimer" className="hover:text-ink">Risk disclosure</Link>
         </div>

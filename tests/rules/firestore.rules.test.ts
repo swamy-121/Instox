@@ -46,6 +46,22 @@ beforeEach(async () => {
     await setDoc(doc(db, "plans/premium_monthly"), { name: "Premium monthly", priceMinor: 9900 });
     await setDoc(doc(db, "appConfig/public"), { key: "public", value: { product: "instox" } });
     await setDoc(doc(db, "appConfig/secret"), { key: "secret", value: { token: "nope" } });
+    await setDoc(doc(db, "paymentEvents/evt_1"), { providerEventId: "evt_1", payloadHash: "abc" });
+    await setDoc(doc(db, "referrals/alice"), { referredUid: "alice", code: "INXTEST" });
+    await setDoc(doc(db, "pushSubscriptions/sub_1"), { uid: "alice", endpoint: "https://push.example/secret" });
+    await setDoc(doc(db, "fcmTokens/tok_1"), { uid: "alice", token: "fcm-secret-token" });
+    await setDoc(doc(db, "shopOrders/shop_1"), { uid: "alice", status: "held_unapproved", amountMinor: 49900 });
+    await setDoc(doc(db, "strategies/str_1"), { uid: "alice", name: "Draft", status: "draft" });
+    await setDoc(doc(db, "newsArticles/news_1"), { title: "Sample", status: "published" });
+    await setDoc(doc(db, "advertisements/ad_1"), { title: "Banner", status: "published" });
+    await setDoc(doc(db, "homeTiles/tile_1"), { label: "Tips", href: "/tips", status: "published" });
+    await setDoc(doc(db, "moreLinks/link_1"), { label: "Shop", href: "/shop", status: "published" });
+    await setDoc(doc(db, "watchlistDefaults/def_1"), { symbol: "RELIANCE", status: "published" });
+    await setDoc(doc(db, "notificationTemplates/tpl_1"), { name: "Open", title: "Open", body: "Hello", status: "draft" });
+    await setDoc(doc(db, "watchlistItems/alice_RELIANCE"), { uid: "alice", symbol: "RELIANCE" });
+    await setDoc(doc(db, "marketQuotes/q_1"), { symbol: "NIFTY", last: 1, providerId: "aliceblue" });
+    await setDoc(doc(db, "appConfig/aliceblue"), { userSession: "secret-session", userId: "AB1" });
+    await setDoc(doc(db, "appConfig/integrations"), { secrets: { RAZORPAY_KEY_SECRET: { iv: "a", tag: "b", data: "c" } } });
   });
 });
 
@@ -84,6 +100,23 @@ describe("firestore rules", () => {
     await assertFails(setDoc(doc(alice, "tipEvents/evt_1"), { tipId: "tip_premium", reason: "forged" }));
     await assertFails(setDoc(doc(alice, "adminAuditLogs/aud_1"), { action: "user.roles_updated" }));
     await assertFails(setDoc(doc(alice, "paymentOrders/ord_1"), { status: "paid_verified", amountMinor: 1 }));
+    await assertFails(getDoc(doc(alice, "paymentEvents/evt_1")));
+    await assertFails(getDoc(doc(alice, "referrals/alice")));
+    await assertFails(getDoc(doc(alice, "pushSubscriptions/sub_1")));
+    await assertFails(getDoc(doc(alice, "fcmTokens/tok_1")));
+    await assertFails(getDoc(doc(alice, "shopOrders/shop_1")));
+    await assertFails(getDoc(doc(alice, "strategies/str_1")));
+    await assertFails(getDoc(doc(alice, "newsArticles/news_1")));
+    await assertFails(getDoc(doc(alice, "advertisements/ad_1")));
+    await assertFails(getDoc(doc(alice, "homeTiles/tile_1")));
+    await assertFails(getDoc(doc(alice, "moreLinks/link_1")));
+    await assertFails(getDoc(doc(alice, "watchlistDefaults/def_1")));
+    await assertFails(getDoc(doc(alice, "notificationTemplates/tpl_1")));
+    await assertFails(getDoc(doc(alice, "watchlistItems/alice_RELIANCE")));
+    await assertFails(getDoc(doc(alice, "marketQuotes/q_1")));
+    await assertFails(getDoc(doc(alice, "appConfig/aliceblue")));
+    await assertFails(getDoc(doc(alice, "appConfig/integrations")));
+    await assertFails(updateDoc(doc(alice, "users/alice"), { tipPush: true }));
   });
 
   it("allows public plan and public config reads only", async () => {

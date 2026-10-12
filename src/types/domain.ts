@@ -98,6 +98,7 @@ export type TipRecord = {
   updatedAt: string;
   schemaVersion: number;
   version: number;
+  featured?: boolean;
 };
 
 export type TipEventType =
@@ -183,6 +184,7 @@ export type PlanConfig = {
   effectiveFrom: string;
   taxTreatment: string;
   placeholder: boolean;
+  accessDays?: number;
 };
 
 export type PaymentOrderStatus =

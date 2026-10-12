@@ -1,0 +1,25 @@
+{
+  "note": "Catalogue placeholders. Fulfilment, shipping, and refunds are not approved. DEC-008 is still open.",
+  "products": [
+    {
+      "id": "research_journal",
+      "name": "Research journal",
+      "description": "A printable research notebook listing. This does not ship and it does not unlock premium tips.",
+      "priceMinor": 49900,
+      "currency": "INR",
+      "active": true,
+      "approved": false,
+      "fulfillment": "unconfigured"
+    },
+    {
+      "id": "desk_card",
+      "name": "Desk card set",
+      "description": "Sample stationery. Refund rules are not approved, so checkout is held.",
+      "priceMinor": 19900,
+      "currency": "INR",
+      "active": true,
+      "approved": false,
+      "fulfillment": "unconfigured"
+    }
+  ]
+}

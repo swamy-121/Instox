@@ -51,6 +51,14 @@ export function canAccessAdmin(roles: readonly Role[]): boolean {
   return hasAnyRole(roles, ["editor", "publisher", "support", "admin", "super_admin"]);
 }
 
+export function canManageOperations(roles: readonly Role[]): boolean {
+  return hasAnyRole(roles, ["admin", "super_admin"]);
+}
+
+export function canManageIntegrations(roles: readonly Role[]): boolean {
+  return roles.includes("super_admin");
+}
+
 export function canAssignRole(actorRoles: readonly Role[], targetRole: Role): boolean {
   if (actorRoles.includes("super_admin")) return true;
   if (!actorRoles.includes("admin")) return false;

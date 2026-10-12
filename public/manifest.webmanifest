@@ -1,11 +1,11 @@
 {
-  "name": "Instox",
-  "short_name": "Instox",
+  "name": "inStox",
+  "short_name": "inStox",
   "description": "Manually published market tips.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
+  "background_color": "#F8FCFA",
   "theme_color": "#FFFFFF",
   "lang": "en-IN",
   "icons": [

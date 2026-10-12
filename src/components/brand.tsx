@@ -1,70 +1,64 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Wordmark } from "@/components/wordmark";
+import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 
 export function BrandSplash({
   label = "Loading Instox",
-  onSkip,
+  advance = false,
 }: {
   label?: string;
-  onSkip?: () => void;
+  advance?: boolean;
 }) {
-  const skipRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    skipRef.current?.focus();
-  }, []);
-
   return (
-    <div
-      className="brand-surface fixed inset-0 z-50 flex flex-col"
-      role={onSkip ? "dialog" : "status"}
-      aria-label="inStox"
-      aria-live={onSkip ? undefined : "polite"}
-    >
-      <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Wordmark className="h-auto w-[min(78vw,420px)]" />
-        <p className="mt-6 text-center text-sm tracking-wide text-muted">Instant Trading ideas</p>
-        <span className="sr-only">{label}</span>
-      </div>
-      {onSkip ? (
-        <div className="flex justify-end px-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
-          <button
-            ref={skipRef}
-            type="button"
-            className="rounded-full border border-line bg-canvas px-5 py-2 text-sm font-medium text-ink shadow-card"
-            onClick={onSkip}
-          >
-            Skip
-          </button>
+    <div className="splash-screen" role="status" aria-label="Loading Market Insights">
+      <div className="splash-frame">
+        <picture>
+          <source srcSet="/brand/splash.avif" type="image/avif" />
+          <source srcSet="/brand/splash.webp" type="image/webp" />
+          {/* The artwork is a full-bleed file. next/image would crop it to a fixed box. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/splash.png"
+            width={853}
+            height={1844}
+            alt=""
+            className="splash-photo"
+          />
+        </picture>
+        <div className="splash-bar" aria-hidden="true">
+          <span className={advance ? "splash-bar-fill" : "splash-bar-indeterminate"} />
         </div>
-      ) : null}
+      </div>
+      <span className="sr-only">{label}. Loading Market Insights.</span>
     </div>
   );
 }
 
 const SPLASH_KEY = "instox-splash";
+const SPLASH_MS = 2800;
 
 export function SplashGate({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    if (sessionStorage.getItem(SPLASH_KEY) === "skip") setVisible(false);
-  }, []);
+    if (sessionStorage.getItem(SPLASH_KEY) === "skip") {
+      setVisible(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      sessionStorage.setItem(SPLASH_KEY, "skip");
+      setVisible(false);
+      router.push("/onboarding");
+    }, SPLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [router]);
 
   return (
     <>
       {children}
-      {visible ? (
-        <BrandSplash
-          label="inStox"
-          onSkip={() => {
-            sessionStorage.setItem(SPLASH_KEY, "skip");
-            setVisible(false);
-          }}
-        />
-      ) : null}
+      {visible ? <BrandSplash label="inStox" advance /> : null}
     </>
   );
 }

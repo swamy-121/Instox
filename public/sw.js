@@ -1,6 +1,6 @@
-const CACHE = "instox-static-v2";
-const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/brand/wordmark.svg", "/icons/icon-192.png", "/icons/icon-512.png"];
-const STATIC_EXT = /\.(?:png|svg|ico|webp|woff2)$/i;
+const CACHE = "instox-static-v5";
+const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/brand/wordmark.png", "/brand/splash.avif", "/brand/splash.webp", "/icons/icon-192.png", "/icons/icon-512.png"];
+const STATIC_EXT = /\.(?:png|svg|ico|webp|avif|jpg|woff2)$/i;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
@@ -30,6 +30,23 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/tips")) return;
   if (url.pathname.startsWith("/profile")) return;
   if (url.pathname.startsWith("/sign-in")) return;
+  if (url.pathname.startsWith("/screener")) return;
+  if (url.pathname.startsWith("/insights")) return;
+  if (url.pathname.startsWith("/pulse")) return;
+  if (url.pathname.startsWith("/referrals")) return;
+  if (url.pathname.startsWith("/shop")) return;
+  if (url.pathname.startsWith("/notifications")) return;
+  if (url.pathname.startsWith("/charts")) return;
+  if (url.pathname.startsWith("/strategies")) return;
+  if (url.pathname.startsWith("/backtest")) return;
+  if (url.pathname.startsWith("/news")) return;
+  if (url.pathname.startsWith("/more")) return;
+  if (url.pathname.startsWith("/watchlist")) return;
+  if (url.pathname.startsWith("/market")) return;
+  if (url.pathname.startsWith("/settings")) return;
+  if (url.pathname.startsWith("/help")) return;
+  if (url.pathname.startsWith("/onboarding")) return;
+  if (url.pathname.startsWith("/premium")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => caches.match("/offline.html")));
@@ -50,4 +67,27 @@ self.addEventListener("fetch", (event) => {
       });
     }),
   );
+});
+
+self.addEventListener("push", (event) => {
+  let payload = { title: "Instox", body: "Open Instox for the update.", url: "/home" };
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      payload = {
+        title: typeof parsed.title === "string" ? parsed.title : payload.title,
+        body: typeof parsed.body === "string" ? parsed.body : payload.body,
+        url: typeof parsed.url === "string" ? parsed.url : payload.url,
+      };
+    }
+  } catch {
+    payload = { title: "Instox", body: "Open Instox for the update.", url: "/home" };
+  }
+  event.waitUntil(self.registration.showNotification(payload.title, { body: payload.body, data: { url: payload.url } }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/home";
+  event.waitUntil(self.clients.openWindow(url));
 });
