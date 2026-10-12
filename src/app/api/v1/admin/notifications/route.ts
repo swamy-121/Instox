@@ -5,15 +5,45 @@ import { canPublishTips } from "@/server/authorization/roles";
 import { assertRecentAuth } from "@/server/authorization/session-policy";
 import { adminDb } from "@/server/db/admin";
 import { apiOk, readJson, withApi } from "@/server/http";
-import { dispatchTipAlert } from "@/server/notifications/dispatch";
+import { dispatchBroadcast, dispatchTipAlert } from "@/server/notifications/dispatch";
 
-const bodySchema = z
+const tipSchema = z
   .object({
     tipId: z.string().min(4).max(80),
     kind: z.enum(["transactional", "marketing"]),
     reason: z.string().min(3).max(500),
   })
   .strict();
+
+const broadcastSchema = z
+  .object({
+    title: z.string().trim().min(3).max(80),
+    message: z.string().trim().min(3).max(240),
+    audience: z.enum(["all", "free", "premium"]),
+  })
+  .strict();
+
+export async function GET(request: Request): Promise<Response> {
+  return withApi(request, "GET /api/v1/admin/notifications", async ({ requestId }) => {
+    const actor = await requireActor(request);
+    if (!canPublishTips(actor.roles)) throw new AppError(403, "FORBIDDEN", "You cannot view alerts.");
+    const snap = await adminDb().collection("notificationCampaigns").limit(50).get();
+    const campaigns = snap.docs
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: String(data.title ?? data.tipId ?? "Tip alert"),
+          body: String(data.body ?? data.reason ?? ""),
+          audience: String(data.audience ?? data.kind ?? ""),
+          status: String(data.status ?? ""),
+          createdAt: String(data.createdAt ?? ""),
+        };
+      })
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    return apiOk({ campaigns }, requestId);
+  });
+}
 
 export async function POST(request: Request): Promise<Response> {
   return withApi(request, "POST /api/v1/admin/notifications", async ({ requestId }) => {
@@ -22,10 +52,22 @@ export async function POST(request: Request): Promise<Response> {
       throw new AppError(403, "FORBIDDEN", "You cannot queue tip alerts.");
     }
     assertRecentAuth(actor.authTime, Date.now());
-    const parsed = bodySchema.safeParse(await readJson(request));
+    const body = await readJson(request);
+    const broadcast = broadcastSchema.safeParse(body);
+    if (broadcast.success) {
+      const result = await dispatchBroadcast({
+        title: broadcast.data.title,
+        body: broadcast.data.message,
+        audience: broadcast.data.audience,
+        actorUid: actor.uid,
+        requestId,
+      });
+      return apiOk(result, requestId, null, 201);
+    }
+    const parsed = tipSchema.safeParse(body);
     if (!parsed.success) {
-      throw new AppError(400, "VALIDATION_ERROR", "A published tip id, alert kind, and reason are required.", {
-        tipId: "Choose a published tip.",
+      throw new AppError(400, "VALIDATION_ERROR", "Send a title and message, or a published tip id.", {
+        title: "Enter a title.",
       });
     }
     const tipSnap = await adminDb().collection("tips").doc(parsed.data.tipId).get();

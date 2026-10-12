@@ -8,6 +8,13 @@ import { loadInstruments } from "@/server/market-data/catalog";
 import { runScreener } from "@/server/screener/engine";
 import { filtersFromSearchParams } from "@/server/screener/query";
 
+function periodParam(params: URLSearchParams, key: string, stored: unknown, fallback: number): number {
+  const raw = params.get(key);
+  const value = raw === null || raw.trim() === "" ? Number(stored) : Number(raw);
+  if (!Number.isInteger(value) || value < 2 || value > 200) return fallback;
+  return value;
+}
+
 export async function GET(request: Request): Promise<Response> {
   return withApi(request, "GET /api/v1/screener", async ({ requestId }) => {
     await requireActor(request);
@@ -16,6 +23,10 @@ export async function GET(request: Request): Promise<Response> {
     const now = new Date();
     const instruments = await loadInstruments();
     const flags = await loadRuntimeFlags();
+    const presetSnap = await adminDb().collection("appConfig").doc("screenerPresets").get();
+    const preset = presetSnap.exists ? presetSnap.data() ?? {} : {};
+    const rsiPeriod = periodParam(url.searchParams, "rsiPeriod", preset.rsiPeriod, features.indicatorDefaults.rsiPeriod);
+    const emaPeriod = periodParam(url.searchParams, "emaPeriod", preset.emaPeriod, features.indicatorDefaults.emaPeriod);
     const stored = await adminDb().collection("candleSeries").limit(100).get();
     const candlesBySymbol: Record<string, Candle[]> = {};
     for (const doc of stored.docs) {
@@ -30,8 +41,8 @@ export async function GET(request: Request): Promise<Response> {
       now,
       maxAgeMs: features.screener.maxAgeMs,
       periods: {
-        rsi: features.indicatorDefaults.rsiPeriod,
-        ema: features.indicatorDefaults.emaPeriod,
+        rsi: rsiPeriod,
+        ema: emaPeriod,
         atr: features.indicatorDefaults.atrPeriod,
         supertrend: features.indicatorDefaults.supertrendPeriod,
         supertrendMultiplier: features.indicatorDefaults.supertrendMultiplier,

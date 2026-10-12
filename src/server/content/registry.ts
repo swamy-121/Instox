@@ -93,6 +93,14 @@ export const contentSchemas = {
     symbol: z.string().min(1).max(32),
     candles: z.array(candle).max(120),
   }),
+  advertisements: z.object({
+    id,
+    title: z.string().min(1).max(80),
+    body: z.string().min(1).max(400),
+    placement: z.string().min(1).max(40),
+    status: z.enum(["published", "draft"]),
+    sort: z.number().int(),
+  }),
 } as const;
 
 export type ContentName = keyof typeof contentSchemas;
@@ -124,7 +132,7 @@ export function tryParseContent<T extends ContentName>(name: T, input: unknown):
 }
 
 export function publicRecord<T extends ContentName>(name: T, record: ContentRecord<T>): ContentRecord<T> | null {
-  if (name === "newsArticles" || name === "helpArticles") {
+  if (name === "newsArticles" || name === "helpArticles" || name === "advertisements") {
     return (record as { status?: string }).status === "published" ? record : null;
   }
   if (name === "shopProducts" || name === "paymentMethods" || name === "plans") {

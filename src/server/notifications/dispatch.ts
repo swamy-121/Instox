@@ -258,3 +258,81 @@ export async function dispatchTipAlert(input: {
 
   return { duplicate: false, notice, campaign: { id: key, counts, configured } };
 }
+
+export async function dispatchBroadcast(input: {
+  title: string;
+  body: string;
+  audience: "all" | "free" | "premium";
+  actorUid: string;
+  requestId: string;
+}): Promise<TipAlertResult> {
+  const db = adminDb();
+  const id = createId("camp");
+  const campaignRef = db.collection("notificationCampaigns").doc(id);
+  const entitlements = await db.collection("userEntitlements").limit(300).get();
+  const premium = new Set(
+    entitlements.docs
+      .filter((doc) => doc.data().status === "active" || doc.data().status === "grace")
+      .map((doc) => doc.id),
+  );
+  const users = await db.collection("users").where("tipPush", "==", true).limit(200).get();
+  const devices = [];
+  for (const userDoc of users.docs) {
+    const isPremium = premium.has(userDoc.id);
+    if (input.audience === "premium" && !isPremium) continue;
+    if (input.audience === "free" && isPremium) continue;
+    const tokens = await db.collection("fcmTokens").where("uid", "==", userDoc.id).limit(10).get();
+    for (const tokenDoc of tokens.docs) {
+      const token = tokenDoc.data().token;
+      if (typeof token !== "string" || !token) continue;
+      devices.push({
+        tokenId: tokenDoc.id,
+        token,
+        revoked: tokenDoc.data().revoked === true,
+        consent: { tipPush: true, marketingPush: userDoc.data().marketingPush === true },
+      });
+    }
+  }
+  const configured = fcmConfigured();
+  const payload = { title: input.title, body: input.body, url: "/home" };
+  const plan = buildFcmDeliveries({
+    devices,
+    kind: "transactional",
+    payload,
+    configured,
+    mode: fcmSendMode(),
+  });
+  const now = new Date().toISOString();
+  await campaignRef.set({
+    id,
+    title: input.title,
+    body: input.body,
+    audience: input.audience,
+    kind: "broadcast",
+    channel: "fcm",
+    status: configured && plan.messages.length > 0 ? "pending" : "skipped_unconfigured",
+    configured,
+    counts: plan.counts,
+    createdBy: input.actorUid,
+    createdAt: now,
+    reason: input.body,
+  });
+  let notice = configured ? "FCM accepted the message." : "FCM is not configured, so the message was saved and nothing was sent.";
+  if (plan.messages.length > 0) {
+    try {
+      await sendWithAdmin(plan.messages);
+    } catch {
+      notice = "The message was saved. FCM did not accept the send.";
+      await campaignRef.set({ status: "failed" }, { merge: true });
+    }
+  }
+  await recordAudit({
+    actorUid: input.actorUid,
+    action: "notification.queued",
+    targetType: "campaign",
+    targetId: id,
+    reason: input.title,
+    requestId: input.requestId,
+  });
+  return { duplicate: false, notice, campaign: { id, counts: plan.counts, configured } };
+}

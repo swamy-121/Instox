@@ -483,6 +483,15 @@ export async function getTip(tipId: string): Promise<TipRecord | null> {
   return asTip(snap.id, snap.data() ?? {});
 }
 
+export async function deleteDraftTip(tipId: string): Promise<void> {
+  const tip = await getTip(tipId);
+  if (!tip) throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
+  if (tip.status !== "draft") {
+    throw new AppError(422, "BUSINESS_RULE_FAILED", "Only a draft can be deleted.");
+  }
+  await adminDb().collection("tips").doc(tipId).delete();
+}
+
 export async function listTipEvents(tipId: string): Promise<TipEvent[]> {
   const snap = await adminDb()
     .collection("tipEvents")

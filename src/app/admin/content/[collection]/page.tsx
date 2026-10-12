@@ -71,6 +71,13 @@ const SPECS: Record<string, { title: string; fields: Field[] }> = {
     { key: "mostPopular", label: "Most popular", type: "bool" },
     { key: "accessDays", label: "Access days", type: "number" },
   ] },
+  advertisements: { title: "Advertisements", fields: [
+    { key: "title", label: "Title", type: "text" },
+    { key: "body", label: "Body", type: "lines" },
+    { key: "placement", label: "Placement", type: "text" },
+    { key: "status", label: "Status (published or draft)", type: "text" },
+    { key: "sort", label: "Sort", type: "number" },
+  ] },
   contentDocs: { title: "Copy", fields: [
     { key: "title", label: "Title", type: "text" },
     { key: "body", label: "Body", type: "lines" },

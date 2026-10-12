@@ -115,6 +115,27 @@ body {
   }
 }
 
+.admin-light {
+  background-color: #f3f7f4;
+  color: #013316;
+}
+.admin-light .card,
+.admin-light .bg-white {
+  background-color: #ffffff;
+  color: #013316;
+}
+.admin-light .text-ink { color: #013316; }
+.admin-light .text-muted { color: #4f6b5e; }
+.admin-light .text-primary { color: #027332; }
+.admin-light .text-brand { color: #027332; }
+.admin-light .text-profit { color: #0f7a45; }
+.admin-light .text-loss { color: #b42318; }
+.admin-light .border-line { border-color: #d3e3db; }
+.admin-light .bg-canvas { background-color: #f3f8f5; }
+.admin-light select.field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23013316' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+}
+
 @media (prefers-color-scheme: dark) {
   select.field {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23F4FBF6' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");

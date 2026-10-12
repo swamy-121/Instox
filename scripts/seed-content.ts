@@ -52,8 +52,15 @@ export async function seedCatalog(db: Firestore): Promise<void> {
     { id: "news_results", title: "Infosys posts a steady second quarter", summary: "The company reported revenue in line with its own range. This starter item is not a live report.", source: "Sample wire", category: "Results", publishedAt: "2026-10-10T12:00:00.000Z", status: "published", sort: 2 },
     { id: "news_fed", title: "Global markets open higher after the Fed note", summary: "Index futures were higher in early trade. Figures in this feed are stored sample copy.", source: "Sample wire", category: "Global", publishedAt: "2026-10-10T06:00:00.000Z", status: "published", sort: 3 },
     { id: "news_oil", title: "Oil prices ease as supply concerns cool", summary: "Crude slipped in the sample tape. It is not a quote you can trade from.", source: "Sample wire", category: "Commodities", publishedAt: "2026-10-09T09:00:00.000Z", status: "published", sort: 4 },
+    { id: "news_draft", title: "Metals tape note still in draft", summary: "This row stays unpublished until an editor marks it published.", source: "Desk", category: "Commodities", publishedAt: "2026-10-11T11:00:00.000Z", status: "draft", sort: 5 },
   ];
   for (const row of news) await db.collection("newsArticles").doc(row.id).set(row);
+
+  const ads = [
+    { id: "ad_home", title: "Premium ideas", body: "A home placement. It does not change who can read a tip.", placement: "home", status: "published", sort: 1 },
+    { id: "ad_tips", title: "Screener tools", body: "A tips placement that is still a draft.", placement: "tips", status: "draft", sort: 2 },
+  ];
+  for (const row of ads) await db.collection("advertisements").doc(row.id).set(row);
 
   const help = [
     { id: "help_tips", question: "What is a tip?", answer: "A tip is a manually written idea with an entry, a stop, and targets. Instox does not place the trade.", status: "published", sort: 1 },
