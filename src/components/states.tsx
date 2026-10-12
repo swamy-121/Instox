@@ -6,7 +6,7 @@ export function LoadingState({ label = "Loading" }: { label?: string }) {
   return (
     <div role="status" className="space-y-3" aria-live="polite">
       <span className="sr-only">{label}</span>
-      <Wordmark decorative className="h-7 w-auto" />
+      <Wordmark decorative className="h-8 w-auto" />
       <div className="h-24 animate-pulse rounded-card bg-white" />
       <div className="h-24 animate-pulse rounded-card bg-white" />
     </div>
