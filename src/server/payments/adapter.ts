@@ -1,4 +1,5 @@
 import { AppError } from "@/lib/errors";
+import { refreshIntegrations, runtimeEnv } from "@/server/integrations/store";
 import { verifyCashfreeSignature, verifyRazorpaySignature } from "@/server/payments/signature";
 
 export type CheckoutSession = {
@@ -219,13 +220,23 @@ export function parseCashfreeBody(rawBody: string): NormalizedWebhook | null {
 }
 
 export function paymentProviderById(id: string): PaymentProvider | null {
+  const env = runtimeEnv();
   if (id === "stub") return new StubPaymentProvider();
-  if (id === "razorpay") return new RazorpayPaymentProvider();
-  if (id === "cashfree") return new CashfreePaymentProvider();
+  if (id === "razorpay") {
+    return new RazorpayPaymentProvider(env.RAZORPAY_KEY_ID ?? "", env.RAZORPAY_KEY_SECRET ?? "", env.RAZORPAY_WEBHOOK_SECRET ?? "");
+  }
+  if (id === "cashfree") {
+    return new CashfreePaymentProvider(
+      env.CASHFREE_CLIENT_ID ?? "",
+      env.CASHFREE_CLIENT_SECRET ?? "",
+      env.CASHFREE_WEBHOOK_SECRET || env.CASHFREE_CLIENT_SECRET || "",
+    );
+  }
   return null;
 }
 
-export function getPaymentProvider(): PaymentProvider {
-  const id = process.env.PAYMENTS_PROVIDER || "stub";
+export async function getPaymentProvider(): Promise<PaymentProvider> {
+  await refreshIntegrations();
+  const id = runtimeEnv().PAYMENTS_PROVIDER || "stub";
   return paymentProviderById(id) ?? new StubPaymentProvider();
 }

@@ -1,5 +1,6 @@
 import { getMessaging } from "firebase-admin/messaging";
 import { adminDb, getAdminApp } from "@/server/db/admin";
+import { refreshIntegrations } from "@/server/integrations/store";
 import { readAliceConnection } from "@/server/market-data/alice-store";
 import { activeFeedId } from "@/server/market-data/quotes";
 import { aliceReminderDue, istClock } from "@/server/market-data/session";
@@ -11,7 +12,9 @@ const BODY = "Index prices are delayed. Connect Alice Blue before the market ses
 let sending = false;
 
 export async function maybeSendAliceReminder(now = new Date()): Promise<void> {
-  if (sending || activeFeedId() !== "aliceblue") return;
+  if (sending) return;
+  await refreshIntegrations();
+  if (activeFeedId() !== "aliceblue") return;
   const connection = await readAliceConnection(now);
   if (!aliceReminderDue({
     now,

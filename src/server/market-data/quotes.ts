@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { isLiveIndex, LIVE_INDEX_SYMBOLS } from "@/lib/live-indices";
+import { runtimeEnv } from "@/server/integrations/store";
 
 export { isLiveIndex, LIVE_INDEX_SYMBOLS };
 
@@ -29,7 +30,7 @@ export type QuoteSnapshot = {
   providerId: FeedId;
 };
 
-export function activeFeedId(env: NodeJS.ProcessEnv = process.env): FeedId {
+export function activeFeedId(env: Record<string, string | undefined> = runtimeEnv()): FeedId {
   if (env.MARKET_DATA_PROVIDER === "aliceblue") return "aliceblue";
   if (env.MARKET_DATA_PROVIDER === "dev" && env.NODE_ENV !== "production") return "dev";
   return "mock";

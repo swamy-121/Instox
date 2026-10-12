@@ -1,3 +1,4 @@
+import { runtimeEnv } from "@/server/integrations/store";
 import { activeFeedId, type FeedId, type QuoteSnapshot } from "@/server/market-data/quotes";
 
 export type SampleQuote = {
@@ -101,7 +102,8 @@ class RemoteFeedProvider implements MarketDataProvider {
         checkedAt: now.toISOString(),
       };
     }
-    const configured = Boolean(process.env.ALICEBLUE_APP_CODE && process.env.ALICEBLUE_API_SECRET);
+    const env = runtimeEnv();
+    const configured = Boolean(env.ALICEBLUE_APP_CODE && env.ALICEBLUE_API_SECRET);
     return {
       providerId: this.id,
       status: configured ? "degraded" : "unavailable",

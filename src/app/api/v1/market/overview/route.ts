@@ -1,4 +1,5 @@
 import { listContent } from "@/server/content/store";
+import { refreshIntegrations } from "@/server/integrations/store";
 import { adminDb } from "@/server/db/admin";
 import { isLiveIndex } from "@/lib/live-indices";
 import { readAliceConnection } from "@/server/market-data/alice-store";
@@ -8,6 +9,7 @@ import { apiOk, withApi } from "@/server/http";
 
 export async function GET(request: Request): Promise<Response> {
   return withApi(request, "GET /api/v1/market/overview", async ({ requestId }) => {
+    await refreshIntegrations();
     const symbol = new URL(request.url).searchParams.get("symbol")?.toUpperCase() ?? "";
     const indices = await listContent("indices", "public");
     const chartSymbol = symbol || indices.find((row) => row.kind === "index")?.symbol || "";

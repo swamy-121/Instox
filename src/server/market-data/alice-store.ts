@@ -1,3 +1,4 @@
+import { runtimeEnv } from "@/server/integrations/store";
 import { adminDb } from "@/server/db/admin";
 import { isAliceSessionCurrent, istClock, type StoredAliceSession } from "@/server/market-data/session";
 
@@ -13,7 +14,7 @@ export type AliceConnection = {
   reminderSentOn: string | null;
 };
 
-export function aliceConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+export function aliceConfigured(env: Record<string, string | undefined> = runtimeEnv()): boolean {
   return Boolean(env.ALICEBLUE_APP_CODE && env.ALICEBLUE_API_SECRET);
 }
 

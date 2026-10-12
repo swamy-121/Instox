@@ -1,4 +1,5 @@
 import { requireOperations } from "@/server/auth/operations";
+import { refreshIntegrations, runtimeEnv } from "@/server/integrations/store";
 import { exchangeAliceAuthCode } from "@/server/market-data/aliceblue";
 import { saveAliceSession } from "@/server/market-data/alice-store";
 import { withApi } from "@/server/http";
@@ -22,13 +23,14 @@ function clearStateCookie(): string {
 export async function GET(request: Request): Promise<Response> {
   return withApi(request, "GET /api/v1/admin/market/aliceblue/callback", async () => {
     await requireOperations(request);
+    await refreshIntegrations();
     const url = new URL(request.url);
     const failed = new URL("/admin?alice=failed", request.url);
     const authCode = url.searchParams.get("authCode") ?? "";
     const userId = url.searchParams.get("userId") ?? "";
     const state = url.searchParams.get("state");
     const expected = readCookie(request, "instox_alice_state");
-    const apiSecret = process.env.ALICEBLUE_API_SECRET ?? "";
+    const apiSecret = runtimeEnv().ALICEBLUE_API_SECRET ?? "";
     if (!authCode || !userId || !apiSecret || (state && state !== expected)) {
       return new Response(null, { status: 302, headers: { location: failed.toString(), "set-cookie": clearStateCookie() } });
     }

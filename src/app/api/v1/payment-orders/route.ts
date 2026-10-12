@@ -62,7 +62,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const orderId = createId("ord");
-    const provider = getPaymentProvider();
+    const provider = await getPaymentProvider();
     const checkout = await provider.createCheckoutSession({
       orderId,
       amountMinor: priced.amountMinor,

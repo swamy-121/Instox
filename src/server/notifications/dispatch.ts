@@ -3,6 +3,7 @@ import { getMessaging, type Message } from "firebase-admin/messaging";
 import { createId } from "@/lib/ids";
 import { recordAudit } from "@/server/audit/log";
 import { adminDb, getAdminApp } from "@/server/db/admin";
+import { refreshIntegrations } from "@/server/integrations/store";
 import {
   FCM_TOPICS,
   buildFcmDeliveries,
@@ -56,6 +57,7 @@ async function sendWithAdmin(messages: FcmOutbound[]): Promise<SendRow[]> {
 }
 
 async function syncTopics(tokens: string[], consent: PushConsent): Promise<void> {
+  await refreshIntegrations();
   if (!fcmConfigured() || tokens.length === 0) return;
   const messaging = getMessaging(getAdminApp());
   const tipTopic = FCM_TOPICS.transactional;
@@ -67,6 +69,7 @@ async function syncTopics(tokens: string[], consent: PushConsent): Promise<void>
 }
 
 export async function syncUserTopics(uid: string): Promise<void> {
+  await refreshIntegrations();
   if (!fcmConfigured()) return;
   const db = adminDb();
   const [userSnap, tokens] = await Promise.all([
@@ -93,6 +96,7 @@ export async function dispatchTipAlert(input: {
   reason: string;
   requestId: string;
 }): Promise<TipAlertResult> {
+  await refreshIntegrations();
   const db = adminDb();
   const payload = safePushPayload({
     symbol: input.symbol,
@@ -266,6 +270,7 @@ export async function dispatchBroadcast(input: {
   actorUid: string;
   requestId: string;
 }): Promise<TipAlertResult> {
+  await refreshIntegrations();
   const db = adminDb();
   const id = createId("camp");
   const campaignRef = db.collection("notificationCampaigns").doc(id);

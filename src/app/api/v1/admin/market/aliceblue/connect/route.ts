@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { requireOperations } from "@/server/auth/operations";
+import { refreshIntegrations, runtimeEnv } from "@/server/integrations/store";
 import { ALICE_LOGIN_URL } from "@/server/market-data/aliceblue";
 import { aliceConfigured } from "@/server/market-data/alice-store";
 import { withApi } from "@/server/http";
@@ -12,11 +13,12 @@ function stateCookie(value: string, maxAge: number): string {
 export async function GET(request: Request): Promise<Response> {
   return withApi(request, "GET /api/v1/admin/market/aliceblue/connect", async () => {
     await requireOperations(request);
+    await refreshIntegrations();
     if (!aliceConfigured()) {
       return Response.redirect(new URL("/admin?alice=unconfigured", request.url), 302);
     }
     const state = randomBytes(16).toString("hex");
-    const appCode = process.env.ALICEBLUE_APP_CODE ?? "";
+    const appCode = runtimeEnv().ALICEBLUE_APP_CODE ?? "";
     const login = new URL(ALICE_LOGIN_URL);
     login.searchParams.set("appcode", appCode);
     login.searchParams.set("state", state);

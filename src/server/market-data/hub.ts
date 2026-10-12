@@ -1,4 +1,5 @@
 import { LIVE_INDEX_SYMBOLS } from "@/lib/live-indices";
+import { refreshIntegrations } from "@/server/integrations/store";
 import { adminDb } from "@/server/db/admin";
 import { readAliceConnection } from "@/server/market-data/alice-store";
 import { aliceConnectFrame, ALICE_SOCKET_URL, openAliceMarketSocket, type AliceSession } from "@/server/market-data/aliceblue";
@@ -20,6 +21,7 @@ const memory = new Map<string, QuoteSnapshot>();
 const contracts = new Map<string, { exchange: string; token: string }>();
 const tokenIndex = new Map<string, string>();
 let started = false;
+let loops = false;
 let activeDay = "";
 let generation = 0;
 
@@ -151,9 +153,19 @@ async function ensureAlice(): Promise<void> {
 
 export function startMarketFeed(): void {
   if (started) return;
-  const feed = activeFeedId();
-  if (feed === "mock") return;
   started = true;
+  const watch = () => {
+    void refreshIntegrations()
+      .catch(() => undefined)
+      .then(() => armMarketFeed(activeFeedId()));
+  };
+  watch();
+  setInterval(watch, 60_000);
+}
+
+function armMarketFeed(feed: FeedId): void {
+  if (loops || feed === "mock") return;
+  loops = true;
   if (feed === "dev") {
     const tick = () => {
       void pollDev(liveSymbols()).then(() => flush("dev")).catch(() => undefined);

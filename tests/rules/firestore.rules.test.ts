@@ -61,6 +61,7 @@ beforeEach(async () => {
     await setDoc(doc(db, "watchlistItems/alice_RELIANCE"), { uid: "alice", symbol: "RELIANCE" });
     await setDoc(doc(db, "marketQuotes/q_1"), { symbol: "NIFTY", last: 1, providerId: "aliceblue" });
     await setDoc(doc(db, "appConfig/aliceblue"), { userSession: "secret-session", userId: "AB1" });
+    await setDoc(doc(db, "appConfig/integrations"), { secrets: { RAZORPAY_KEY_SECRET: { iv: "a", tag: "b", data: "c" } } });
   });
 });
 
@@ -114,6 +115,7 @@ describe("firestore rules", () => {
     await assertFails(getDoc(doc(alice, "watchlistItems/alice_RELIANCE")));
     await assertFails(getDoc(doc(alice, "marketQuotes/q_1")));
     await assertFails(getDoc(doc(alice, "appConfig/aliceblue")));
+    await assertFails(getDoc(doc(alice, "appConfig/integrations")));
     await assertFails(updateDoc(doc(alice, "users/alice"), { tipPush: true }));
   });
 

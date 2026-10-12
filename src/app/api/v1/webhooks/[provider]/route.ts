@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { AppError } from "@/lib/errors";
 import { adminDb } from "@/server/db/admin";
 import { apiOk, withApi } from "@/server/http";
+import { refreshIntegrations } from "@/server/integrations/store";
 import { paymentProviderById } from "@/server/payments/adapter";
 import { accessDaysForPlan } from "@/server/payments/access-window";
 import { applyPaymentEvent, entitlementEffect } from "@/server/payments/apply-event";
@@ -47,6 +48,7 @@ export async function POST(
 ): Promise<Response> {
   return withApi(request, "POST /api/v1/webhooks/:provider", async ({ requestId }) => {
     const { provider: providerParam } = await context.params;
+    await refreshIntegrations();
     const provider = paymentProviderById(providerParam.toLowerCase());
     if (!provider || provider.id === "stub") {
       throw new AppError(404, "NOT_FOUND", "Unknown payment provider.");

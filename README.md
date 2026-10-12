@@ -79,7 +79,7 @@ Referral codes can be stored and applied. `config/features.json` keeps rewards o
 
 Tip alerts use Firebase Cloud Messaging. The browser stores an FCM device token, and the server sends with the Admin SDK. Alert text does not include entry, stop, targets, or rationale. With an empty web push certificate, or on the emulator, the delivery status is `skipped_unconfigured`.
 
-`PAYMENTS_PROVIDER` defaults to `stub`. Razorpay and Cashfree adapters exist for `PAYMENTS_MODE=test` only. Missing keys return 503 and do not create a remote order. A verified webhook still cannot grant premium while the plan in `config/plans.json` has `approved: false`.
+`PAYMENTS_PROVIDER` defaults to `stub`. Razorpay and Cashfree adapters exist for `PAYMENTS_MODE=test` only. Missing keys return 503 and do not create a remote order. A verified webhook still cannot grant premium while the plan in `config/plans.json` has `approved: false`. A super admin can save provider keys on Integrations. Those values are encrypted with `INTEGRATIONS_ENC_KEY` and override the environment when present. Remote checkout stays off.
 
 Admin screens ADM-06 through ADM-11 cover instruments, screener flags, users, plans and manual entitlements, orders and reconciliation, and referrals.
 
@@ -102,24 +102,33 @@ These still block a real launch. The product owner approved starting this build 
 - DEC-001 Brand palette and logo. Resolved from the official wordmark. `in` is teal `#0194A8` and `Stox` is green `#027332`, on white. Primary buttons and the active tab use the logo green `#027332`. Interface text uses `#013316`. Profit `#0F7A45` and loss `#B42318` stay separate from the logo green so gain and loss stay readable.
 - DEC-002 Plan price, tax, billing, cancellation, and refunds. Plan rows live in Firestore and stay `approved: false`. Manual grants are audited and do not approve the price.
 - DEC-003 SEBI / legal operating model. Paid stock-specific tips should stay off until counsel writes that down. Penny-stock publish is disabled in config.
-- DEC-004 Market-data vendor and redistribution rights. `MARKET_DATA_PROVIDER=aliceblue` streams Nifty 50, Bank Nifty, and Sensex after an admin uses Connect Alice Blue. The daily login is the account's own broker session and does not grant redistribution rights, so `MARKET_DATA_LICENSED` stays false. Until that session is stored, those cards keep the last known values and show Delayed. Tests and CI leave the provider unset and keep the mock adapter. `MARKET_DATA_PROVIDER=dev` reads public chart quotes for the same three indices and is refused when `NODE_ENV` is production.
-- DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off.
+- DEC-004 Market-data vendor and redistribution rights. `MARKET_DATA_PROVIDER=aliceblue` streams Nifty 50, Bank Nifty, and Sensex after an admin uses Connect Alice Blue. The provider and Alice Blue app credentials can also be saved on Integrations. The daily login is the account's own broker session and does not grant redistribution rights, so `MARKET_DATA_LICENSED` stays false. Until that session is stored, those cards keep the last known values and show Delayed. Tests and CI leave the provider unset and keep the mock adapter. `MARKET_DATA_PROVIDER=dev` reads public chart quotes for the same three indices and is refused when `NODE_ENV` is production.
+- DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off. Keys can be entered on Integrations instead of the environment.
 - DEC-006 Automatic outcome tracking. Close, cancel, and expire are manual. Insights read those reasons.
 - DEC-007 Referral threshold and reward. The ledger exists. Entitlement grants from referrals stay off.
 - DEC-008 Shop scope. The catalogue is a placeholder. Fulfilment, shipping, and refunds are not approved.
-- DEC-009 Email/SMS notification channels. FCM consent and token storage are built. The web push certificate and Admin credentials are empty, so nothing is sent.
+- DEC-009 Email/SMS notification channels. FCM consent and token storage are built. The web push certificate can be saved on Integrations. Admin credentials stay empty, so nothing is sent.
 - DEC-010 Named support and grievance contact. The about page says this is unassigned.
 
 ## Credentials still required
 
 Leave these empty until a real account exists. Do not commit values.
 
+These stay in the server environment because the app cannot boot or encrypt secrets without them:
+
+- `INTEGRATIONS_ENC_KEY`, a random string of at least 16 characters. It encrypts secrets saved on Integrations.
 - Firebase admin client email and private key, for a non-emulator deploy and for FCM sends.
-- Firebase web app api key, auth domain, project id, and app id, when you leave the emulator.
-- Firebase Cloud Messaging sender id (`NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`).
+- Firebase web app api key, auth domain, project id, app id, and messaging sender id, when you leave the emulator.
+- `PAYMENTS_MODE` stays `test`. Remote checkout stays off.
+- `MARKET_DATA_LICENSED` stays false until redistribution rights are decided.
+- Emulator hosts, when you run locally.
+
+A super admin can enter these on Integrations. The same names still work as environment fallbacks when the saved field is empty:
+
 - Firebase web push certificate (`NEXT_PUBLIC_FIREBASE_VAPID_KEY`). This is the FCM key, not a separate VAPID private key.
 - Razorpay key id, key secret, and webhook secret.
 - Cashfree client id, client secret, and webhook secret.
+- `PAYMENTS_PROVIDER` (`stub`, `razorpay`, or `cashfree`).
+- `FCM_SEND_MODE` (`token` or `topic`).
 - `MARKET_DATA_PROVIDER` (`aliceblue` or `dev`; leave unset for the mock feed).
 - Alice Blue app code (`ALICEBLUE_APP_CODE`) and API secret (`ALICEBLUE_API_SECRET`) from the developer portal at https://a3.aliceblueonline.com/. Register the redirect URL `https://<your-host>/api/v1/admin/market/aliceblue/callback`. An admin presses Connect Alice Blue once each market day. The session token stays on the server. If it is missing, index cards show Delayed, the admin panel shows a red banner, and admins with an FCM token get one reminder after 9:00 AM IST on NSE market days.
-- `MARKET_DATA_LICENSED` stays false until redistribution rights are decided.

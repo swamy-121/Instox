@@ -49,7 +49,11 @@ export function NotificationSettings() {
   }
 
   async function registerDevice() {
-    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? "";
+    let vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? "";
+    if (!vapidKey) {
+      const key = await apiFetch<{ vapidKey: string }>("/api/v1/integrations/push-key");
+      if (key.ok) vapidKey = key.data.vapidKey;
+    }
     const senderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "";
     if (!vapidKey || !senderId) {
       setMessage("Notifications are not available on this device yet.");

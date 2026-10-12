@@ -8,6 +8,7 @@ import {
   Bell,
   CreditCard,
   Crown,
+  KeyRound,
   LayoutDashboard,
   LifeBuoy,
   LineChart,
@@ -28,9 +29,9 @@ import { Wordmark } from "@/components/wordmark";
 import { MemberConfigProvider, useMemberConfig } from "@/features/app/member-config";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
-import { canAccessAdmin, canManageOperations } from "@/server/authorization/roles";
+import { canAccessAdmin, canManageIntegrations, canManageOperations } from "@/server/authorization/roles";
 
-const ADMIN_LINKS = [
+const ADMIN_LINKS: Array<{ href: string; label: string; icon: typeof LayoutDashboard; superAdmin?: boolean }> = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/tips", label: "Trading Tips", icon: LineChart },
   { href: "/admin/users", label: "Users", icon: Users },
@@ -45,6 +46,7 @@ const ADMIN_LINKS = [
   { href: "/admin/advertisements", label: "Advertisements", icon: Megaphone },
   { href: "/admin/member", label: "Member app", icon: Smartphone },
   { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/integrations", label: "Integrations", icon: KeyRound, superAdmin: true },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
 ];
 
@@ -240,7 +242,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:overflow-visible lg:px-3 lg:pb-6" aria-label="Admin">
-          {ADMIN_LINKS.map((link) => {
+          {ADMIN_LINKS.filter((link) => !link.superAdmin || (state.status === "ready" && canManageIntegrations(state.me.roles))).map((link) => {
             const active = link.href === "/admin" ? pathname === "/admin" : pathname === link.href || pathname.startsWith(`${link.href}/`);
             const Icon = link.icon;
             return (
