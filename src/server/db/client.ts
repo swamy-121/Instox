@@ -7,17 +7,31 @@ import * as schema from "@/server/db/schema";
 
 export type Database = PostgresJsDatabase<typeof schema>;
 
+type SqlClient = ReturnType<typeof postgres>;
+
+const globalDb = globalThis as typeof globalThis & {
+  __instoxDb?: Database;
+  __instoxSql?: SqlClient;
+};
+
 let database: Database | null = null;
-let client: ReturnType<typeof postgres> | null = null;
+let client: SqlClient | null = null;
 
 export function getDb(): Database {
   if (database) return database;
+  if (globalDb.__instoxDb) {
+    database = globalDb.__instoxDb;
+    client = globalDb.__instoxSql ?? null;
+    return database;
+  }
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new AppError(503, "PROVIDER_UNAVAILABLE", "Set DATABASE_URL before using the database.");
   }
   client = postgres(url, { max: 10 });
   database = drizzle(client, { schema });
+  globalDb.__instoxDb = database;
+  globalDb.__instoxSql = client;
   return database;
 }
 
@@ -29,6 +43,8 @@ export async function closeDb(): Promise<void> {
   if (client) await client.end({ timeout: 5 });
   client = null;
   database = null;
+  globalDb.__instoxDb = undefined;
+  globalDb.__instoxSql = undefined;
 }
 
 const MIGRATION_IDS = ["0000_init", "0001_crm_voice"] as const;

@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import { createId } from "@/lib/ids";
+import { toE164 } from "@/lib/phone";
 import { normalizePhone } from "@/server/auth/credentials";
 import { isCrmStage, type CrmStage } from "@/server/crm/model";
 import { getDb } from "@/server/db/client";
@@ -20,6 +21,15 @@ const TRIAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function crmPhone(value: string): string | null {
+  const direct = normalizePhone(value);
+  if (direct) return direct;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return toE164("91", digits);
+  if (digits.length === 12 && digits.startsWith("91")) return normalizePhone(`+${digits}`);
+  return null;
 }
 
 function stageFromAccount(subscriptionStatus: string | null, entitlementStatus: string | null): CrmStage {
@@ -125,7 +135,7 @@ function toListItem(row: typeof crmContacts.$inferSelect): ContactListItem {
 
 export async function createLead(input: { name: string; phone: string; email?: string; authorId: string }): Promise<string> {
   const name = input.name.trim();
-  const phone = normalizePhone(input.phone);
+  const phone = crmPhone(input.phone);
   if (name.length < 2) throw new AppError(400, "VALIDATION_ERROR", "Enter the person's name.", { name: "Enter a name." });
   if (!phone) throw new AppError(400, "VALIDATION_ERROR", "Enter a valid phone number.", { phone: "Use a full mobile number." });
   const db = getDb();
