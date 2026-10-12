@@ -72,7 +72,7 @@ function Illustration() {
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between">
-        <Wordmark decorative className="h-7 w-auto" />
+        <Wordmark decorative className="h-10 w-auto" />
         <Chip>Illustration</Chip>
       </div>
       <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted">NSE · Equity · 1-3 sessions</p>

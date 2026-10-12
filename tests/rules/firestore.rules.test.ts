@@ -52,6 +52,8 @@ beforeEach(async () => {
     await setDoc(doc(db, "fcmTokens/tok_1"), { uid: "alice", token: "fcm-secret-token" });
     await setDoc(doc(db, "shopOrders/shop_1"), { uid: "alice", status: "held_unapproved", amountMinor: 49900 });
     await setDoc(doc(db, "strategies/str_1"), { uid: "alice", name: "Draft", status: "draft" });
+    await setDoc(doc(db, "newsArticles/news_1"), { title: "Sample", status: "published" });
+    await setDoc(doc(db, "watchlistItems/alice_RELIANCE"), { uid: "alice", symbol: "RELIANCE" });
   });
 });
 
@@ -96,6 +98,8 @@ describe("firestore rules", () => {
     await assertFails(getDoc(doc(alice, "fcmTokens/tok_1")));
     await assertFails(getDoc(doc(alice, "shopOrders/shop_1")));
     await assertFails(getDoc(doc(alice, "strategies/str_1")));
+    await assertFails(getDoc(doc(alice, "newsArticles/news_1")));
+    await assertFails(getDoc(doc(alice, "watchlistItems/alice_RELIANCE")));
     await assertFails(updateDoc(doc(alice, "users/alice"), { tipPush: true }));
   });
 

@@ -20,6 +20,12 @@ const ADMIN_LINKS = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/referrals", label: "Referrals" },
   { href: "/admin/audit", label: "Audit" },
+  { href: "/admin/content/indices", label: "Indices" },
+  { href: "/admin/content/newsArticles", label: "News" },
+  { href: "/admin/content/helpArticles", label: "Help" },
+  { href: "/admin/content/shopProducts", label: "Shop" },
+  { href: "/admin/content/onboardingSlides", label: "Onboarding" },
+  { href: "/admin/content/paymentMethods", label: "Pay methods" },
 ];
 
 export function AppFrame({
@@ -106,7 +112,7 @@ export function AppFrame({
       <header className="brand-surface sticky top-0 z-30 border-b border-line">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
           <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
-            <Wordmark decorative className="h-9 w-auto" />
+            <Wordmark decorative className="h-12 w-auto" />
           </Link>
           {signedIn ? <DesktopNav /> : null}
         </div>
@@ -124,7 +130,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       <aside className="brand-surface border-b border-line md:sticky md:top-0 md:h-screen md:border-b-0 md:border-r">
         <div className="flex h-16 items-center justify-between px-4">
           <Link href="/admin" aria-label="inStox admin" className="inline-flex items-center">
-            <Wordmark decorative className="h-8 w-auto" />
+            <Wordmark decorative className="h-11 w-auto" />
           </Link>
           <Link href="/home" className="text-sm font-medium text-primary md:hidden">
             App

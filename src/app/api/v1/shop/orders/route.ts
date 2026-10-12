@@ -4,7 +4,8 @@ import { AppError } from "@/lib/errors";
 import { requireActor } from "@/server/auth/actor";
 import { adminDb } from "@/server/db/admin";
 import { apiOk, readJson, requireIdempotencyKey, withApi } from "@/server/http";
-import { decideShopOrder } from "@/server/shop/catalog";
+import { listContent } from "@/server/content/store";
+import { decideShopOrder, type ShopProduct } from "@/server/shop/catalog";
 
 const bodySchema = z.object({ productId: z.string().min(1).max(64) }).strict();
 
@@ -39,7 +40,18 @@ export async function POST(request: Request): Promise<Response> {
         productId: "Choose a product.",
       });
     }
-    const decision = decideShopOrder(parsed.data.productId);
+    const stored = await listContent("shopProducts", "admin");
+    const products: ShopProduct[] = stored.map((product) => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      priceMinor: product.priceMinor,
+      currency: product.currency,
+      active: product.active,
+      approved: product.approved,
+      fulfillment: "unconfigured",
+    }));
+    const decision = decideShopOrder(parsed.data.productId, products);
     const db = adminDb();
     const existing = await db.collection("idempotencyKeys").doc(`shop_${idempotencyKey}`).get();
     if (existing.exists) {

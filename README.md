@@ -48,7 +48,7 @@ Seeded premium tips stay locked for the free user. Sign in as Premium Member to 
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Unit tests (lifecycle, entitlements, tip redaction) |
 | `npm run test:rules` | Firestore rules tests. Needs the Firestore emulator. |
-| `npm run seed` | Dummy users, tips, and an audit row in the emulator |
+| `npm run seed` | Idempotent users, tips, plans, quotes, news, help, shop, and watchlist rows. Works on the emulator and on a project with Admin credentials. |
 | `npm run emulators` | Auth and Firestore emulators |
 
 CI runs lint, typecheck, unit tests, rules tests under `firebase emulators:exec`, and `npm run build`.
@@ -99,8 +99,8 @@ The sample instrument list is not an exchange master.
 
 These still block a real launch. The product owner approved starting this build anyway. The decisions themselves are not closed.
 
-- DEC-001 Brand palette and logo. Resolved from the product splash. The wordmark uses ink `#0A2C30`, sky blue `#2FAAFC`, and underline `#3DAAB7` on white. Interface text stays on ink. Links use `#227CB8` so small text meets WCAG AA. The screenshot tagline `#D9DADA` is too light, so tagline text uses `#5A6E71`. Profit `#0F7A45` and loss `#B42318` are used only for gain and loss.
-- DEC-002 Plan price, tax, billing, cancellation, and refunds. Config only, marked unapproved. Manual grants are audited and do not approve the price.
+- DEC-001 Brand palette and logo. Resolved from the official wordmark. `in` is teal `#0194A8` and `Stox` is green `#027332`, on white. Primary buttons and the active tab use the logo green `#027332`. Interface text uses `#013316`. Profit `#0F7A45` and loss `#B42318` stay separate from the logo green so gain and loss stay readable.
+- DEC-002 Plan price, tax, billing, cancellation, and refunds. Plan rows live in Firestore and stay `approved: false`. Manual grants are audited and do not approve the price.
 - DEC-003 SEBI / legal operating model. Paid stock-specific tips should stay off until counsel writes that down. Penny-stock publish is disabled in config.
 - DEC-004 Market-data vendor and redistribution rights. The mock adapter and sample instrument master are wired. `MARKET_DATA_LICENSED` stays false.
 - DEC-005 Payment provider. Razorpay and Cashfree signature checks exist. No credentials are committed, and remote checkout is off.

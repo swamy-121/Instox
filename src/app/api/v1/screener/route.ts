@@ -1,8 +1,9 @@
 import features from "../../../../../config/features.json";
 import { requireActor } from "@/server/auth/actor";
 import { apiOk, withApi } from "@/server/http";
+import type { Candle } from "@/server/indicators/formulas";
 import { loadRuntimeFlags } from "@/server/indicators/runtime";
-import { sampleCandleEnd, sampleCandles } from "@/server/market-data/candles";
+import { adminDb } from "@/server/db/admin";
 import { loadInstruments } from "@/server/market-data/catalog";
 import { runScreener } from "@/server/screener/engine";
 import { filtersFromSearchParams } from "@/server/screener/query";
@@ -15,10 +16,11 @@ export async function GET(request: Request): Promise<Response> {
     const now = new Date();
     const instruments = await loadInstruments();
     const flags = await loadRuntimeFlags();
-    const end = sampleCandleEnd(now);
-    const candlesBySymbol: Record<string, ReturnType<typeof sampleCandles>> = {};
-    for (const instrument of instruments) {
-      candlesBySymbol[instrument.symbol] = sampleCandles(instrument.symbol, 40, end);
+    const stored = await adminDb().collection("candleSeries").limit(100).get();
+    const candlesBySymbol: Record<string, Candle[]> = {};
+    for (const doc of stored.docs) {
+      const candles = doc.data().candles;
+      if (Array.isArray(candles)) candlesBySymbol[doc.id] = candles;
     }
     const screen = runScreener({
       instruments,
@@ -39,7 +41,7 @@ export async function GET(request: Request): Promise<Response> {
       {
         dataLabel: "Sample data",
         live: false,
-        notice: "These rows use the sample candle set. They are not a live scan.",
+        notice: "These rows use the candle series stored for each symbol. They are not a live scan.",
         ...screen,
       },
       requestId,

@@ -125,6 +125,42 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /indices/{id} {
+      allow read, write: if false;
+    }
+
+    match /newsArticles/{id} {
+      allow read, write: if false;
+    }
+
+    match /helpArticles/{id} {
+      allow read, write: if false;
+    }
+
+    match /onboardingSlides/{id} {
+      allow read, write: if false;
+    }
+
+    match /shopProducts/{id} {
+      allow read, write: if false;
+    }
+
+    match /contentDocs/{id} {
+      allow read, write: if false;
+    }
+
+    match /paymentMethods/{id} {
+      allow read, write: if false;
+    }
+
+    match /candleSeries/{id} {
+      allow read, write: if false;
+    }
+
+    match /watchlistItems/{id} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

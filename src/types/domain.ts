@@ -98,6 +98,7 @@ export type TipRecord = {
   updatedAt: string;
   schemaVersion: number;
   version: number;
+  featured?: boolean;
 };
 
 export type TipEventType =

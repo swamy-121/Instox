@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PublicFooter, PublicHeader } from "@/components/chrome";
+import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { Chip, PageHeader } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-provider";
@@ -54,10 +54,9 @@ export default function ShopPage() {
   }
 
   return (
-    <>
-      <PublicHeader />
-      <main className="mx-auto max-w-5xl space-y-4 px-4 py-10">
-        <PageHeader title="Shop" lede="Prices are configuration placeholders. Fulfilment and refunds are not approved, so an order is held and nothing is charged." />
+    <AppFrame>
+      <div className="space-y-4">
+        <PageHeader title="Shop" lede={catalog?.note || "The catalogue is empty until products are published."} />
         {error ? <ErrorState message={error} onRetry={load} /> : null}
         {!catalog && !error ? <LoadingState label="Loading catalogue" /> : null}
         {catalog && catalog.products.length === 0 ? <EmptyState title="No products" body="The catalogue is empty." /> : null}
@@ -85,8 +84,7 @@ export default function ShopPage() {
           ))}
         </div>
         {message ? <p className="text-sm" role="status">{message}</p> : null}
-      </main>
-      <PublicFooter />
-    </>
+      </div>
+    </AppFrame>
   );
 }

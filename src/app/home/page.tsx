@@ -4,16 +4,26 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
-import { TipCard } from "@/components/tip-card";
-import { Chip, PageHeader, Sparkline } from "@/components/ui";
+import { Chip } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
-import type { TipView } from "@/server/tips/present";
-import type { ProviderHealth, SampleQuote } from "@/server/market-data/adapter";
+import type { OpenTipView, TipView } from "@/server/tips/present";
 
+type Quote = { symbol: string; name: string; last: number; changePct: number; kind: "index" | "stock" };
 type Feed = { tips: TipView[]; viewerTier: string };
-type Sample = { provider: ProviderHealth; notice: string; quotes: SampleQuote[] };
+type Overview = { indices: Quote[]; dataLabel: string; live: boolean };
+
+const GRID = [
+  ["/tips", "Tips"],
+  ["/screener", "Screener"],
+  ["/news", "News"],
+  ["/shop", "Shop"],
+] as const;
+
+function isOpen(tip: TipView): tip is OpenTipView {
+  return tip.locked === false;
+}
 
 export default function HomePage() {
   return (
@@ -26,20 +36,28 @@ export default function HomePage() {
 function HomeBody() {
   const { state } = useAuth();
   const [feed, setFeed] = useState<Feed | null>(null);
-  const [sample, setSample] = useState<Sample | null>(null);
+  const [overview, setOverview] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | undefined>();
 
   function load() {
     setError(null);
-    Promise.all([apiFetch<Feed>("/api/v1/tips?limit=5"), apiFetch<Sample>("/api/v1/market/sample")]).then(([tips, market]) => {
+    Promise.all([
+      apiFetch<Feed>("/api/v1/tips?featured=1&limit=8"),
+      apiFetch<Overview>("/api/v1/market/overview"),
+    ]).then(([tips, market]) => {
       if (!tips.ok) {
         setError(tips.message);
         setRequestId(tips.requestId);
         return;
       }
       setFeed(tips.data);
-      if (market.ok) setSample(market.data);
+      if (!market.ok) {
+        setError(market.message);
+        setRequestId(market.requestId);
+        return;
+      }
+      setOverview(market.data);
     });
   }
 
@@ -49,87 +67,78 @@ function HomeBody() {
 
   if (state.status !== "ready") return null;
   const name = state.me.displayName || "there";
-
-  const tier = state.me.entitlement.tier === "premium" ? "Premium" : "Free";
+  const indices = overview?.indices.filter((row) => row.kind === "index") ?? [];
+  const quotes = new Map((overview?.indices ?? []).map((row) => [row.symbol, row]));
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={`Hello, ${name}`}
-        lede={`${tier} access. Plan status: ${state.me.entitlement.status}.`}
-      />
-      <nav className="-mx-4 flex gap-2 overflow-x-auto px-4" aria-label="Research">
-        {[
-          ["/pulse", "Pulse"],
-          ["/charts", "Charts"],
-          ["/strategies", "Strategies"],
-          ["/backtest", "Backtest"],
-          ["/shop", "Shop"],
-        ].map(([href, label]) => (
-          <Link key={href} href={href} className="shrink-0 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink hover:border-primary/40">
+    <div className="space-y-6">
+      <header>
+        <p className="text-sm text-muted">Hi, {name}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">Let us find your next opportunity</h1>
+      </header>
+      {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}
+      {!feed && !error ? <LoadingState label="Loading home" /> : null}
+      {overview ? (
+        <section className="grid grid-cols-2 gap-3">
+          {indices.length === 0 ? <EmptyState title="No indices" body="Publish index rows to show Nifty and Sensex." /> : null}
+          {indices.map((row) => (
+            <Link key={row.symbol} href={`/market?symbol=${row.symbol}`} className="card">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">{row.symbol}</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-ink">{formatPrice(row.last)}</p>
+              <p className={`text-sm font-medium tabular-nums ${row.changePct >= 0 ? "text-profit" : "text-loss"}`}>
+                {row.changePct >= 0 ? "+" : ""}{row.changePct.toFixed(2)}%
+              </p>
+            </Link>
+          ))}
+        </section>
+      ) : null}
+      {overview ? <p className="text-xs text-muted">{overview.live ? "Live" : overview.dataLabel}. These figures are stored records, not a vendor feed.</p> : null}
+      <section className="grid grid-cols-4 gap-2">
+        {GRID.map(([href, label]) => (
+          <Link key={href} href={href} className="flex flex-col items-center gap-2 rounded-card border border-line bg-white px-2 py-3 text-xs font-medium text-ink shadow-card">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary">{label.slice(0, 1)}</span>
             {label}
           </Link>
         ))}
-      </nav>
-      <section>
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-ink">Sample quotes</h2>
-            <p className="mt-1 text-xs leading-5 text-muted">{sample?.notice ?? "These figures are sample data for layout. They are not market prices."}</p>
-          </div>
-          <Chip>Sample</Chip>
-        </div>
-        <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
-          {sample?.quotes.map((quote) => (
-            <QuoteCard key={quote.symbol} quote={quote} />
-          ))}
-        </ul>
       </section>
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-ink">Latest tips</h2>
-          <Link href="/tips" className="text-sm font-medium text-primary">
-            See all
-          </Link>
-        </div>
-        {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}
-        {!feed && !error ? <LoadingState /> : null}
-        {feed && feed.tips.length === 0 ? <EmptyState title="No published tips" body="Published tips will show up here." /> : null}
-        <div className="space-y-3">{feed?.tips.map((tip) => <TipCard key={tip.id} tip={tip} />)}</div>
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-ink">Today&apos;s top picks</h2>
+        {feed && feed.tips.length === 0 ? <EmptyState title="No picks" body="Mark a published tip as featured to show it here." /> : null}
+        {feed?.tips.map((tip) => {
+          const quote = quotes.get(tip.symbol);
+          const open = isOpen(tip);
+          return (
+            <Link key={tip.id} href={`/tips/${tip.id}`} className="card block">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold text-ink">{tip.symbol}</p>
+                  <p className="text-xs text-muted">{tip.timeframe}</p>
+                </div>
+                <Chip tone="info">{tip.side}</Chip>
+              </div>
+              {quote ? (
+                <p className="mt-3 text-sm tabular-nums text-ink">
+                  LTP {formatPrice(quote.last)}{" "}
+                  <span className={quote.changePct >= 0 ? "text-profit" : "text-loss"}>
+                    {quote.changePct >= 0 ? "+" : ""}{quote.changePct.toFixed(2)}%
+                  </span>
+                </p>
+              ) : null}
+              {open ? (
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  <div><dt className="text-xs text-muted">Entry</dt><dd className="tabular-nums font-medium">{formatPrice(tip.entryMin)}</dd></div>
+                  <div><dt className="text-xs text-muted">SL</dt><dd className="tabular-nums font-medium text-loss">{formatPrice(tip.stopLoss)}</dd></div>
+                  {tip.targets.slice(0, 2).map((target) => (
+                    <div key={target.label}><dt className="text-xs text-muted">{target.label}</dt><dd className="tabular-nums font-medium text-profit">{formatPrice(target.price)}</dd></div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="mt-3 text-sm text-muted">Premium levels stay hidden until your plan is active.</p>
+              )}
+            </Link>
+          );
+        })}
       </section>
-      {state.me.entitlement.tier !== "premium" ? (
-        <Link href="/pricing" className="card flex items-center justify-between gap-4 hover:border-primary/40">
-          <span>
-            <span className="block text-sm font-semibold text-ink">Premium ideas</span>
-            <span className="mt-1 block text-sm leading-6 text-muted">Entry, stop, and targets stay hidden until a plan is active.</span>
-          </span>
-          <span className="text-sm font-semibold text-primary">View plans</span>
-        </Link>
-      ) : null}
     </div>
-  );
-}
-
-function changeClass(change: number | null, positive: boolean) {
-  if (change === null) return "text-muted";
-  return positive ? "text-profit" : "text-loss";
-}
-
-function QuoteCard({ quote }: { quote: SampleQuote }) {
-  const change = quote.sampleChangePct;
-  const positive = change !== null && change >= 0;
-  return (
-    <li className="card w-40 shrink-0 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-ink">{quote.symbol}</p>
-        {change !== null ? <Sparkline seed={quote.symbol} positive={positive} /> : null}
-      </div>
-      <p className="mt-3 text-lg font-semibold tabular-nums tracking-tight text-ink">
-        {quote.last === null ? "Unavailable" : formatPrice(quote.last)}
-      </p>
-      <p className={`mt-1 text-xs font-medium tabular-nums ${changeClass(change, positive)}`}>
-        {change === null ? quote.dataLabel : `${positive ? "+" : ""}${change.toFixed(2)}%`}
-      </p>
-    </li>
   );
 }

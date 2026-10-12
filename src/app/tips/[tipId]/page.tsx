@@ -65,7 +65,25 @@ function Detail() {
         Published {tip.publishedAt ? new Date(tip.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "not yet"}
       </p>
       {tip.locked ? <PremiumLock /> : <OpenLevels tip={tip} />}
+      <WatchButton symbol={tip.symbol} />
     </article>
+  );
+}
+
+function WatchButton({ symbol }: { symbol: string }) {
+  const [message, setMessage] = useState<string | null>(null);
+  async function add() {
+    const result = await apiFetch<{ symbol: string }>("/api/v1/watchlist", {
+      method: "POST",
+      body: JSON.stringify({ symbol }),
+    });
+    setMessage(result.ok ? `${result.data.symbol} is on your watchlist.` : result.message);
+  }
+  return (
+    <div className="mt-4">
+      <button type="button" className="btn-primary w-full" onClick={() => void add()}>Add to watchlist</button>
+      {message ? <p className="mt-2 text-sm text-muted" role="status">{message}</p> : null}
+    </div>
   );
 }
 

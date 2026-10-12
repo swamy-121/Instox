@@ -57,9 +57,7 @@ export default function PricingPage() {
       <PublicHeader />
       <main className="mx-auto max-w-5xl px-4 py-10">
         <h1 className="text-3xl font-semibold text-navy">Pricing</h1>
-        <p className="mt-3 max-w-2xl text-sm text-muted">
-          Prices below are configuration placeholders. Tax, renewal, cancellation, and refund rules are not approved yet.
-        </p>
+        {plans?.note ? <p className="mt-3 max-w-2xl text-sm text-muted">{plans.note}</p> : null}
         <div className="mt-6">
           {!plans && !error ? <LoadingState label="Loading plans" /> : null}
           {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}

@@ -71,10 +71,12 @@ function ScreenerBody() {
   return (
     <div className="space-y-4">
       <PageHeader title="Screener" lede="Filters combine with AND. ATR and SuperTrend stay off until an admin enables them." />
-      <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-white px-4 py-3 text-sm shadow-card">
-        <p className="text-ink">Sample data. These rows are not live quotes.</p>
-        <Chip>Sample</Chip>
-      </div>
+      {screen ? (
+        <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-white px-4 py-3 text-sm shadow-card">
+          <p className="text-ink">{screen.notice}</p>
+          <Chip>{screen.live ? "Live" : screen.dataLabel}</Chip>
+        </div>
+      ) : null}
       <form className="card grid gap-4 sm:grid-cols-3" onSubmit={apply}>
         <label>
           <span className="label">RSI below</span>
@@ -98,7 +100,7 @@ function ScreenerBody() {
           </select>
         </label>
         <div className="sm:col-span-3">
-          <button className="btn-primary w-full sm:w-auto" type="submit">Run sample screen</button>
+          <button className="btn-primary w-full sm:w-auto" type="submit">Run screener</button>
         </div>
       </form>
       {loading ? <LoadingState label="Running screener" /> : null}
@@ -112,7 +114,7 @@ function ScreenerBody() {
             <li key={row.symbol} className="card">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold tracking-tight text-ink">{row.symbol}</h2>
-                <Chip>Sample</Chip>
+                <Chip>{row.live ? "Live" : row.dataLabel}</Chip>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Chip>RSI {row.indicators.rsi === null ? "n/a" : row.indicators.rsi.toFixed(1)}</Chip>

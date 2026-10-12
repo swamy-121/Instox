@@ -1,6 +1,6 @@
 {
-  "name": "Instox",
-  "short_name": "Instox",
+  "name": "inStox",
+  "short_name": "inStox",
   "description": "Manually published market tips.",
   "start_url": "/",
   "scope": "/",

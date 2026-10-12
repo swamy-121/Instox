@@ -7,6 +7,7 @@ import features from "../config/features.json";
 import plans from "../config/plans.json";
 import { sampleInstruments } from "../src/server/market-data/instruments";
 import { referralCodeFor } from "../src/server/referrals/logic";
+import { seedCatalog } from "./seed-content";
 
 function loadEnvFile(filePath: string) {
   try {
@@ -166,6 +167,22 @@ async function main() {
       version: 2,
     },
     {
+      id: "tip_seed_reliance",
+      symbol: "RELIANCE",
+      category: "equity",
+      segment: "equity",
+      side: "BUY",
+      entryMin: 2845,
+      stopLoss: 2780,
+      targets: [{ label: "T1", price: 2890 }, { label: "T2", price: 2950 }, { label: "T3", price: 3020 }],
+      timeframe: "2-5 sessions",
+      thesis,
+      accessTier: "free",
+      status: "published",
+      publishedAt: "2026-10-11T06:30:00.000Z",
+      version: 2,
+    },
+    {
       id: "tip_seed_free",
       symbol: "INFY",
       category: "equity",
@@ -246,6 +263,7 @@ async function main() {
       instrumentId: tip.symbol,
       createdAt,
       updatedAt,
+      featured: tip.id === "tip_seed_free" || tip.id === "tip_seed_reliance",
       publishedSort: tip.publishedAt ? sortKey(tip.publishedAt, tip.id) : null,
       updatedSort: sortKey(updatedAt, tip.id),
     });
@@ -295,7 +313,8 @@ async function main() {
     requestId: "req_seed",
   });
 
-  console.log("Seeded Auth and Firestore emulator data.");
+  await seedCatalog(db);
+  console.log("Seeded Auth and Firestore data.");
 }
 
 main().catch((error: unknown) => {
