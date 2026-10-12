@@ -1,0 +1,38 @@
+{
+  "indicators": {
+    "rsi": true,
+    "ema": true,
+    "cpr": true,
+    "atr": false,
+    "supertrend": false
+  },
+  "indicatorDefaults": {
+    "rsiPeriod": 14,
+    "emaPeriod": 20,
+    "atrPeriod": 14,
+    "supertrendPeriod": 10,
+    "supertrendMultiplier": 3
+  },
+  "screener": {
+    "maxAgeMs": 172800000,
+    "combine": "and",
+    "completedCandlesOnly": true
+  },
+  "pulse": {
+    "version": "pulse-v1",
+    "weights": { "rsi": 0.4, "emaDistance": 0.3, "cprPosition": 0.3 },
+    "limitations": "Pulse is a descriptive blend of RSI, EMA distance, and CPR position. It is not a probability and it is not a recommendation."
+  },
+  "insights": {
+    "version": "insights-v1",
+    "timezone": "Asia/Kolkata",
+    "defaultDays": 30,
+    "offsetMinutes": 330
+  },
+  "referrals": {
+    "qualifiedCount": 5,
+    "rewardDays": 30,
+    "rewardEnabled": false,
+    "rewardGrantsEntitlement": false
+  }
+}

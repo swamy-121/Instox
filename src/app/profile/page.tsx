@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/states";
 import { Chip, PageHeader } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
+import { NotificationSettings } from "@/features/profile/notifications";
 import { canAccessAdmin } from "@/server/authorization/roles";
 
 export default function ProfilePage() {
@@ -114,7 +115,11 @@ function ProfileBody() {
         </div>
         <p className="text-xs leading-5 text-muted">Disable and deletion need a sign-in from the last 15 minutes. Deletion is a request. It does not wipe records that may have to be kept.</p>
       </section>
-      <Link href="/disclaimer" className="inline-flex text-sm font-medium text-primary hover:underline">Risk disclosure</Link>
+      <NotificationSettings />
+      <div className="flex flex-wrap gap-4 text-sm font-medium">
+        <Link href="/referrals" className="text-primary hover:underline">Referral code</Link>
+        <Link href="/disclaimer" className="text-primary hover:underline">Risk disclosure</Link>
+      </div>
       {message ? <p className="text-sm" role="status">{message}</p> : null}
       {confirm ? (
         <ConfirmDialog

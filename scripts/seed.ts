@@ -3,7 +3,10 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import compliance from "../config/compliance.json";
+import features from "../config/features.json";
 import plans from "../config/plans.json";
+import { sampleInstruments } from "../src/server/market-data/instruments";
+import { referralCodeFor } from "../src/server/referrals/logic";
 
 function loadEnvFile(filePath: string) {
   try {
@@ -80,6 +83,17 @@ async function main() {
       consentVersion: compliance.consentVersion,
       consentAt: now,
       providers: ["custom"],
+      tipPush: false,
+      marketingPush: false,
+    });
+    const code = referralCodeFor(user.uid);
+    await db.collection("referralCodes").doc(code).set({ uid: user.uid, code, createdAt: now });
+    await db.collection("referralAccounts").doc(user.uid).set({
+      uid: user.uid,
+      code,
+      conversions: 0,
+      createdAt: now,
+      updatedAt: now,
     });
     await db.collection("userRoles").doc(user.uid).set({
       uid: user.uid,
@@ -254,6 +268,14 @@ async function main() {
   for (const plan of plans.plans) {
     await db.collection("plans").doc(plan.id).set(plan);
   }
+  for (const instrument of sampleInstruments()) {
+    await db.collection("instruments").doc(instrument.symbol).set(instrument);
+  }
+  await db.collection("appConfig").doc("screener").set({
+    ...features.indicators,
+    updatedBy: "seed",
+    updatedAt: now,
+  });
   await db.collection("appConfig").doc("public").set({
     key: "public",
     value: { product: "instox", sampleData: true },

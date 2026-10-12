@@ -30,6 +30,15 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/tips")) return;
   if (url.pathname.startsWith("/profile")) return;
   if (url.pathname.startsWith("/sign-in")) return;
+  if (url.pathname.startsWith("/screener")) return;
+  if (url.pathname.startsWith("/insights")) return;
+  if (url.pathname.startsWith("/pulse")) return;
+  if (url.pathname.startsWith("/referrals")) return;
+  if (url.pathname.startsWith("/shop")) return;
+  if (url.pathname.startsWith("/notifications")) return;
+  if (url.pathname.startsWith("/charts")) return;
+  if (url.pathname.startsWith("/strategies")) return;
+  if (url.pathname.startsWith("/backtest")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => caches.match("/offline.html")));
@@ -50,4 +59,27 @@ self.addEventListener("fetch", (event) => {
       });
     }),
   );
+});
+
+self.addEventListener("push", (event) => {
+  let payload = { title: "Instox", body: "Open Instox for the update.", url: "/home" };
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      payload = {
+        title: typeof parsed.title === "string" ? parsed.title : payload.title,
+        body: typeof parsed.body === "string" ? parsed.body : payload.body,
+        url: typeof parsed.url === "string" ? parsed.url : payload.url,
+      };
+    }
+  } catch {
+    payload = { title: "Instox", body: "Open Instox for the update.", url: "/home" };
+  }
+  event.waitUntil(self.registration.showNotification(payload.title, { body: payload.body, data: { url: payload.url } }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/home";
+  event.waitUntil(self.clients.openWindow(url));
 });

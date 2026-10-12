@@ -5,6 +5,7 @@ import { canPublishTips } from "@/server/authorization/roles";
 import { assertRecentAuth } from "@/server/authorization/session-policy";
 import { apiOk, readJson, requireIdempotencyKey, withApi } from "@/server/http";
 import { validateTipInput } from "@/lib/validation/tip";
+import { dispatchTipAlert } from "@/server/notifications/dispatch";
 import { getTip, publishTip } from "@/server/tips/repo";
 
 const bodySchema = z
@@ -53,6 +54,24 @@ export async function POST(
       requestId,
       idempotencyKey,
     });
-    return apiOk({ tip }, requestId);
+    let alertNotice: string | undefined;
+    if (tip.status === "published") {
+      try {
+        const alert = await dispatchTipAlert({
+          tipId: tip.id,
+          version: tip.version,
+          symbol: tip.symbol,
+          accessTier: tip.accessTier,
+          kind: "transactional",
+          actorUid: actor.uid,
+          reason: parsed.data.reason,
+          requestId,
+        });
+        alertNotice = alert.notice;
+      } catch {
+        alertNotice = "The tip was published. The FCM alert could not be queued.";
+      }
+    }
+    return apiOk({ tip, alertNotice }, requestId);
   });
 }
