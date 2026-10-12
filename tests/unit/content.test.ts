@@ -59,6 +59,8 @@ describe("content registry", () => {
   it("fills missing member copy and rejects a premium grant claim", () => {
     expect(memberCopyFromValue({ greetingPrefix: "Hello" }).greetingPrefix).toBe("Hello");
     expect(memberCopyFromValue({ greetingPrefix: "Hello" }).paymentSuccessTitle).toBe(MEMBER_COPY_DEFAULTS.paymentSuccessTitle);
+    expect(memberCopyFromValue({ greetingSubtitle: "Let us find your next opportunity" }).greetingSubtitle).toBe(MEMBER_COPY_DEFAULTS.greetingSubtitle);
+    expect(memberCopyFromValue({ greetingSubtitle: "Desk notes for the session." }).greetingSubtitle).toBe("Desk notes for the session.");
     expect(claimsPremiumGrant("Payment successful", "Your order is saved.")).toBe(false);
     expect(() =>
       parseMemberCopy({
