@@ -28,6 +28,17 @@ export default function PhoneSignInPage() {
     const params = new URLSearchParams(window.location.search);
     const preset = params.get("national");
     if (preset) setNational(preset);
+    // The first sign-in screen already sent the code, so open on the code step.
+    if (preset && params.get("sent") === "1") {
+      const sentPhone = toE164("91", preset);
+      if (sentPhone) {
+        setPhone(sentPhone);
+        setStep("otp");
+        setResendIn(RESEND_SECONDS);
+        setExpiresIn(OTP_SECONDS);
+        setNotice(params.get("delivery") === "dev" ? "The code was written to the server log." : "The code was sent by text.");
+      }
+    }
   }, []);
 
   useEffect(() => {
