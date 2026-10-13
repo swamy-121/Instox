@@ -57,7 +57,7 @@ function InsightsBody() {
     <div className="space-y-4">
       <PageHeader
         title="Insights"
-        lede="Last 30 Asia/Kolkata calendar days. Unresolved tips are not counted as wins."
+        lede="Last 30 days (IST). Open ideas are not counted as wins."
         action={<Link href="/pulse" className="text-sm font-medium text-primary">Pulse</Link>}
       />
       {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}
@@ -76,7 +76,7 @@ function InsightsBody() {
             <p className="mt-2 text-muted">Denominator: {report.winRateDenominator}. Cancelled: {report.cancelled}. Population: {report.totalTips}.</p>
             <p className="mt-2 text-xs text-muted">{report.timezone}. {report.periodStart} to {report.periodEnd}</p>
           </section>
-          {report.rows.length === 0 ? <EmptyState title="No tips in this window" body="Published tips in the last 30 days will appear here with their manual outcome." /> : null}
+          {report.rows.length === 0 ? <EmptyState title="No tips in this window" body="Ideas from the last 30 days will show up here with how they played out." /> : null}
           <ul className="space-y-2">
             {report.rows.map((row) => (
               <li key={row.id} className="card flex items-center justify-between gap-3 text-sm">

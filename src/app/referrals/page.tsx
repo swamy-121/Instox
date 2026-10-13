@@ -68,7 +68,7 @@ function ReferralsBody() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Referrals</h1>
-        <p className="mt-1 text-sm text-muted">Codes are accepted, but rewards do not grant premium while that rule is unapproved.</p>
+        <p className="mt-1 text-sm text-muted">You can share and apply codes. Referral rewards aren't live yet.</p>
       </div>
       {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}
       {!me && !error ? <LoadingState label="Loading referral code" /> : null}

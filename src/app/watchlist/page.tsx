@@ -75,7 +75,7 @@ function Body() {
       </form>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!items && !error ? <LoadingState label="Loading watchlist" /> : null}
-      {items && items.length === 0 ? <EmptyState title="Nothing saved" body="Add a symbol from a tip or type one above." /> : null}
+      {items && items.length === 0 ? <EmptyState title="Nothing saved" body="Add a stock from any idea, or type one above." /> : null}
       <ul className="space-y-2">
         {items?.map((item) => {
           const quote = bySymbol.get(item.symbol);

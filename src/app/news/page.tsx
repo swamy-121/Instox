@@ -52,7 +52,7 @@ function NewsBody() {
           </button>
         ))}
       </div>
-      {payload && rows.length === 0 ? <EmptyState title="No stories" body="Publish a news article to fill this list." /> : null}
+      {payload && rows.length === 0 ? <EmptyState title="No stories" body="No news yet. Check back soon." /> : null}
       <ul className="space-y-3">
         {rows.map((row) => (
           <li key={row.id} className="card flex gap-3">

@@ -48,7 +48,7 @@ function MoreBody() {
       </header>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!links && !error ? <LoadingState label="Loading menu" /> : null}
-      {links && links.length === 0 ? <EmptyState title="No links" body="Publish a More menu row to show it here." /> : null}
+      {links && links.length === 0 ? <EmptyState title="No links" body="Nothing here yet." /> : null}
       <ul className="card divide-y divide-line p-0">
         {links?.map((link) => (
           <li key={link.id}>

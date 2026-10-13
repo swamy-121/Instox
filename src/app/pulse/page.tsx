@@ -53,7 +53,7 @@ function PulseBody() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Pulse score" lede="Versioned blend of RSI, EMA distance, and CPR. Missing inputs are dropped, not treated as zero." />
+      <PageHeader title="Pulse score" lede="A mix of RSI, EMA distance and CPR. If some data is missing, we leave it out instead of counting it as zero." />
       <form className="card flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => void run(event)}>
         <label className="block flex-1">
           <span className="label">Symbol</span>
@@ -79,7 +79,7 @@ function PulseBody() {
               </li>
             ))}
           </ul>
-          {result.pulse.renormalized ? <p className="text-xs text-muted">Weights were rescaled because some inputs are missing.</p> : null}
+          {result.pulse.renormalized ? <p className="text-xs text-muted">Some data was missing, so the score uses what's available.</p> : null}
           <p className="text-sm">{result.pulse.limitations}</p>
         </section>
       ) : null}

@@ -8,12 +8,12 @@ export default function AboutPage() {
         <h1 className="text-3xl font-semibold text-navy">About</h1>
         <div className="mt-6 space-y-4 text-sm leading-6 text-ink">
           <p>
-            Instox publishes market tips that a person drafts and another person can review. The first release keeps that workflow manual.
+            Instox shares trade ideas for the Indian market. Every idea is written by a person on our team and checked before it goes live.
           </p>
           <p>
-            Support and grievance ownership is not assigned yet. Until that decision is recorded, there is no production contact channel on this page.
+            We're still setting up our support and grievance desk, so there's no contact option here just yet.
           </p>
-          <p>Company details, FAQs, and a grievance officer will be added after the product owner names them.</p>
+          <p>Company details, FAQs and our grievance officer's contact will be added here soon.</p>
         </div>
       </main>
       <PublicFooter />

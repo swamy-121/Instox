@@ -54,7 +54,7 @@ function Body() {
           <p className="mt-2 text-sm leading-6 text-muted">{support.body}</p>
         </section>
       ) : null}
-      {articles && articles.length === 0 ? <EmptyState title="No articles" body="Publish a help article to answer common questions." /> : null}
+      {articles && articles.length === 0 ? <EmptyState title="No articles" body="Help articles will show up here soon." /> : null}
       <ul className="space-y-2">
         {articles?.map((article) => (
           <li key={article.id} className="card">

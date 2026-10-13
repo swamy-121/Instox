@@ -42,7 +42,7 @@ export default function OnboardingPage() {
       </div>
       {error ? <div className="mt-8"><ErrorState message={error} onRetry={load} /></div> : null}
       {!slides && !error ? <div className="mt-8"><LoadingState label="Loading onboarding" /></div> : null}
-      {slides && slides.length === 0 ? <div className="mt-8"><EmptyState title="No slides" body="Publish onboarding slides to show this carousel." /></div> : null}
+      {slides && slides.length === 0 ? <div className="mt-8"><EmptyState title="No slides" body="Nothing to show here yet." /></div> : null}
       {slide ? (
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <OnboardingArt icon={slide.icon} />

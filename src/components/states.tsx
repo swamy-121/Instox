@@ -50,7 +50,7 @@ export function ErrorState({
   );
 }
 
-export function PermissionDenied({ message = "You do not have access to this page." }: { message?: string }) {
+export function PermissionDenied({ message = "You don't have access to this page." }: { message?: string }) {
   return (
     <div role="alert" className="rounded-card border border-line bg-white p-6">
       <h2 className="text-base font-semibold text-ink">Access denied</h2>

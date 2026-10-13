@@ -26,12 +26,12 @@ export default function SignInPage() {
         </Link>
         <h1 className="mt-6 text-2xl font-semibold tracking-tight text-ink">Sign in</h1>
         <p className="mt-2 text-sm leading-6 text-muted">
-          Use a phone code. Read the <Link href="/disclaimer" className="text-primary hover:underline">risk disclosure</Link> before you rely on any tip.
+          Sign in with a one-time code sent to your phone. Please read the <Link href="/disclaimer" className="text-primary hover:underline">risk disclosure</Link> before you rely on any tip.
         </p>
         {state.status === "error" ? <div className="mt-4"><ErrorState message={state.message} /></div> : null}
         {state.status === "ready" && state.emailConflict ? (
           <p className="mt-4 text-sm text-warning" role="status">
-            Another account already uses this email. The accounts were not merged.
+            This email is already linked to another account, so we kept them separate.
           </p>
         ) : null}
         <SignInPanel />

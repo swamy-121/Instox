@@ -77,8 +77,8 @@ function Body() {
       {!methods && !error ? <LoadingState label="Loading methods" /> : null}
       {plan ? (
         <p className="text-sm font-medium text-ink">{plan.name} · {formatInr(plan.priceMinor)} · {plan.billingPeriod}</p>
-      ) : methods ? <EmptyState title="Plan not found" body="Choose a plan that is still published." /> : null}
-      {methods && methods.length === 0 ? <EmptyState title="No methods" body="Publish a payment method before checkout." /> : null}
+      ) : methods ? <EmptyState title="Plan not found" body="This plan isn't available any more. Please pick another." /> : null}
+      {methods && methods.length === 0 ? <EmptyState title="No methods" body="Payments aren't available right now. Please try again later." /> : null}
       <ul className="space-y-2">
         {methods?.map((method) => (
           <li key={method.id}>

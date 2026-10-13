@@ -45,7 +45,7 @@ export default function ProfileCompletePage() {
   if (state.status !== "ready") {
     return (
       <main className="mx-auto max-w-md px-4 py-10">
-        <ErrorState message="Sign in before completing your profile." />
+        <ErrorState message="Please sign in to finish your profile." />
         <Link href="/sign-in" className="btn-primary mt-4">Sign in</Link>
       </main>
     );
@@ -54,7 +54,7 @@ export default function ProfileCompletePage() {
   return (
     <main className="mx-auto max-w-md px-4 py-10">
       <h1 className="text-3xl font-semibold text-navy">Finish your profile</h1>
-      <p className="mt-2 text-sm text-muted">We store a name, timezone, and your acknowledgement of the risk disclosure.</p>
+      <p className="mt-2 text-sm text-muted">We only save your name, timezone and that you've read the risk disclosure.</p>
       <form className="mt-6 space-y-4" onSubmit={submit}>
         <div>
           <label className="label" htmlFor="name">Name</label>

@@ -42,7 +42,7 @@ function Body() {
 
   useEffect(() => {
     if (orderId) load();
-    else setError("That order could not be found.");
+    else setError("We couldn't find that order.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
