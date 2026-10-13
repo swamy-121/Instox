@@ -103,7 +103,7 @@ export const contentSchemas = {
   }),
   homeTiles: z.object({
     id,
-    href: z.string().regex(/^\/(tips|screener|news|shop|market|watchlist|premium|help|profile|insights|settings|pricing|home)$/),
+    href: z.string().regex(/^\/(?:tips(?:\/(?:saved|recommended|tracked|alerts))?|tip-check|screener|levels|options|backtest|strategies|charts|pulse|news|shop|market|watchlist|premium|help|profile|insights|settings|pricing|home)$/),
     label: z.string().min(1).max(40),
     icon: z.enum(["tips", "screener", "news", "shop", "market", "watchlist", "premium", "help"]),
     status: z.enum(["published", "draft"]),
@@ -111,7 +111,7 @@ export const contentSchemas = {
   }),
   moreLinks: z.object({
     id,
-    href: z.string().regex(/^\/(tips|screener|news|shop|market|watchlist|premium|help|profile|insights|settings|pricing|home)$/),
+    href: z.string().regex(/^\/(?:tips(?:\/(?:saved|recommended|tracked|alerts))?|tip-check|screener|levels|options|backtest|strategies|charts|pulse|news|shop|market|watchlist|premium|help|profile|insights|settings|pricing|home)$/),
     label: z.string().min(1).max(40),
     status: z.enum(["published", "draft"]),
     sort: z.number().int(),

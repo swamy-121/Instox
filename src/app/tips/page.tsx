@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState, PermissionDenied } from "@/components/states";
@@ -77,7 +78,22 @@ function TipsBody() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Trading ideas</h1>
+      <header className="space-y-3">
+        <h1 className="text-2xl font-semibold text-ink">Trading ideas</h1>
+        <div className="flex gap-2 overflow-x-auto">
+          {[
+            ["/tips/recommended", "For you"],
+            ["/tips/saved", "Saved"],
+            ["/tips/tracked", "Tracked"],
+            ["/tips/alerts", "Alerts"],
+            ["/tip-check", "Check a stock"],
+          ].map(([href, label]) => (
+            <Link key={href} href={href} className="shrink-0 rounded-full bg-canvas px-3 py-1.5 text-sm font-medium text-ink">
+              {label}
+            </Link>
+          ))}
+        </div>
+      </header>
       <div className="flex gap-2 overflow-x-auto">
         {GROUPS.map((item) => (
           <button key={item.id} type="button" className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${group === item.id ? "bg-primary text-white" : "bg-canvas text-ink"}`} onClick={() => setGroup(item.id)}>

@@ -47,7 +47,7 @@ export async function closeDb(): Promise<void> {
   globalDb.__instoxSql = undefined;
 }
 
-const MIGRATION_IDS = ["0000_init", "0001_crm_voice"] as const;
+const MIGRATION_IDS = ["0000_init", "0001_crm_voice", "0002_research"] as const;
 
 function readMigration(id: (typeof MIGRATION_IDS)[number]): string {
   return readFileSync(join(process.cwd(), `drizzle/${id}.sql`), "utf8");

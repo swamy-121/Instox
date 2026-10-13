@@ -263,6 +263,60 @@ function Body() {
           </section>
         </div>
       ) : null}
+      {!loading && !error ? <ManualRuns /> : null}
     </div>
+  );
+}
+
+function ManualRuns() {
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"screen" | "tips" | null>(null);
+
+  async function runScreen() {
+    setBusy("screen");
+    const result = await apiFetch<{ notice: string; standout: number; optionSelling: number; sideways: number; bhavcopy: { notice: string }; oi: { notice: string } }>(
+      "/api/v1/admin/screener/trigger",
+      { method: "POST" },
+    );
+    setBusy(null);
+    if (!result.ok) {
+      setMessage(result.message);
+      return;
+    }
+    const data = result.data;
+    setMessage(`${data.notice} ${data.standout} names stand out, ${data.optionSelling} option-selling names, ${data.sideways} sideways names. ${data.bhavcopy.notice} ${data.oi.notice}`);
+  }
+
+  async function runTips() {
+    setBusy("tips");
+    const result = await apiFetch<{ notice: string; checked: number; updated: number; missingPrice: number; alerts: number }>(
+      "/api/v1/jobs/daily-tips",
+      { method: "POST" },
+    );
+    setBusy(null);
+    if (!result.ok) {
+      setMessage(result.message);
+      return;
+    }
+    const data = result.data;
+    setMessage(`${data.notice} Checked ${data.checked}. Updated ${data.updated}. Missing a nearby price for ${data.missingPrice}. Result notes sent: ${data.alerts}.`);
+  }
+
+  return (
+    <section className="card mt-4 space-y-3">
+      <h2 className="text-base font-semibold text-ink">Run it now</h2>
+      <p className="text-sm leading-6 text-muted">
+        Refresh the end-of-day screens, or check open ideas for a target, a stop, or an ended window. Without a file address, sample prices are used.
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button type="button" className="btn-primary" disabled={busy !== null} onClick={() => void runScreen()}>
+          {busy === "screen" ? "Running screen" : "Run screeners"}
+        </button>
+        <button type="button" className="btn-secondary" disabled={busy !== null} onClick={() => void runTips()}>
+          {busy === "tips" ? "Checking ideas" : "Check open ideas"}
+        </button>
+      </div>
+      {message ? <p className="text-sm leading-6 text-ink" role="status">{message}</p> : null}
+    </section>
   );
 }

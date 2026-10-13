@@ -85,7 +85,42 @@ function Detail() {
       </p>
       {tip.locked ? <PremiumLock /> : <OpenLevels tip={tip} />}
       <WatchButton symbol={tip.symbol} />
+      <LibraryButtons tipId={tip.id} />
     </article>
+  );
+}
+
+function LibraryButtons({ tipId }: { tipId: string }) {
+  const [saved, setSaved] = useState(false);
+  const [tracked, setTracked] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<{ saved: boolean; tracked: boolean }>(`/api/v1/tips/${tipId}/library`).then((result) => {
+      if (!result.ok) return;
+      setSaved(result.data.saved);
+      setTracked(result.data.tracked);
+    });
+  }, [tipId]);
+
+  async function toggle(kind: "save" | "track") {
+    const on = kind === "save" ? saved : tracked;
+    const result = await apiFetch<{ saved?: boolean; tracked?: boolean }>(`/api/v1/tips/${tipId}/${kind}`, { method: on ? "DELETE" : "POST" });
+    if (!result.ok) {
+      setMessage(result.message);
+      return;
+    }
+    if (kind === "save") setSaved(Boolean(result.data.saved));
+    else setTracked(Boolean(result.data.tracked));
+    setMessage(kind === "save" ? (on ? "Removed from saved." : "Saved for later.") : (on ? "Stopped tracking." : "Tracking this idea."));
+  }
+
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <button type="button" className="btn-secondary" onClick={() => void toggle("save")}>{saved ? "Saved" : "Save"}</button>
+      <button type="button" className="btn-secondary" onClick={() => void toggle("track")}>{tracked ? "Tracking" : "Track"}</button>
+      {message ? <p className="col-span-2 text-sm text-muted" role="status">{message}</p> : null}
+    </div>
   );
 }
 

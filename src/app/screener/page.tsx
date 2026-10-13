@@ -19,11 +19,28 @@ type Screen = {
   skipped: { symbol: string; reason: string }[];
 };
 
+type ConfidenceRow = {
+  symbol: string;
+  close: number;
+  score: number;
+  band: "stands out" | "mixed" | "weak";
+  reasons: string[];
+  rsi: number | null;
+};
+
+type ConfidenceScreen = {
+  dataLabel: string;
+  notice: string;
+  rows: ConfidenceRow[];
+  standout: number;
+};
+
 const TABS = [
   { id: "rsi", label: "RSI" },
   { id: "ema", label: "EMA" },
   { id: "cpr", label: "CPR" },
   { id: "fo", label: "F&O" },
+  { id: "confidence", label: "High confidence" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -40,6 +57,7 @@ function ScreenerBody() {
   const [tab, setTab] = useState<TabId>("rsi");
   const [rsiLt, setRsiLt] = useState("");
   const [screen, setScreen] = useState<Screen | null>(null);
+  const [confidence, setConfidence] = useState<ConfidenceScreen | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
@@ -61,6 +79,9 @@ function ScreenerBody() {
 
   useEffect(() => {
     load();
+    apiFetch<ConfidenceScreen>("/api/v1/screener/bhavcopy").then((result) => {
+      if (result.ok) setConfidence(result.data);
+    });
   }, []);
 
   function apply(event: React.FormEvent) {
@@ -77,7 +98,12 @@ function ScreenerBody() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Screener</h1>
+      <header>
+        <h1 className="text-2xl font-semibold text-ink">Screener</h1>
+        <p className="mt-1 max-w-xl text-sm leading-6 text-muted">
+          Indicator scans, plus a high-confidence reading from daily bars. A high score means the checks line up. It is not a chance of profit.
+        </p>
+      </header>
       <div className="flex gap-2 overflow-x-auto">
         {TABS.map((item) => (
           <button
@@ -90,6 +116,11 @@ function ScreenerBody() {
           </button>
         ))}
       </div>
+      {tab === "confidence" ? (
+        <ConfidenceList screen={confidence} />
+      ) : null}
+      {tab !== "confidence" ? (
+      <>
       <form className="flex items-end gap-2" onSubmit={apply}>
         <label className="min-w-0 flex-1">
           <span className="label">RSI below</span>
@@ -127,6 +158,39 @@ function ScreenerBody() {
           </table>
         </div>
       ) : null}
+      </>
+      ) : null}
+    </div>
+  );
+}
+
+function ConfidenceList({ screen }: { screen: ConfidenceScreen | null }) {
+  if (!screen) return <LoadingState label="Scoring daily bars" />;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm leading-6 text-muted">
+        {screen.dataLabel}. {screen.standout} name{screen.standout === 1 ? "" : "s"} stand out. {screen.notice}
+      </p>
+      {screen.rows.length === 0 ? <EmptyState title="Not enough bars" body="The high-confidence read needs about 50 sessions." /> : null}
+      <ul className="grid gap-3 md:grid-cols-2">
+        {screen.rows.map((row) => (
+          <li key={row.symbol} className="card space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-ink">{row.symbol}</p>
+                <p className="text-sm tabular-nums text-muted">{formatPrice(row.close)} · RSI {row.rsi ?? "n/a"}</p>
+              </div>
+              <span className="text-right">
+                <span className="block text-lg font-semibold tabular-nums text-ink">{row.score}</span>
+                <span className="text-xs capitalize text-muted">{row.band}</span>
+              </span>
+            </div>
+            <ul className="space-y-1 text-sm text-muted">
+              {row.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+            </ul>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -464,6 +464,22 @@ export async function getTip(tipId: string): Promise<TipRecord | null> {
   return rows[0] ? asTip(rows[0]) : null;
 }
 
+export async function getTipsByIds(ids: string[]): Promise<TipRecord[]> {
+  if (ids.length === 0) return [];
+  const rows = await getDb().select().from(tips).where(inArray(tips.id, ids));
+  return rows.map(asTip);
+}
+
+export async function listPublishedForRecommend(limit = 40): Promise<TipRecord[]> {
+  const rows = await getDb()
+    .select()
+    .from(tips)
+    .where(eq(tips.status, "published"))
+    .orderBy(desc(tips.publishedSort))
+    .limit(limit);
+  return rows.map(asTip);
+}
+
 export async function deleteDraftTip(tipId: string): Promise<void> {
   const tip = await getTip(tipId);
   if (!tip) throw new AppError(404, "NOT_FOUND", "That tip does not exist.");
