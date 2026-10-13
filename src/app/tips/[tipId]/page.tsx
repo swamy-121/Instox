@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Lock } from "lucide-react";
+import { Bookmark, Lock } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
-import { StockAvatar } from "@/components/illustrations";
+import { ChangeText, Pill, SampleBadge, SidePill, StatusDot } from "@/components/design";
 import { ErrorState, LoadingState, PermissionDenied } from "@/components/states";
-import { Chip, PageHeader } from "@/components/ui";
 import { apiFetch } from "@/lib/api-client";
-import { CATEGORY_LABELS, statusLabel } from "@/lib/labels";
+import { CATEGORY_LABELS } from "@/lib/labels";
 import { formatPrice } from "@/lib/money";
+import { isSampleData } from "@/lib/market-session";
 import type { OpenTipView, TipView } from "@/server/tips/present";
 
 function isOpen(tip: TipView): tip is OpenTipView {
@@ -28,7 +28,7 @@ export default function TipDetailPage() {
 function Detail() {
   const params = useParams<{ tipId: string }>();
   const [tip, setTip] = useState<TipView | null>(null);
-  const [quote, setQuote] = useState<{ last: number; changePct: number } | null>(null);
+  const [quote, setQuote] = useState<{ last: number; changePct: number; freshnessStatus?: string; dataLabel?: string } | null>(null);
   const [error, setError] = useState<{ message: string; code: string; requestId?: string } | null>(null);
 
   function load() {
@@ -39,7 +39,7 @@ function Detail() {
         return;
       }
       setTip(result.data.tip);
-      apiFetch<{ records: Array<{ symbol: string; last: number; changePct: number }> }>("/api/v1/content/indices").then((market) => {
+      apiFetch<{ records: Array<{ symbol: string; last: number; changePct: number; freshnessStatus?: string; dataLabel?: string }> }>("/api/v1/content/indices").then((market) => {
         if (!market.ok) return;
         const match = market.data.records.find((row) => row.symbol === result.data.tip.symbol);
         setQuote(match ?? null);
@@ -58,34 +58,48 @@ function Detail() {
 
   const reason = isOpen(tip) ? tip.closeReason : null;
 
+  const sample = isSampleData(quote?.dataLabel, quote?.freshnessStatus === "live" ? true : quote ? false : undefined);
+  const statusTone = reason === "target_hit" ? "up" : reason === "stop_loss_hit" ? "down" : tip.status === "published" ? "brand" : "neutral";
+  const statusText = reason === "target_hit" ? "Target hit" : reason === "stop_loss_hit" ? "SL hit" : tip.status === "published" ? "Active" : tip.status === "expired" ? "Expired" : tip.status === "closed" ? "Closed" : tip.status;
+
   return (
-    <article>
-      <div className="mb-4 flex items-center gap-3">
-        <StockAvatar symbol={tip.symbol} />
-        <PageHeader title={tip.symbol} lede={`${CATEGORY_LABELS[tip.category]} · ${tip.timeframe}`} />
+    <article className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-5">
+      <div>
+        <section className="card">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold tracking-tight text-ink">{tip.symbol}</h2>
+              <SidePill side={tip.side} />
+            </div>
+            <StatusDot tone={statusTone}>{statusText}</StatusDot>
+          </div>
+          <p className="mt-0.5 text-[11px] text-muted">{CATEGORY_LABELS[tip.category]} · {tip.timeframe}</p>
+          {quote ? (
+            <p className="mt-3 flex items-baseline gap-2">
+              <span className="num text-[26px] font-bold text-ink">{formatPrice(quote.last)}</span>
+              <ChangeText last={quote.last} changePct={quote.changePct} />
+            </p>
+          ) : <p className="mt-3 text-sm text-muted">Price unavailable</p>}
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] text-muted">
+              {quote?.freshnessStatus === "delayed" ? "Delayed" : quote?.freshnessStatus === "stale" ? "Stale" : quote?.freshnessStatus === "offline" ? "Offline" : "As published"}
+              {" · "}
+              {tip.updatedAt ? new Date(tip.updatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "no update time"}
+            </p>
+            {sample ? <SampleBadge /> : null}
+          </div>
+        </section>
+        {tip.locked ? <PremiumLock /> : <OpenLevels tip={tip} />}
       </div>
-      {quote ? (
-        <p className="mb-4 text-sm tabular-nums text-ink">
-          LTP {formatPrice(quote.last)}{" "}
-          <span className={quote.changePct >= 0 ? "font-semibold text-profit" : "font-semibold text-loss"}>
-            {quote.changePct >= 0 ? "+" : ""}
-            {quote.changePct.toFixed(2)}%
-          </span>
+      <div className="mt-3 lg:mt-0">
+        <div className="flex flex-wrap gap-2">
+          <LibraryButtons tipId={tip.id} />
+          <WatchButton symbol={tip.symbol} />
+        </div>
+        <p className="mt-4 text-[11px] leading-5 text-muted">
+          This is a research idea, not a guaranteed outcome. Market investments are subject to risk.
         </p>
-      ) : null}
-      <div className="mb-4 flex flex-wrap gap-2">
-        <Chip tone="info">{tip.side}</Chip>
-        <Chip tone={reason === "target_hit" ? "profit" : reason === "stop_loss_hit" ? "loss" : "neutral"}>
-          {statusLabel(tip.status, reason)}
-        </Chip>
-        {tip.accessTier === "premium" ? <Chip tone="info">Premium</Chip> : <Chip>Free</Chip>}
       </div>
-      <p className="text-xs text-muted">
-        Published {tip.publishedAt ? new Date(tip.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "not yet"}
-      </p>
-      {tip.locked ? <PremiumLock /> : <OpenLevels tip={tip} />}
-      <WatchButton symbol={tip.symbol} />
-      <LibraryButtons tipId={tip.id} />
     </article>
   );
 }
@@ -116,10 +130,13 @@ function LibraryButtons({ tipId }: { tipId: string }) {
   }
 
   return (
-    <div className="mt-3 grid grid-cols-2 gap-2">
-      <button type="button" className="btn-secondary" onClick={() => void toggle("save")}>{saved ? "Saved" : "Save"}</button>
-      <button type="button" className="btn-secondary" onClick={() => void toggle("track")}>{tracked ? "Tracking" : "Track"}</button>
-      {message ? <p className="col-span-2 text-sm text-muted" role="status">{message}</p> : null}
+    <div className="flex flex-1 flex-wrap gap-2">
+      <button type="button" className="btn-secondary" onClick={() => void toggle("save")}>
+        <Bookmark className="h-4 w-4" aria-hidden="true" />
+        {saved ? "Saved" : "Save"}
+      </button>
+      <button type="button" className="btn-primary" onClick={() => void toggle("track")}>{tracked ? "Tracking" : "Track this tip"}</button>
+      {message ? <p className="w-full text-sm text-muted" role="status">{message}</p> : null}
     </div>
   );
 }
@@ -135,7 +152,7 @@ function WatchButton({ symbol }: { symbol: string }) {
   }
   return (
     <div className="mt-4">
-      <button type="button" className="btn-primary w-full" onClick={() => void add()}>Add to watchlist</button>
+      <button type="button" className="btn-secondary" onClick={() => void add()}>Add to watchlist</button>
       {message ? <p className="mt-2 text-sm text-muted" role="status">{message}</p> : null}
     </div>
   );
@@ -171,30 +188,51 @@ function PremiumLock() {
 }
 
 function OpenLevels({ tip }: { tip: OpenTipView }) {
-  const levels = [
-    ["Entry", formatPrice(tip.entryMin)],
-    ["Stop", formatPrice(tip.stopLoss)],
-    ...tip.targets.map((target) => [target.label, formatPrice(target.price)] as const),
+  const entry = tip.entryMax != null && tip.entryMax !== tip.entryMin ? `${formatPrice(tip.entryMin)} – ${formatPrice(tip.entryMax)}` : formatPrice(tip.entryMin);
+  const rows: Array<[string, string, string]> = [
+    ["Entry range", entry, "text-ink"],
+    ["Stop-loss", formatPrice(tip.stopLoss), "text-loss"],
+    ...tip.targets.map((target) => [target.label, formatPrice(target.price), "text-profit"] as [string, string, string]),
   ];
   return (
-    <div className="mt-6 space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {levels.map(([label, value]) => (
-          <div key={label} className="card p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-ink">{value}</p>
+    <div className="mt-3 space-y-3">
+      <section className="card !py-1">
+        {rows.map(([label, value, tone], index) => (
+          <div key={label} className={`flex items-center justify-between gap-3 py-3 ${index ? "border-t border-line" : ""}`}>
+            <div>
+              <p className="text-[13px] text-muted">{label}</p>
+              <p className={`num text-base font-bold ${tone}`}>{value}</p>
+            </div>
+            <Pill>{label === "Stop-loss" ? "Level" : "Set"}</Pill>
           </div>
         ))}
-      </div>
+      </section>
       {tip.optionType ? (
         <p className="text-sm text-muted">
           {tip.optionType} {tip.strikePrice} · expiry {tip.expiry} · lot {tip.lotSize}
         </p>
       ) : null}
       <section className="card">
-        <h2 className="text-sm font-semibold text-ink">Rationale</h2>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{tip.thesis}</p>
-        <p className="mt-4 text-xs text-muted">Risk disclosure {tip.riskDisclosureVersion}</p>
+        <h3 className="text-[15px] font-bold text-ink">Rationale</h3>
+        <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-6 text-[#33413A]">{tip.thesis}</p>
+        <dl className="mt-3 grid grid-cols-2 gap-3">
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">Published</dt>
+            <dd className="text-[13px] font-semibold">{tip.publishedAt ? new Date(tip.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "Not yet"}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">Valid until</dt>
+            <dd className="text-[13px] font-semibold">{tip.expiresAt ? new Date(tip.expiresAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }) : "Not set"}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">Last update</dt>
+            <dd className="text-[13px] font-semibold">{new Date(tip.updatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">Disclosure</dt>
+            <dd className="text-[13px] font-semibold">{tip.riskDisclosureVersion}</dd>
+          </div>
+        </dl>
       </section>
     </div>
   );

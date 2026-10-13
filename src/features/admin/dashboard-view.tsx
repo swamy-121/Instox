@@ -26,7 +26,7 @@ type Model = {
   categories: Array<{ category: string; count: number }>;
 };
 
-const COLORS = ["#027332", "#0194A8", "#7DCEA0", "#0F7A45", "#F0B429", "#8E6BB8", "#E8772E", "#4F6B5E"];
+const COLORS = ["#07864B", "#075C3B", "#7DCEA0", "#0B7A43", "#F0B429", "#8E6BB8", "#E8772E", "#64716A"];
 
 function isoDay(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -157,7 +157,7 @@ export function DashboardView({ title, lede }: { title: string; lede: string }) 
                       <Tooltip labelFormatter={(label) => shortDay(String(label))} />
                       <Legend />
                       <Bar yAxisId="left" dataKey="free" name="Free users" fill="#8FD19A" radius={[4, 4, 0, 0]} />
-                      <Bar yAxisId="left" dataKey="premium" name="Premium users" fill="#027332" radius={[4, 4, 0, 0]} />
+                      <Bar yAxisId="left" dataKey="premium" name="Premium users" fill="#07864B" radius={[4, 4, 0, 0]} />
                       <Line yAxisId="right" dataKey="revenue" name="Revenue (Rs)" stroke="#0194A8" strokeWidth={2} dot={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -188,7 +188,7 @@ export function DashboardView({ title, lede }: { title: string; lede: string }) 
                       </Pie>
                       <Tooltip />
                       <Legend />
-                      <text x="50%" y="44%" textAnchor="middle" fill="#013316" fontSize="20" fontWeight="600">
+                      <text x="50%" y="44%" textAnchor="middle" fill="#17211C" fontSize="20" fontWeight="600">
                         {model.categories.reduce((sum, entry) => sum + entry.count, 0)}
                       </text>
                     </PieChart>

@@ -16,7 +16,7 @@ function SettingsBody() {
   const config = useMemberConfig();
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Settings</h1>
+      <h1 className="sr-only">Settings</h1>
       <p className="text-sm text-muted">{config.settingsIntro}</p>
       <NotificationSettings />
       <p className="text-xs text-muted">Version {config.appVersion}</p>

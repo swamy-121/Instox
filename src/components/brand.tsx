@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 
 export function BrandSplash({
   label = "Loading Instox",
@@ -36,11 +35,10 @@ export function BrandSplash({
 }
 
 const SPLASH_KEY = "instox-splash";
-const SPLASH_MS = 2800;
+const SPLASH_MS = 700;
 
 export function SplashGate({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     if (sessionStorage.getItem(SPLASH_KEY) === "skip") {
@@ -50,10 +48,9 @@ export function SplashGate({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => {
       sessionStorage.setItem(SPLASH_KEY, "skip");
       setVisible(false);
-      router.push("/onboarding");
     }, SPLASH_MS);
     return () => window.clearTimeout(timer);
-  }, [router]);
+  }, []);
 
   return (
     <>

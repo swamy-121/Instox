@@ -4,142 +4,69 @@
 
 :root {
   color-scheme: light;
-  --background: #f3f8f5;
-  --foreground: #013316;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: #071a12;
-    --foreground: #f4fbf6;
-  }
+  --background: #f6f8f7;
+  --foreground: #17211c;
+  --p: #07864b;
+  --pd: #075c3b;
+  --pl: #e7f4ec;
+  --line: #e1e8e3;
 }
 
 body {
   min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 .brand-surface {
   background-color: #ffffff;
-  color: #013316;
+  color: #17211c;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card,
-  .bg-white {
-    background-color: #0e2e20;
-  }
-  .text-ink {
-    color: #f4fbf6;
-  }
-  .text-muted {
-    color: #a8c4ba;
-  }
-  .text-primary {
-    color: #0194a8;
-  }
-  .text-brand {
-    color: #5fcb8a;
-  }
-  .text-profit {
-    color: #5fcb8a;
-  }
-  .text-loss {
-    color: #ff8b82;
-  }
-  .border-line {
-    border-color: #1c4636;
-  }
-  .bg-canvas {
-    background-color: #0a2418;
-  }
-  .focus-visible\:outline-primary:focus-visible {
-    outline-color: #0194a8;
-  }
-  .brand-surface {
-    background-color: #ffffff;
-    color: #013316;
-  }
-  .brand-surface .text-ink {
-    color: #013316;
-  }
-  .brand-surface .text-muted {
-    color: #4f6b5e;
-  }
-  .brand-surface .text-primary {
-    color: #018193;
-  }
-  .brand-surface .text-brand {
-    color: #027332;
-  }
-  .brand-surface .border-line {
-    border-color: #d3e3db;
-  }
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 @layer components {
   .card {
-    @apply rounded-xl border border-line bg-white p-4 shadow-card;
+    @apply rounded-xl border border-line bg-white p-4;
   }
   .btn-primary {
-    @apply inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
+    @apply inline-flex h-11 items-center justify-center gap-1.5 rounded-[10px] bg-primary px-[18px] text-sm font-semibold text-white hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
   }
   .btn-secondary {
-    @apply inline-flex h-11 items-center justify-center rounded-xl border border-brand bg-white px-5 text-sm font-semibold text-brand hover:bg-brand-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
+    @apply inline-flex h-11 items-center justify-center gap-1.5 rounded-[10px] border border-line bg-white px-[18px] text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
   }
   .btn-quiet {
-    @apply inline-flex h-10 items-center justify-center rounded-xl border border-line bg-white px-3 text-sm font-medium text-ink hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-line bg-white px-3 text-[13px] font-semibold text-ink hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60;
   }
   .field {
-    @apply h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20;
+    @apply h-11 w-full rounded-[10px] border border-line bg-white px-3 text-sm text-ink outline-none focus:border-primary focus:ring-4 focus:ring-primary-soft;
   }
   textarea.field {
     @apply h-auto py-3;
   }
   select.field {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23013316' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2317211C' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
     padding-right: 2.5rem;
   }
   .label {
-    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted;
+    @apply mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-muted;
   }
   input[type="checkbox"],
   input[type="radio"] {
-    accent-color: #027332;
+    accent-color: #07864b;
   }
 }
 
 .admin-light {
-  background-color: #f3f7f4;
-  color: #013316;
-}
-.admin-light .card,
-.admin-light .bg-white {
-  background-color: #ffffff;
-  color: #013316;
-}
-.admin-light .text-ink { color: #013316; }
-.admin-light .text-muted { color: #4f6b5e; }
-.admin-light .text-primary { color: #027332; }
-.admin-light .text-brand { color: #027332; }
-.admin-light .text-profit { color: #0f7a45; }
-.admin-light .text-loss { color: #b42318; }
-.admin-light .border-line { border-color: #d3e3db; }
-.admin-light .bg-canvas { background-color: #f3f8f5; }
-.admin-light select.field {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23013316' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
-}
-
-@media (prefers-color-scheme: dark) {
-  select.field {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23F4FBF6' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
-  }
+  background-color: #f6f8f7;
+  color: #17211c;
 }
 
 .splash-screen {

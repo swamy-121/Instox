@@ -41,7 +41,7 @@ function ChartsBody() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Charts" lede="Daily sample prices with an EMA line. This isn't a live chart." />
+      <PageHeader embedded title="Charts" lede="Daily sample prices with an EMA line. This isn't a live chart." />
       <form className="card flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => void load(event)}>
         <label className="block flex-1">
           <span className="label">Symbol</span>

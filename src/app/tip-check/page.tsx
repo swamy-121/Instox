@@ -58,6 +58,7 @@ function CheckBody() {
   return (
     <div className="space-y-4">
       <PageHeader
+        embedded
         title="Check a stock"
         lede="A reading of trend, momentum, and where price sits versus recent bars. The number is how many checks agree. It is not a chance of profit."
       />

@@ -56,6 +56,7 @@ function InsightsBody() {
   return (
     <div className="space-y-4">
       <PageHeader
+        embedded
         title="Insights"
         lede="Last 30 days (IST). Open ideas are not counted as wins."
         action={<Link href="/pulse" className="text-sm font-medium text-primary">Pulse</Link>}

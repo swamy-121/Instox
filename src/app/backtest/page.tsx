@@ -108,7 +108,7 @@ function BacktestBody() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Backtest" lede="A practice EMA cross test on sample prices, with fees and slippage included. Losing trades are shown too. Past results don't predict future returns." />
+      <PageHeader embedded title="Backtest" lede="A practice EMA cross test on sample prices, with fees and slippage included. Losing trades are shown too. Past results don't predict future returns." />
       <form className="card flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => void run(event)}>
         <label className="block flex-1">
           <span className="label">Symbol</span>
