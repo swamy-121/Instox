@@ -60,7 +60,7 @@ export default function PricingPage() {
         <div className="mt-6">
           {!plans && !error ? <LoadingState label="Loading plans" /> : null}
           {error ? <ErrorState message={error} requestId={requestId} onRetry={load} /> : null}
-          {plans && plans.plans.length === 0 ? <EmptyState title="No plans" body="No active plan is configured." /> : null}
+          {plans && plans.plans.length === 0 ? <EmptyState title="No plans" body="No plans are available right now." /> : null}
           <div className="grid gap-4 md:grid-cols-2">
             {plans?.plans.map((plan) => (
               <article key={plan.id} className="card">

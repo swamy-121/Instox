@@ -197,7 +197,7 @@ export function TipForm({
         </label>
         <label>
           <span className="label">LTP</span>
-          <input className="field tabular-nums" readOnly value={ltp == null ? "" : formatPrice(ltp)} placeholder="From stored quotes" />
+          <input className="field tabular-nums" readOnly value={ltp == null ? "" : formatPrice(ltp)} placeholder="Latest price" />
         </label>
         <label>
           <span className="label">Expiry</span>

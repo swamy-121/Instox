@@ -2,15 +2,15 @@ import Link from "next/link";
 import { SplashGate } from "@/components/brand";
 import { MaintenanceNotice } from "@/features/app/member-config";
 import { PublicFooter, PublicHeader } from "@/components/chrome";
-import { PenIcon, ShieldIcon } from "@/components/icons";
+import { LockIcon, NewsIcon, TipsIcon } from "@/components/icons";
 import { Wordmark } from "@/components/wordmark";
 import { Chip } from "@/components/ui";
 
 const TRUST = [
-  ["Reviewed by people", "A draft is checked before it is published. Close, cancel, and expire each keep a reason."],
-  ["Levels stay on the server", "Premium entry, stop, targets, and the write-up are omitted until a plan is active."],
-  ["No orders from this app", "Instox records ideas. It does not place trades and it does not promise a result."],
-  ["Quotes follow stored records", "Index and stock figures on the home screen come from the published market records."],
+  ["Checked before it's posted", "Every idea is reviewed by our team before it goes live."],
+  ["Clear levels", "Entry, stop-loss and targets on every call."],
+  ["You stay in control", "We share ideas. You decide and trade on your own broker."],
+  ["Live market view", "Nifty, Bank Nifty and your stocks at a glance."],
 ];
 
 export default function LandingPage() {
@@ -23,17 +23,17 @@ export default function LandingPage() {
           <div>
             <p className="text-sm font-medium text-primary">Instant trading ideas</p>
             <h1 className="mt-3 max-w-xl text-4xl font-semibold tracking-tight text-ink md:text-5xl md:leading-tight">
-              Indian market ideas, written down with the levels.
+              Trade ideas for the Indian market, clear and to the point.
             </h1>
             <p className="mt-4 max-w-lg text-base leading-7 text-muted">
-              Free ideas show the entry, stop, and targets. Premium ideas stay locked until your plan is active. Publishing is manual.
+              Every idea comes with entry, stop-loss and targets, picked by our research team. Start free, upgrade when you want more.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/sign-in" className="btn-primary">
-                Sign in
+                Get started
               </Link>
               <Link href="/tips" className="btn-secondary">
-                Browse ideas
+                See today&apos;s ideas
               </Link>
             </div>
           </div>
@@ -51,9 +51,9 @@ export default function LandingPage() {
         </section>
         <section className="mx-auto grid max-w-6xl gap-4 px-4 py-12 md:grid-cols-3">
           {[
-            [PenIcon, "A desk, not a feed", "Editors draft an idea. A publisher reviews it. The event log keeps the old and new state."],
-            [ShieldIcon, "Access is checked on the server", "Roles and premium come from the account record, not from a flag the browser can set."],
-            [ShieldIcon, "Risk stays on the page", "Every published idea points at the current risk disclosure. Past events are not rewritten."],
+            [LockIcon, "Free and Premium ideas", "Free calls for everyone. More calls and detailed reasoning on Premium."],
+            [NewsIcon, "Instant alerts", "Get notified the moment a new idea goes live."],
+            [TipsIcon, "Honest track record", "Closed and stopped-out calls stay visible. Nothing is hidden."],
           ].map(([Icon, title, body]) => (
             <article key={String(title)} className="card">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary">
@@ -75,9 +75,8 @@ function Illustration() {
     <div className="card p-5">
       <div className="flex items-center justify-between">
         <Wordmark decorative className="h-10 w-auto" />
-        <Chip>Illustration</Chip>
       </div>
-      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted">NSE · Equity · 1-3 sessions</p>
+      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted">NSE &middot; Equity &middot; 1-3 sessions</p>
       <div className="mt-2 flex items-end justify-between gap-3">
         <h2 className="text-3xl font-semibold tracking-tight tabular-nums text-ink">INFY</h2>
         <Chip tone="info">BUY</Chip>
@@ -95,7 +94,7 @@ function Illustration() {
         ))}
       </div>
       <p className="mt-4 text-xs leading-5 text-muted">
-        A picture of a published free idea. It is not a live quote and it is not a recommendation to trade.
+        Sample idea for display only, not a live price or advice.
       </p>
     </div>
   );

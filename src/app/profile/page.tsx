@@ -57,7 +57,7 @@ function ProfileBody() {
       return;
     }
     setConfirm(null);
-    setMessage("Deletion request recorded. Access is paused.");
+    setMessage("We've got your deletion request. Your access is paused for now.");
     await refresh();
   }
 
@@ -113,7 +113,7 @@ function ProfileBody() {
           <button type="button" className="btn-secondary" onClick={() => setConfirm("disable")}>Disable account</button>
           <button type="button" className="btn-secondary" onClick={() => setConfirm("delete")}>Request deletion</button>
         </div>
-        <p className="text-xs leading-5 text-muted">Disable and deletion need a sign-in from the last 15 minutes. Deletion is a request. It does not wipe records that may have to be kept.</p>
+        <p className="text-xs leading-5 text-muted">For your safety, turning off or deleting your account needs a fresh sign-in (within the last 15 minutes). Some details may be kept where the law requires it.</p>
       </section>
       <NotificationSettings />
       <div className="flex flex-wrap gap-4 text-sm font-medium">
@@ -124,7 +124,7 @@ function ProfileBody() {
       {confirm ? (
         <ConfirmDialog
           title={confirm === "delete" ? "Request account deletion?" : "Disable this account?"}
-          body={confirm === "delete" ? "Access pauses after the request is stored. An administrator can still see the audit row." : "You will be signed out and blocked until an administrator enables the account."}
+          body={confirm === "delete" ? "Your access pauses as soon as we get the request. We may keep some details where the law requires it." : "You'll be signed out and won't be able to sign in until our team turns your account back on."}
           confirmLabel={confirm === "delete" ? "Request deletion" : "Disable"}
           busy={busy}
           onCancel={() => setConfirm(null)}

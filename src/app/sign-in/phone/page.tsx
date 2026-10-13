@@ -28,6 +28,17 @@ export default function PhoneSignInPage() {
     const params = new URLSearchParams(window.location.search);
     const preset = params.get("national");
     if (preset) setNational(preset);
+    // The first sign-in screen already sent the code, so open on the code step.
+    if (preset && params.get("sent") === "1") {
+      const sentPhone = toE164("91", preset);
+      if (sentPhone) {
+        setPhone(sentPhone);
+        setStep("otp");
+        setResendIn(RESEND_SECONDS);
+        setExpiresIn(OTP_SECONDS);
+        setNotice(params.get("delivery") === "dev" ? "Test mode: check the app log for your code." : "We've sent a code to your phone.");
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -61,12 +72,12 @@ export default function PhoneSignInPage() {
     setCode("");
     setResendIn(RESEND_SECONDS);
     setExpiresIn(OTP_SECONDS);
-    setNotice(result.data.delivery === "dev" ? "The code was written to the server log." : "The code was sent by text.");
+    setNotice(result.data.delivery === "dev" ? "Test mode: check the app log for your code." : "We've sent a code to your phone.");
   }
 
   async function verifyCode() {
     if (!phone) {
-      setError("Request a code first.");
+      setError("Send yourself a code first.");
       return;
     }
     if (expiresIn === 0) {
@@ -74,7 +85,7 @@ export default function PhoneSignInPage() {
       return;
     }
     if (!/^\d{6}$/.test(code)) {
-      setError("Enter the 6 digit code.");
+      setError("Please enter the 6 digit code.");
       return;
     }
     setBusy(true);
@@ -114,7 +125,7 @@ export default function PhoneSignInPage() {
           <input id="country" className="field" inputMode="numeric" value={countryCode} onChange={(event) => setCountryCode(event.target.value)} />
           <label className="label" htmlFor="phone">Phone number</label>
           <input id="phone" className="field" inputMode="tel" autoComplete="tel" value={national} onChange={(event) => setNational(event.target.value)} />
-          <p className="text-xs text-muted">The code is checked on the server and is not kept after you sign in.</p>
+          <p className="text-xs text-muted">We&apos;ll text you a 6 digit code. It&apos;s only used to sign you in.</p>
           <button className="btn-primary w-full" type="submit" disabled={busy}>{busy ? "Sending" : "Send code"}</button>
         </form>
       ) : (

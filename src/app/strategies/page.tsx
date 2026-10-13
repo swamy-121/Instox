@@ -59,10 +59,10 @@ function StrategiesBody() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Strategy builder" lede="Rules stay in draft and version when you change them. Saving a strategy does not publish a tip." />
+      <PageHeader title="Strategy builder" lede="Your rules are saved as drafts, and each change keeps its own version. Saving a strategy doesn't post an idea." />
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!rows && !error ? <LoadingState /> : null}
-      {rows && rows.length === 0 ? <EmptyState title="No strategies" body="Create a draft rule. It will not be published." /> : null}
+      {rows && rows.length === 0 ? <EmptyState title="No strategies" body="Create a draft rule. It won't be posted as an idea." /> : null}
       <ul className="space-y-2">
         {rows?.map((row) => (
           <li key={row.id} className="card text-sm">

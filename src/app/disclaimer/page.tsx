@@ -12,9 +12,9 @@ export default function DisclaimerPage() {
             Instox does not place orders, hold funds, or guarantee returns. Historical or sample outcomes are not a promise of future results.
           </p>
           <p>
-            A written legal review of the paid-tips model is still open. A disclaimer on this page does not mean the service is registered or cleared.
+            A legal review of our paid ideas is still in progress. This disclosure does not mean the service is registered or approved by any regulator.
           </p>
-          <p>Figures marked sample data are not quotes from an exchange and must not be treated as prices.</p>
+          <p>Figures marked as sample data are not exchange prices. Please don&apos;t treat them as real prices.</p>
           <p>Version: 2026-10-11-draft.</p>
         </div>
       </main>

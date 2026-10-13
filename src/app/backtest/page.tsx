@@ -73,7 +73,7 @@ function BacktestBody() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Backtest" lede="Hypothetical EMA cross on sample candles. Fees and slippage come from config. Losing trades stay in the list." />
+      <PageHeader title="Backtest" lede="A practice EMA cross test on sample prices, with fees and slippage included. Losing trades are shown too. Past results don't predict future returns." />
       <form className="card flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => void run(event)}>
         <label className="block flex-1">
           <span className="label">Symbol</span>
@@ -96,7 +96,7 @@ function BacktestBody() {
             </p>
           </div>
           {result.trades.length === 0 ? (
-            <EmptyState title="No closed trades" body="The sample series did not complete an EMA cross. That is not shown as a profit." />
+            <EmptyState title="No closed trades" body="No EMA cross happened in this sample, so there's no result to show." />
           ) : (
             <ul className="space-y-2">
               {result.trades.map((trade) => (

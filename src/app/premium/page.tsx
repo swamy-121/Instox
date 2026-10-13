@@ -64,7 +64,7 @@ function Body() {
       </div>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!payload && !error ? <LoadingState label="Loading plans" /> : null}
-      {payload && plans.length === 0 ? <EmptyState title="No plans" body="Publish a listed plan for this billing period." /> : null}
+      {payload && plans.length === 0 ? <EmptyState title="No plans" body="No plans for this period right now. Please check back soon." /> : null}
       <ul className="space-y-4 pt-2">
         {plans.map((plan) => (
           <li key={plan.id} className={`card relative ${plan.mostPopular ? "border-2 border-[#E8772E]" : ""}`}>

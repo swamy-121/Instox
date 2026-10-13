@@ -82,7 +82,7 @@ function MarketBody() {
       <h1 className="text-2xl font-semibold text-ink">Market overview</h1>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!payload && !error ? <LoadingState label="Loading market" /> : null}
-      {payload && indices.length === 0 ? <EmptyState title="No market data" body="Add index rows before this overview can draw." /> : null}
+      {payload && indices.length === 0 ? <EmptyState title="No market data" body="Market data will show up here soon." /> : null}
       <div className="grid grid-cols-2 gap-3">
         {indices.map((row) => (
           <article key={row.symbol} className={`rounded-xl p-4 shadow-card ${row.changePct >= 0 ? "bg-[#E7F6EE]" : "bg-[#FDECEC]"}`}>
@@ -114,7 +114,7 @@ function MarketBody() {
           </div>
         </section>
       ) : null}
-      {payload && closes.length <= 1 ? <EmptyState title="No chart" body="Store a candle series for the selected symbol." /> : null}
+      {payload && closes.length <= 1 ? <EmptyState title="No chart" body="No chart is available for this symbol yet." /> : null}
       <div className="grid grid-cols-2 rounded-full bg-canvas p-1 text-sm font-medium">
         <button type="button" className={`h-10 rounded-full ${board === "gainers" ? "bg-primary text-white" : "text-ink"}`} onClick={() => setBoard("gainers")}>Top gainers</button>
         <button type="button" className={`h-10 rounded-full ${board === "losers" ? "bg-primary text-white" : "text-ink"}`} onClick={() => setBoard("losers")}>Top losers</button>

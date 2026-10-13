@@ -97,7 +97,7 @@ function HomeBody() {
       {!feed && !error ? <LoadingState label="Loading home" /> : null}
       {overview ? (
         <section className="grid grid-cols-2 gap-3">
-          {indices.length === 0 ? <EmptyState title="No indices" body="Publish index rows to show Nifty and Sensex." /> : null}
+          {indices.length === 0 ? <EmptyState title="No indices" body="Nifty and Sensex will show up here soon." /> : null}
           {indices.map((row) => (
             <Link
               key={row.symbol}
@@ -115,7 +115,7 @@ function HomeBody() {
           ))}
         </section>
       ) : null}
-      {tiles && tiles.length === 0 ? <EmptyState title="No shortcuts" body="Publish a home tile to show it here." /> : null}
+      {tiles && tiles.length === 0 ? <EmptyState title="No shortcuts" body="Shortcuts will show up here soon." /> : null}
       {tiles && tiles.length > 0 ? (
         <section className="grid grid-cols-4 gap-3">
           {tiles.map((tile) => {
@@ -139,7 +139,7 @@ function HomeBody() {
       ))}
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-ink">{config.homePicksTitle}</h2>
-        {feed && feed.tips.length === 0 ? <EmptyState title="No picks" body="Mark a published tip as featured to show it here." /> : null}
+        {feed && feed.tips.length === 0 ? <EmptyState title="No picks" body="Featured ideas will show up here." /> : null}
         {feed?.tips.map((tip) => (
           <TipCard key={tip.id} tip={tip} quote={quotes.get(tip.symbol) ?? null} />
         ))}

@@ -125,7 +125,7 @@ function PremiumLock() {
         </span>
         <h2 className="mt-3 text-lg font-semibold text-ink">Premium idea</h2>
         <p className="mt-1 max-w-xs text-sm leading-6 text-muted">
-          Entry, stop, targets, and the write-up stay on the server until a plan is active.
+          Upgrade to Premium to see the entry, stop-loss, targets and full reasoning.
         </p>
         <Link href="/pricing" className="btn-primary mt-4">
           View plans

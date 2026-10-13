@@ -44,7 +44,7 @@ export function NotificationSettings() {
       body: JSON.stringify({ tipPush, marketingPush }),
     });
     setBusy(false);
-    setMessage(result.ok ? "Notification choices saved." : result.message);
+    setMessage(result.ok ? "Your notification settings are saved." : result.message);
     if (result.ok) load();
   }
 
@@ -56,26 +56,26 @@ export function NotificationSettings() {
     }
     const senderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "";
     if (!vapidKey || !senderId) {
-      setMessage("Notifications are not available on this device yet.");
+      setMessage("Notifications aren't available on this device yet.");
       return;
     }
     if (!("serviceWorker" in navigator) || !("Notification" in window)) {
-      setMessage("This browser does not support Firebase Cloud Messaging.");
+      setMessage("This browser doesn't support notifications.");
       return;
     }
     const { getMessaging, getToken, isSupported } = await import("firebase/messaging");
     if (!(await isSupported())) {
-      setMessage("This browser does not support Firebase Cloud Messaging.");
+      setMessage("This browser doesn't support notifications.");
       return;
     }
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
-      setMessage("Notification permission was not granted.");
+      setMessage("Notifications are blocked. Allow them in your browser settings.");
       return;
     }
     const app = getFirebaseApp();
     if (!app) {
-      setMessage("Firebase is not configured in this browser.");
+      setMessage("Notifications aren't set up yet. Please try again later.");
       return;
     }
     try {
@@ -84,23 +84,23 @@ export function NotificationSettings() {
       });
       const token = await getToken(getMessaging(app), { vapidKey, serviceWorkerRegistration: registration });
       if (!token) {
-        setMessage("Firebase did not return a device token.");
+        setMessage("We couldn't turn on notifications. Please try again.");
         return;
       }
       const result = await apiFetch("/api/v1/fcm-tokens", {
         method: "POST",
         body: JSON.stringify({ token }),
       });
-      setMessage(result.ok ? "This browser is registered for FCM alerts." : result.message);
+      setMessage(result.ok ? "You're all set. Alerts will come to this browser." : result.message);
       if (result.ok) load();
     } catch {
-      setMessage("Could not register this browser with Firebase Cloud Messaging.");
+      setMessage("We couldn't turn on alerts for this browser. Please try again.");
     }
   }
 
   async function revoke(id: string) {
     const result = await apiFetch(`/api/v1/fcm-tokens/${id}`, { method: "DELETE" });
-    setMessage(result.ok ? "This device token was revoked." : result.message);
+    setMessage(result.ok ? "Alerts are turned off for this device." : result.message);
     if (result.ok) load();
   }
 

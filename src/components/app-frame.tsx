@@ -82,7 +82,7 @@ export function AppFrame({
         <div className="mx-auto max-w-md px-4 py-16">
           <div className="card">
             <h1 className="text-lg font-semibold">Sign in required</h1>
-            <p className="mt-2 text-sm leading-6 text-muted">This page is available after you sign in.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">Please sign in to see this page.</p>
             <Link href="/sign-in" className="btn-primary mt-4">
               Sign in
             </Link>
@@ -103,8 +103,8 @@ export function AppFrame({
           <PermissionDenied
             message={
               state.me.status === "disabled"
-                ? "This account is disabled. Sign out, or ask an administrator to review it."
-                : "A deletion request is pending. Access is paused while that request stays open."
+                ? "Your account is turned off. Please contact support if you think this is a mistake."
+                : "Your request to delete the account is being processed, so access is paused for now."
             }
           />
           <SignOutRow />
@@ -117,7 +117,7 @@ export function AppFrame({
     if (admin && state.status === "ready" && !canAccessAdmin(state.me.roles)) {
       return (
         <div className="mx-auto max-w-md px-4 py-16">
-          <PermissionDenied message="Your account does not include an admin role." />
+          <PermissionDenied message="You don't have admin access." />
         </div>
       );
     }

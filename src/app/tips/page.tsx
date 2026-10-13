@@ -97,7 +97,7 @@ function TipsBody() {
         <ErrorState message={error.message} requestId={error.requestId} onRetry={load} />
       ) : null}
       {!tips && !error ? <LoadingState label="Loading tips" /> : null}
-      {tips && !error && visible.length === 0 ? <EmptyState title="No tips match" body="Try another category, or check back after a tip is published." /> : null}
+      {tips && !error && visible.length === 0 ? <EmptyState title="No tips match" body="Try another category, or check back soon for new ideas." /> : null}
       <div className="space-y-3">
         {visible.map((tip) => <TipCard key={tip.id} tip={tip} quote={quotes.get(tip.symbol) ?? null} />)}
       </div>
