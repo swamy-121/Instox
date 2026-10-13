@@ -56,7 +56,7 @@ export default function ShopPage() {
   return (
     <AppFrame>
       <div className="space-y-4">
-        <PageHeader title="Shop" lede="Courses and tools from the catalogue." />
+        <PageHeader embedded title="Shop" lede="Courses and tools from the catalogue." />
         {error ? <ErrorState message={error} onRetry={load} /> : null}
         {!catalog && !error ? <LoadingState label="Loading catalogue" /> : null}
         {catalog && catalog.products.length === 0 ? <EmptyState title="No products" body="The catalogue is empty." /> : null}

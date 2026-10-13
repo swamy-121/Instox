@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
+import { SampleBadge } from "@/components/design";
 import { Chip, PageHeader } from "@/components/ui";
+import { isSampleData } from "@/lib/market-session";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
 
@@ -98,6 +100,7 @@ function PulseBody() {
   return (
     <div className="space-y-4">
       <PageHeader
+        embedded
         title="Pulse"
         lede="A score for one symbol, plus names that look quiet enough for an option-selling map or a sideways read. None of this is a promise of returns."
       />
@@ -128,8 +131,8 @@ function PulseBody() {
           {result ? (
             <section className="card space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-ink">{result.dataLabel}</p>
-                <Chip>Sample</Chip>
+                <p className="text-sm font-semibold text-ink">{result.dataLabel}</p>
+                {isSampleData(result.dataLabel, result.live) ? <SampleBadge /> : <Chip>Live file</Chip>}
               </div>
               <p className="text-4xl font-semibold tabular-nums tracking-tight text-ink">{result.pulse.score === null ? "n/a" : result.pulse.score}</p>
               <p className="text-sm text-muted">{result.pulse.version}. {result.notice}</p>

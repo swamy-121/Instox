@@ -71,7 +71,7 @@ function Collection({
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+        <h1 className="sr-only">{title}</h1>
         <p className="mt-1 max-w-xl text-sm leading-6 text-muted">{lede}</p>
       </header>
       {note ? <p className="text-sm text-muted">{note}</p> : null}

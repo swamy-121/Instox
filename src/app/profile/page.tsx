@@ -63,7 +63,7 @@ function ProfileBody() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Profile" lede="Your account details." />
+      <PageHeader embedded title="Profile" lede="Your account details." />
       <section className="card">
         <div className="flex items-start justify-between gap-3">
           <div>

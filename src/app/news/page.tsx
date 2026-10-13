@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { NewsThumb } from "@/components/illustrations";
+import { FilterChip } from "@/components/design";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
 
@@ -41,27 +41,22 @@ function NewsBody() {
   const rows = payload?.records.filter((row) => category === "All" || row.category === category) ?? [];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Market news</h1>
+    <div className="space-y-3">
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!payload && !error ? <LoadingState label="Loading news" /> : null}
       <div className="flex gap-2 overflow-x-auto">
         {categories.map((item) => (
-          <button key={item} type="button" className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${item === category ? "bg-primary text-white" : "bg-canvas text-ink"}`} onClick={() => setCategory(item)}>
-            {item}
-          </button>
+          <FilterChip key={item} active={item === category} onClick={() => setCategory(item)}>{item}</FilterChip>
         ))}
       </div>
       {payload && rows.length === 0 ? <EmptyState title="No stories" body="No news yet. Check back soon." /> : null}
-      <ul className="space-y-3">
+      <ul className="card divide-y divide-line !p-0">
         {rows.map((row) => (
-          <li key={row.id} className="card flex gap-3">
-            <NewsThumb category={row.category} />
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">{row.category}</p>
-              <h2 className="mt-1 font-semibold text-ink">{row.title}</h2>
-              <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted">{row.summary}</p>
-            </div>
+          <li key={row.id} className="px-3.5 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{row.category}</p>
+            <h2 className="mt-1 text-[15px] font-semibold text-ink">{row.title}</h2>
+            <p className="mt-1 text-sm leading-6 text-muted">{row.summary}</p>
+            <p className="mt-1 text-[11px] text-muted">{row.source} · {new Date(row.publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
           </li>
         ))}
       </ul>

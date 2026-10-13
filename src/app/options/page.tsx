@@ -78,6 +78,7 @@ function OptionsBody() {
   return (
     <div className="space-y-4">
       <PageHeader
+        embedded
         title="Option chain notes"
         lede="End-of-day open interest, put-call ratio, and a sketch for buying a call or a put. Time decay works against a bought option."
       />

@@ -20,21 +20,15 @@ function isActive(pathname: string, href: string) {
 
 export function PublicHeader() {
   return (
-    <header className="brand-surface sticky top-0 z-30 border-b border-line">
+    <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <Link href="/" aria-label="inStox" className="inline-flex shrink-0 items-center">
-          <Wordmark decorative className="h-12 w-auto" />
+        <Link href="/" aria-label="Instox" className="inline-flex shrink-0 items-center">
+          <Wordmark decorative className="h-8 w-auto" />
         </Link>
-        <nav className="hidden items-center gap-6 text-sm text-ink md:flex">
-          <Link href="/pricing" className="hover:text-primary">
-            Pricing
-          </Link>
-          <Link href="/shop" className="hover:text-primary">
-            Shop
-          </Link>
-          <Link href="/about" className="hover:text-primary">
-            About
-          </Link>
+        <nav className="hidden items-center gap-6 text-sm font-semibold text-muted md:flex">
+          <Link href="/#features" className="hover:text-ink">Features</Link>
+          <Link href="/premium" className="hover:text-ink">Premium</Link>
+          <Link href="/help" className="hover:text-ink">Help</Link>
         </nav>
         <Link href="/sign-in" className="btn-primary">
           Sign in
@@ -68,8 +62,8 @@ export function PublicFooter() {
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur md:hidden" aria-label="Primary" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <ul className="mx-auto grid max-w-lg grid-cols-5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white lg:hidden" aria-label="Primary" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <ul className="mx-auto grid h-[4.75rem] max-w-lg grid-cols-5 px-1.5 pt-2">
         {MEMBER_LINKS.map((link) => {
           const active = isActive(pathname, link.href);
           const Icon = link.icon;
@@ -77,12 +71,10 @@ export function BottomNav() {
             <li key={link.href}>
               <Link
                 href={link.href}
-                className={`flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-primary" : "text-muted"}`}
+                className={`flex h-11 flex-col items-center justify-center gap-0.5 text-[11px] ${active ? "font-bold text-primary" : "font-medium text-muted"}`}
                 aria-current={active ? "page" : undefined}
               >
-                <span className={`flex h-7 w-7 items-center justify-center rounded-full ${active ? "bg-primary-soft" : ""}`}>
-                  <Icon className="h-4 w-4" />
-                </span>
+                <Icon className="h-[22px] w-[22px]" aria-hidden="true" strokeWidth={active ? 2.2 : 1.8} />
                 {link.label}
               </Link>
             </li>

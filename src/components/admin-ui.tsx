@@ -54,9 +54,9 @@ export function AdminTabs({
 }
 
 const PILL = {
-  green: "bg-[#E5F6EC] text-[#027332]",
-  red: "bg-[#FDECEC] text-[#B42318]",
-  gray: "bg-[#F3F6F4] text-[#4F6B5E]",
+  green: "bg-[#E7F4EC] text-[#075C3B]",
+  red: "bg-[#FCEBEB] text-[#C62F2F]",
+  gray: "bg-[#EEF2EF] text-[#64716A]",
   teal: "bg-[#E6F6F8] text-[#018193]",
 } as const;
 

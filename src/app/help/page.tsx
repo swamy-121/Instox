@@ -45,7 +45,7 @@ function Body() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">{config.helpTitle}</h1>
+      <h1 className="sr-only">{config.helpTitle}</h1>
       {error ? <ErrorState message={error} onRetry={load} /> : null}
       {!articles && !error ? <LoadingState label="Loading help" /> : null}
       {support ? (

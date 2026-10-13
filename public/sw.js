@@ -1,4 +1,4 @@
-const CACHE = "instox-static-v5";
+const CACHE = "instox-static-v6";
 const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/brand/wordmark.png", "/brand/splash.avif", "/brand/splash.webp", "/icons/icon-192.png", "/icons/icon-512.png"];
 const STATIC_EXT = /\.(?:png|svg|ico|webp|avif|jpg|woff2)$/i;
 
@@ -47,6 +47,9 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/help")) return;
   if (url.pathname.startsWith("/onboarding")) return;
   if (url.pathname.startsWith("/premium")) return;
+  if (url.pathname.startsWith("/levels")) return;
+  if (url.pathname.startsWith("/options")) return;
+  if (url.pathname.startsWith("/tip-check")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => caches.match("/offline.html")));

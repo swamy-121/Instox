@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ErrorState, LoadingState } from "@/components/states";
-import { Chip } from "@/components/ui";
+import { SampleBadge } from "@/components/design";
+import { isSampleData } from "@/lib/market-session";
 import { apiFetch } from "@/lib/api-client";
 import { formatPrice } from "@/lib/money";
 
@@ -48,7 +49,7 @@ export function LevelsPanel() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold text-ink">Support and resistance</h1>
+        <h1 className="sr-only">Support and resistance</h1>
         <p className="mt-1 max-w-xl text-sm leading-6 text-muted">
           Places where price turned, plus pivot levels from the previous bar. They can break. This is not a forecast.
         </p>
@@ -66,7 +67,7 @@ export function LevelsPanel() {
         <section className="card space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-semibold text-ink">{levels.symbol}</p>
-            <Chip>{levels.dataLabel}</Chip>
+            {isSampleData(levels.dataLabel) ? <SampleBadge /> : <span className="text-xs font-semibold text-muted">{levels.dataLabel}</span>}
           </div>
           <ol className="space-y-2">
             {ladder.map((level) => (

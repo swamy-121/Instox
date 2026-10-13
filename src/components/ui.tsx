@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
-export function PageHeader({ title, lede, action }: { title: string; lede?: string; action?: ReactNode }) {
+export function PageHeader({ title, lede, action, embedded = false }: { title: string; lede?: string; action?: ReactNode; embedded?: boolean }) {
   return (
-    <div className="mb-6 flex items-end justify-between gap-4">
+    <div className="mb-4 flex items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
-        {lede ? <p className="mt-1 max-w-xl text-sm leading-6 text-muted">{lede}</p> : null}
+        <h1 className={embedded ? "sr-only" : "text-lg font-bold tracking-tight text-ink"}>{title}</h1>
+        {lede ? <p className={`${embedded ? "" : "mt-1"} max-w-xl text-sm leading-6 text-muted`}>{lede}</p> : null}
       </div>
       {action}
     </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   BarChart3,
   Bell,
@@ -13,12 +13,14 @@ import {
   Handshake,
   KeyRound,
   LayoutDashboard,
+  Menu,
   Ruler,
   Phone,
   LifeBuoy,
   LineChart,
   Megaphone,
   Newspaper,
+  ScrollText,
   Search,
   Settings,
   ShoppingBag,
@@ -26,9 +28,11 @@ import {
   SlidersHorizontal,
   Smartphone,
   Users,
+  X,
 } from "lucide-react";
 import { BrandSplash } from "@/components/brand";
-import { BottomNav, DesktopNav } from "@/components/chrome";
+import { BottomNav, PublicFooter, PublicHeader } from "@/components/chrome";
+import { MemberSidebar, MemberTop } from "@/components/shell";
 import { ErrorState, PermissionDenied } from "@/components/states";
 import { Wordmark } from "@/components/wordmark";
 import { MemberConfigProvider, useMemberConfig } from "@/features/app/member-config";
@@ -58,6 +62,7 @@ const ADMIN_LINKS: Array<{ href: string; label: string; icon: typeof LayoutDashb
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/integrations", label: "Integrations", icon: KeyRound, superAdmin: true },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
+  { href: "/admin/audit", label: "Audit", icon: ScrollText },
 ];
 
 export function AppFrame({
@@ -143,65 +148,41 @@ export function AppFrame({
 function MemberShell({ children, signedIn }: { children: React.ReactNode; signedIn: boolean }) {
   const config = useMemberConfig();
   const { signOutUser } = useAuth();
-  return (
-    <div className="min-h-screen bg-white">
-      <MemberHeader signedIn={signedIn} />
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 pb-24 md:pb-10">
-        {config.maintenance ? (
-          <div className="card">
-            <h1 className="text-lg font-semibold text-ink">{config.maintenanceTitle}</h1>
-            <p className="mt-2 text-sm leading-6 text-muted">{config.maintenanceBody}</p>
-            {signedIn ? (
-              <button type="button" className="btn-secondary mt-4" onClick={() => void signOutUser()}>
-                Sign out
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          children
-        )}
-      </main>
-      {signedIn && !config.maintenance ? <BottomNav /> : null}
+  const body = config.maintenance ? (
+    <div className="card">
+      <h1 className="text-lg font-semibold text-ink">{config.maintenanceTitle}</h1>
+      <p className="mt-2 text-sm leading-6 text-muted">{config.maintenanceBody}</p>
+      {signedIn ? (
+        <button type="button" className="btn-secondary mt-4" onClick={() => void signOutUser()}>
+          Sign out
+        </button>
+      ) : null}
     </div>
+  ) : (
+    children
   );
-}
 
-function MemberHeader({ signedIn }: { signedIn: boolean }) {
-  const pathname = usePathname();
-  const { state } = useAuth();
-  const config = useMemberConfig();
-  const home = pathname === "/home" && state.status === "ready";
-  const name = state.status === "ready" ? state.me.displayName || "there" : "there";
-  const initial = name.trim().slice(0, 1).toUpperCase() || "I";
+  if (!signedIn) {
+    return (
+      <div className="min-h-screen bg-canvas">
+        <PublicHeader />
+        <main className="mx-auto w-full max-w-5xl px-4 py-6">{body}</main>
+        <PublicFooter />
+      </div>
+    );
+  }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-white">
-      <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 py-3">
-        {home ? (
-          <div className="min-w-0">
-            <p className="text-sm text-muted">{config.greetingPrefix}, {name}</p>
-            <p className="text-base font-semibold leading-5 text-ink">{config.greetingSubtitle}</p>
-          </div>
-        ) : (
-          <Link href={signedIn ? "/home" : "/"} aria-label="inStox" className="inline-flex shrink-0 items-center">
-            <Wordmark decorative className="h-12 w-auto" />
-          </Link>
-        )}
-        <div className="flex items-center gap-2">
-          {signedIn ? <DesktopNav /> : null}
-          {home ? (
-            <>
-              <Link href="/settings" aria-label="Notifications" className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-canvas">
-                <Bell className="h-5 w-5" aria-hidden="true" />
-              </Link>
-              <Link href="/profile" aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
-                {initial}
-              </Link>
-            </>
-          ) : null}
-        </div>
+    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      <MemberSidebar />
+      <div className="min-w-0">
+        <Suspense fallback={<div className="h-16 border-b border-line bg-canvas" />}>
+          <MemberTop />
+        </Suspense>
+        <main className="mx-auto w-full max-w-[1192px] px-4 pb-24 pt-3 lg:px-7 lg:pb-10 lg:pt-6">{body}</main>
+        {!config.maintenance ? <BottomNav /> : null}
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -219,6 +200,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const { state, signOutUser } = useAuth();
   const [query, setQuery] = useState("");
   const [menu, setMenu] = useState(false);
+  const [drawer, setDrawer] = useState(false);
   const [alerts, setAlerts] = useState(0);
   const [alice, setAlice] = useState<{ provider: string; connected: boolean; configured: boolean } | null>(null);
   const [aliceFailed, setAliceFailed] = useState(false);
@@ -236,37 +218,86 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     setAliceFailed(new URLSearchParams(window.location.search).get("alice") === "failed");
   }, [state.status]);
 
+  const visibleLinks = ADMIN_LINKS.filter((link) => {
+    if (state.status !== "ready") return !link.superAdmin && !link.crm;
+    if (link.superAdmin && !canManageIntegrations(state.me.roles)) return false;
+    if (link.crm && !canManageCrm(state.me.roles)) return false;
+    return true;
+  });
+  const systemHrefs = new Set(["/admin/analytics", "/admin/notifications", "/admin/advertisements", "/admin/member", "/admin/settings", "/admin/integrations", "/admin/support", "/admin/audit"]);
+
+  function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
+    const groups = [
+      { label: "Admin", links: visibleLinks.filter((link) => !systemHrefs.has(link.href)) },
+      { label: "System", links: visibleLinks.filter((link) => systemHrefs.has(link.href)) },
+    ];
+    return (
+      <nav className="flex flex-col" aria-label="Admin">
+        {groups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-1.5 ml-3 mt-3 text-[10.5px] font-bold uppercase tracking-[0.08em] text-[#8C9891]">{group.label}</p>
+            {group.links.map((link) => {
+              const on = link.href === "/admin" ? pathname === "/admin" : pathname === link.href || pathname.startsWith(`${link.href}/`);
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={onNavigate}
+                  className={`flex h-10 items-center gap-3 rounded-[9px] px-3 text-[13.5px] ${on ? "bg-primary-soft font-bold text-primary-dark" : "font-medium text-[#3A4741] hover:bg-canvas"}`}
+                  aria-current={on ? "page" : undefined}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" strokeWidth={on ? 2.2 : 1.8} />
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+    );
+  }
+
   return (
-    <div className="admin-light min-h-screen bg-[#f3f7f4] lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
-      <aside className="bg-[#083326] text-white lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
-        <div className="flex h-16 items-center px-4">
-          <Link href="/admin" aria-label="inStox admin" className="inline-flex rounded-xl bg-white px-2 py-1">
-            <Wordmark decorative className="h-9 w-auto" />
-          </Link>
+    <div className="admin-light min-h-screen bg-canvas lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-white px-3.5 py-5 lg:flex">
+        <Link href="/admin" aria-label="Instox admin" className="mb-2 inline-flex px-2">
+          <Wordmark decorative className="h-8 w-auto" />
+        </Link>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <AdminNav />
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:overflow-visible lg:px-3 lg:pb-6" aria-label="Admin">
-          {ADMIN_LINKS.filter((link) => {
-            if (state.status !== "ready") return !link.superAdmin && !link.crm;
-            if (link.superAdmin && !canManageIntegrations(state.me.roles)) return false;
-            if (link.crm && !canManageCrm(state.me.roles)) return false;
-            return true;
-          }).map((link) => {
-            const active = link.href === "/admin" ? pathname === "/admin" : pathname === link.href || pathname.startsWith(`${link.href}/`);
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${active ? "bg-primary text-white" : "text-white/80 hover:bg-white/10"}`}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon className="h-4 w-4" aria-hidden="true" />
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="mt-3 rounded-xl border border-line p-3">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF4D6] px-2 py-0.5 text-[11px] font-semibold text-[#9A6700]">
+            <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+            Production
+          </span>
+          <p className="mt-1.5 text-[11px] text-muted">Role checks stay on the server. Actions are logged.</p>
+        </div>
       </aside>
+      {drawer ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button type="button" className="absolute inset-0 bg-ink/45" aria-label="Close admin menu" onClick={() => setDrawer(false)} />
+          <aside role="dialog" aria-label="Admin menu" className="absolute inset-y-0 left-0 flex w-[292px] flex-col bg-white px-3 py-4 shadow-card">
+            <div className="mb-2 flex items-center justify-between px-1.5">
+              <Wordmark decorative className="h-7 w-auto" />
+              <button type="button" className="flex h-9 w-9 items-center justify-center rounded-[10px] text-ink" aria-label="Close" onClick={() => setDrawer(false)}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-line px-3 py-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-dark text-[11px] font-bold text-white">{initial}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-semibold">{name}</span>
+                <span className="block text-[11px] text-muted">Admin</span>
+              </span>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <AdminNav onNavigate={() => setDrawer(false)} />
+            </div>
+          </aside>
+        </div>
+      ) : null}
       <div className="min-w-0">
         {alice?.provider === "aliceblue" && !alice.connected ? (
           <div className="flex flex-wrap items-center justify-between gap-3 bg-loss px-4 py-3 text-sm text-white md:px-6">
@@ -284,6 +315,12 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white px-4 md:px-6">
+          <button type="button" className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-line lg:hidden" aria-label="Open admin menu" onClick={() => setDrawer(true)}>
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <div className="hidden min-w-0 lg:block">
+            <p className="text-lg font-bold tracking-tight text-ink">Admin</p>
+          </div>
           <form
             className="relative min-w-0 flex-1"
             onSubmit={(event) => {

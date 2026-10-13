@@ -54,7 +54,7 @@ function Body() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">{config.premiumTitle}</h1>
+      <h1 className="sr-only">{config.premiumTitle}</h1>
       <div className="grid grid-cols-2 rounded-full bg-canvas p-1 text-sm font-medium">
         {(["monthly", "yearly"] as const).map((item) => (
           <button key={item} type="button" className={`h-10 rounded-full capitalize ${period === item ? "bg-primary text-white" : "text-ink"}`} onClick={() => setPeriod(item)}>

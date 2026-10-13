@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFrame } from "@/components/app-frame";
-import { StockAvatar } from "@/components/illustrations";
+import { FilterChip, SampleBadge } from "@/components/design";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { apiFetch } from "@/lib/api-client";
+import { isSampleData } from "@/lib/market-session";
 import { formatPrice } from "@/lib/money";
 
 type Row = {
@@ -17,6 +19,9 @@ type Row = {
 type Screen = {
   results: Row[];
   skipped: { symbol: string; reason: string }[];
+  dataLabel?: string;
+  live?: boolean;
+  notice?: string;
 };
 
 type ConfidenceRow = {
@@ -54,6 +59,7 @@ export default function ScreenerPage() {
 }
 
 function ScreenerBody() {
+  const [view, setView] = useState<"prebuilt" | "custom" | "saved">("prebuilt");
   const [tab, setTab] = useState<TabId>("rsi");
   const [rsiLt, setRsiLt] = useState("");
   const [screen, setScreen] = useState<Screen | null>(null);
@@ -95,68 +101,108 @@ function ScreenerBody() {
   }
 
   const rows = (screen?.results ?? []).filter((row) => (tab === "fo" ? row.segment !== "equity" : true));
+  const sample = isSampleData(view === "saved" ? confidence?.dataLabel : screen?.dataLabel, view === "saved" ? false : screen?.live);
 
   return (
-    <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold text-ink">Screener</h1>
-        <p className="mt-1 max-w-xl text-sm leading-6 text-muted">
-          Indicator scans, plus a high-confidence reading from daily bars. A high score means the checks line up. It is not a chance of profit.
-        </p>
-      </header>
-      <div className="flex gap-2 overflow-x-auto">
-        {TABS.map((item) => (
+    <div className="space-y-3">
+      <p className="max-w-xl text-sm leading-6 text-muted">
+        Indicator scans, plus a high-confidence reading from daily bars. A high score means the checks line up. It is not a chance of profit.
+      </p>
+      <div className="grid grid-cols-3 rounded-[10px] border border-line bg-white p-0.5 text-[13px] font-semibold" role="tablist">
+        {([
+          ["prebuilt", "Prebuilt"],
+          ["custom", "Custom"],
+          ["saved", "Saved"],
+        ] as const).map(([id, label]) => (
           <button
-            key={item.id}
+            key={id}
             type="button"
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold ${tab === item.id ? "bg-primary text-white" : "bg-primary-soft text-primary"}`}
-            onClick={() => setTab(item.id)}
+            role="tab"
+            aria-selected={view === id}
+            className={`h-9 rounded-lg ${view === id ? "bg-primary text-white" : "text-muted"}`}
+            onClick={() => setView(id)}
           >
-            {item.label}
+            {label}
           </button>
         ))}
       </div>
-      {tab === "confidence" ? (
-        <ConfidenceList screen={confidence} />
+      {view === "prebuilt" ? (
+        <div className="flex gap-2 overflow-x-auto">
+          {TABS.filter((item) => item.id !== "confidence").map((item) => (
+            <button key={item.id} type="button" className={`card min-w-[150px] shrink-0 !p-3 text-left ${tab === item.id ? "border-[#9FD1B3] bg-[#F3FAF6]" : ""}`} onClick={() => { setTab(item.id); setRsiLt(""); const params = new URLSearchParams(); if (item.id === "ema") params.set("ema", "above"); if (item.id === "cpr") params.set("cpr", "above"); const query = params.toString(); load(query ? `?${query}` : ""); }}>
+              <span className="block text-[13px] font-bold">{item.label}</span>
+              <span className="text-[11px] text-muted">{item.id === "rsi" ? "Relative strength" : item.id === "ema" ? "Above the average" : item.id === "cpr" ? "Above the pivot" : "Futures and options"}</span>
+            </button>
+          ))}
+        </div>
       ) : null}
-      {tab !== "confidence" ? (
-      <>
-      <form className="flex items-end gap-2" onSubmit={apply}>
+      {view === "saved" ? (
+        <>
+          <EmptyState title="No saved screeners" body="Saving a custom screener is not available yet. The high-confidence reading below uses the daily bars already stored." />
+          <ConfidenceList screen={confidence} />
+        </>
+      ) : null}
+      {view === "custom" ? (
+      <form className="flex flex-wrap items-end gap-2" onSubmit={apply}>
         <label className="min-w-0 flex-1">
           <span className="label">RSI below</span>
           <input className="field tabular-nums" inputMode="decimal" value={rsiLt} onChange={(event) => setRsiLt(event.target.value)} placeholder="40" />
         </label>
-        <button className="btn-primary shrink-0" type="submit">Run screener</button>
+        <button className="btn-quiet" type="button" onClick={() => { setRsiLt(""); setTab("rsi"); load(); }}>Reset</button>
+        <button className="btn-primary shrink-0" type="submit">Apply</button>
       </form>
+      ) : null}
+      {view !== "saved" ? (
+      <>
+      <div className="flex flex-wrap gap-2">
+        {tab !== "rsi" ? <FilterChip active onClick={() => { setTab("rsi"); load(); }}>{tab.toUpperCase()} on</FilterChip> : null}
+        {rsiLt ? <FilterChip active onClick={() => { setRsiLt(""); load(); }}>RSI below {rsiLt}</FilterChip> : null}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] text-muted">{screen ? `${rows.length} matches${screen.notice ? ` · ${screen.notice}` : ""}` : "Running screener"}</p>
+        {sample ? <SampleBadge /> : null}
+      </div>
       {loading ? <LoadingState label="Running screener" /> : null}
       {error ? <ErrorState message={error} requestId={requestId} onRetry={() => load()} /> : null}
-      {screen && rows.length === 0 ? <EmptyState title="No matches" body="No symbol passed this scan." /> : null}
+      {screen && rows.length === 0 ? <EmptyState title="No matches" body="No symbol passed this scan. Clear a filter or try another preset." /> : null}
       {rows.length > 0 ? (
-        <div className="card overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Symbol</th>
-                <th className="px-4 py-3 font-medium">LTP</th>
-                <th className="px-4 py-3 font-medium">{tab === "ema" ? "EMA" : tab === "cpr" ? "CPR" : "RSI"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.symbol} className="border-t border-line">
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-2 font-semibold text-ink">
-                      <StockAvatar symbol={row.symbol} className="h-8 w-8 text-[10px]" />
-                      {row.symbol}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-ink">{formatPrice(row.last)}</td>
-                  <td className="px-4 py-3 tabular-nums text-ink">{metric(row, tab)}</td>
+        <>
+          <ul className="card divide-y divide-line !p-0 lg:hidden">
+            {rows.map((row) => (
+              <li key={row.symbol}>
+                <Link href={`/market?symbol=${encodeURIComponent(row.symbol)}`} className="flex items-center justify-between gap-3 px-3.5 py-3">
+                  <span>
+                    <span className="block text-[13px] font-bold text-ink">{row.symbol}</span>
+                    <span className="text-[11px] text-muted">{metric(row, tab)}</span>
+                  </span>
+                  <span className="num text-[13px] font-semibold text-ink">{formatPrice(row.last)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="card hidden overflow-x-auto p-0 lg:block">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[#FAFBFA] text-[11px] uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="px-3.5 py-2.5 font-semibold">Symbol</th>
+                  <th className="px-3.5 py-2.5 font-semibold">Matched</th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">Price</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.symbol} className="border-t border-line">
+                    <td className="px-3.5 py-3 font-bold text-ink">
+                      <Link href={`/market?symbol=${encodeURIComponent(row.symbol)}`}>{row.symbol}</Link>
+                    </td>
+                    <td className="px-3.5 py-3 text-muted">{metric(row, tab)}</td>
+                    <td className="num px-3.5 py-3 text-right font-semibold text-ink">{formatPrice(row.last)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : null}
       </>
       ) : null}
