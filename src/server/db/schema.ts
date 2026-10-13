@@ -571,6 +571,129 @@ export const voiceCalls = pgTable(
   ],
 );
 
+export const savedTips = pgTable(
+  "saved_tips",
+  {
+    userId: text("user_id").notNull(),
+    tipId: text("tip_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.tipId] }), index("saved_tips_user_idx").on(table.userId)],
+);
+
+export const trackedTips = pgTable(
+  "tracked_tips",
+  {
+    userId: text("user_id").notNull(),
+    tipId: text("tip_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.tipId] }), index("tracked_tips_tip_idx").on(table.tipId)],
+);
+
+export const tipAlertPrefs = pgTable("tip_alert_prefs", {
+  userId: text("user_id").primaryKey(),
+  targetHit: boolean("target_hit").notNull().default(true),
+  stopLoss: boolean("stop_loss").notNull().default(true),
+  expired: boolean("expired").notNull().default(false),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const memberAlerts = pgTable(
+  "member_alerts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    tipId: text("tip_id"),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    readAt: text("read_at"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("member_alerts_user_idx").on(table.userId, table.createdAt)],
+);
+
+export const tipChecks = pgTable(
+  "tip_checks",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    symbol: text("symbol").notNull(),
+    side: text("side").notNull(),
+    agreement: integer("agreement").notNull(),
+    summary: text("summary").notNull(),
+    source: text("source").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("tip_checks_user_idx").on(table.userId, table.createdAt), index("tip_checks_symbol_idx").on(table.symbol)],
+);
+
+export const dailyBars = pgTable(
+  "daily_bars",
+  {
+    symbol: text("symbol").notNull(),
+    tradeDate: text("trade_date").notNull(),
+    open: doublePrecision("open").notNull(),
+    high: doublePrecision("high").notNull(),
+    low: doublePrecision("low").notNull(),
+    close: doublePrecision("close").notNull(),
+    volume: doublePrecision("volume").notNull(),
+    source: text("source").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.symbol, table.tradeDate] })],
+);
+
+export const optionOi = pgTable(
+  "option_oi",
+  {
+    tradeDate: text("trade_date").notNull(),
+    underlying: text("underlying").notNull(),
+    expiry: text("expiry").notNull(),
+    strike: doublePrecision("strike").notNull(),
+    optionType: text("option_type").notNull(),
+    openInterest: doublePrecision("open_interest").notNull(),
+    oiChange: doublePrecision("oi_change").notNull(),
+    ltp: doublePrecision("ltp").notNull(),
+    iv: doublePrecision("iv"),
+    volume: doublePrecision("volume").notNull(),
+    source: text("source").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tradeDate, table.underlying, table.expiry, table.strike, table.optionType] }),
+    index("option_oi_underlying_idx").on(table.underlying, table.tradeDate),
+  ],
+);
+
+export const affiliates = pgTable(
+  "affiliates",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    code: text("code").notNull(),
+    commissionBps: integer("commission_bps").notNull(),
+    status: text("status").notNull(),
+    notes: text("notes").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("affiliates_code_idx").on(table.code)],
+);
+
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: text("id").primaryKey(),
+    job: text("job").notNull(),
+    status: text("status").notNull(),
+    summary: jsonb("summary").$type<Record<string, unknown>>().notNull(),
+    actorId: text("actor_id").notNull(),
+    startedAt: text("started_at").notNull(),
+    finishedAt: text("finished_at").notNull(),
+  },
+  (table) => [index("job_runs_job_idx").on(table.job, table.startedAt)],
+);
+
 export const integrationSecrets = pgTable("integration_secrets", {
   fieldKey: text("field_key").primaryKey(),
   iv: text("iv").notNull(),

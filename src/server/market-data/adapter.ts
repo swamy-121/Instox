@@ -82,6 +82,10 @@ export class MockMarketDataProvider implements MarketDataProvider {
   }
 }
 
+export function knownSampleLast(symbol: string): number | null {
+  return SAMPLE_LAST[symbol]?.last ?? null;
+}
+
 export function getMarketDataProvider(): MarketDataProvider {
   const feed = activeFeedId();
   if (feed === "mock") return new MockMarketDataProvider();

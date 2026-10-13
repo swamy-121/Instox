@@ -32,6 +32,23 @@ type Result = {
   trades: Trade[];
 };
 
+type OptimizeRow = {
+  emaPeriod: number;
+  trades: number;
+  gains: number;
+  losses: number;
+  netReturnPct: number | null;
+  profitFactor: number | null;
+};
+
+type Optimize = {
+  pickedPeriod: number | null;
+  minTrades: number;
+  note: string;
+  dataLabel: string;
+  rows: OptimizeRow[];
+};
+
 function outcomeTone(outcome: string) {
   if (outcome === "gain") return "text-profit";
   if (outcome === "loss") return "text-loss";
@@ -49,6 +66,7 @@ export default function BacktestPage() {
 function BacktestBody() {
   const [symbol, setSymbol] = useState("RELIANCE");
   const [result, setResult] = useState<Result | null>(null);
+  const [optimize, setOptimize] = useState<Optimize | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
@@ -71,6 +89,23 @@ function BacktestBody() {
     setResult(response.data);
   }
 
+  async function compare() {
+    setBusy(true);
+    setError(null);
+    const response = await apiFetch<Optimize>("/api/v1/backtests/optimize", {
+      method: "POST",
+      body: JSON.stringify({ symbol }),
+    });
+    setBusy(false);
+    if (!response.ok) {
+      setOptimize(null);
+      setError(response.message);
+      setRequestId(response.requestId);
+      return;
+    }
+    setOptimize(response.data);
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader title="Backtest" lede="A practice EMA cross test on sample prices, with fees and slippage included. Losing trades are shown too. Past results don't predict future returns." />
@@ -79,8 +114,46 @@ function BacktestBody() {
           <span className="label">Symbol</span>
           <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} />
         </label>
-        <button className="btn-primary w-full sm:w-auto" type="submit" disabled={busy}>Run hypothetical test</button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <button className="btn-primary w-full sm:w-auto" type="submit" disabled={busy}>Run hypothetical test</button>
+          <button className="btn-secondary w-full sm:w-auto" type="button" disabled={busy} onClick={() => void compare()}>Compare settings</button>
+        </div>
       </form>
+      {optimize ? (
+        <section className="card space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-semibold text-ink">EMA lengths on this sample</h2>
+            <Chip>Hypothetical</Chip>
+          </div>
+          <p className="text-sm leading-6 text-muted">{optimize.note} {optimize.dataLabel}.</p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="py-2 font-medium">EMA</th>
+                  <th className="py-2 font-medium">Trades</th>
+                  <th className="py-2 font-medium">Wins</th>
+                  <th className="py-2 font-medium">Losses</th>
+                  <th className="py-2 font-medium">Net</th>
+                  <th className="py-2 font-medium">Factor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {optimize.rows.map((row) => (
+                  <tr key={row.emaPeriod} className={`border-t border-line ${row.emaPeriod === optimize.pickedPeriod ? "bg-primary-soft" : ""}`}>
+                    <td className="py-2 font-medium tabular-nums">{row.emaPeriod}</td>
+                    <td className="py-2 tabular-nums">{row.trades}</td>
+                    <td className="py-2 tabular-nums">{row.gains}</td>
+                    <td className="py-2 tabular-nums">{row.losses}</td>
+                    <td className="py-2 tabular-nums">{row.netReturnPct === null ? "n/a" : `${row.netReturnPct}%`}</td>
+                    <td className="py-2 tabular-nums">{row.profitFactor === null ? "n/a" : row.profitFactor}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
       {error ? <ErrorState message={error} requestId={requestId} /> : null}
       {result ? (
         <section className="space-y-3">

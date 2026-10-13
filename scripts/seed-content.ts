@@ -154,6 +154,15 @@ export async function seedCatalog(): Promise<void> {
     { id: "more_settings", href: "/settings", label: "Settings", status: "published" as const, sort: 7 },
     { id: "more_help", href: "/help", label: "Help and support", status: "published" as const, sort: 8 },
     { id: "more_pricing", href: "/pricing", label: "Plans", status: "published" as const, sort: 9 },
+    { id: "more_saved", href: "/tips/saved", label: "Saved ideas", status: "published" as const, sort: 10 },
+    { id: "more_recommended", href: "/tips/recommended", label: "Ideas for you", status: "published" as const, sort: 11 },
+    { id: "more_tracked", href: "/tips/tracked", label: "Tracked ideas", status: "published" as const, sort: 12 },
+    { id: "more_alerts", href: "/tips/alerts", label: "Tip alerts", status: "published" as const, sort: 13 },
+    { id: "more_check", href: "/tip-check", label: "Check a stock", status: "published" as const, sort: 14 },
+    { id: "more_pulse", href: "/pulse", label: "Pulse", status: "published" as const, sort: 15 },
+    { id: "more_levels", href: "/levels", label: "Support and resistance", status: "published" as const, sort: 16 },
+    { id: "more_options", href: "/options", label: "Option chain notes", status: "published" as const, sort: 17 },
+    { id: "more_backtest", href: "/backtest", label: "Practice backtest", status: "published" as const, sort: 18 },
   ];
   for (const row of more) await saveContent("moreLinks", row);
 
