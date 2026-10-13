@@ -14,7 +14,7 @@ export default function DisclaimerPage() {
           <p>
             A legal review of our paid ideas is still in progress. This disclosure does not mean the service is registered or approved by any regulator.
           </p>
-          <p>Figures marked as sample data are not exchange prices. Please don't treat them as real prices.</p>
+          <p>Figures marked as sample data are not exchange prices. Please don&apos;t treat them as real prices.</p>
           <p>Version: 2026-10-11-draft.</p>
         </div>
       </main>

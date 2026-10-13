@@ -125,7 +125,7 @@ export default function PhoneSignInPage() {
           <input id="country" className="field" inputMode="numeric" value={countryCode} onChange={(event) => setCountryCode(event.target.value)} />
           <label className="label" htmlFor="phone">Phone number</label>
           <input id="phone" className="field" inputMode="tel" autoComplete="tel" value={national} onChange={(event) => setNational(event.target.value)} />
-          <p className="text-xs text-muted">We'll text you a 6 digit code. It's only used to sign you in.</p>
+          <p className="text-xs text-muted">We&apos;ll text you a 6 digit code. It&apos;s only used to sign you in.</p>
           <button className="btn-primary w-full" type="submit" disabled={busy}>{busy ? "Sending" : "Send code"}</button>
         </form>
       ) : (

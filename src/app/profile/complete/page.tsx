@@ -54,7 +54,7 @@ export default function ProfileCompletePage() {
   return (
     <main className="mx-auto max-w-md px-4 py-10">
       <h1 className="text-3xl font-semibold text-navy">Finish your profile</h1>
-      <p className="mt-2 text-sm text-muted">We only save your name, timezone and that you've read the risk disclosure.</p>
+      <p className="mt-2 text-sm text-muted">We only save your name, timezone and that you&apos;ve read the risk disclosure.</p>
       <form className="mt-6 space-y-4" onSubmit={submit}>
         <div>
           <label className="label" htmlFor="name">Name</label>

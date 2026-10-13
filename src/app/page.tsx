@@ -33,7 +33,7 @@ export default function LandingPage() {
                 Get started
               </Link>
               <Link href="/tips" className="btn-secondary">
-                See today's ideas
+                See today&apos;s ideas
               </Link>
             </div>
           </div>

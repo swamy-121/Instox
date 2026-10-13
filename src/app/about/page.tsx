@@ -11,9 +11,9 @@ export default function AboutPage() {
             Instox shares trade ideas for the Indian market. Every idea is written by a person on our team and checked before it goes live.
           </p>
           <p>
-            We're still setting up our support and grievance desk, so there's no contact option here just yet.
+            We&apos;re still setting up our support and grievance desk, so there&apos;s no contact option here just yet.
           </p>
-          <p>Company details, FAQs and our grievance officer's contact will be added here soon.</p>
+          <p>Company details, FAQs and our grievance officer&apos;s contact will be added here soon.</p>
         </div>
       </main>
       <PublicFooter />

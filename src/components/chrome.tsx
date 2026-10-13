@@ -51,7 +51,7 @@ export function PublicFooter() {
         <div>
           <Wordmark decorative className="h-10 w-auto" />
           <p className="mt-3 max-w-sm leading-6">
-            Ideas are written by our research team for information only. Instox doesn't place trades for you and doesn't promise returns.
+            Ideas are written by our research team for information only. Instox doesn&apos;t place trades for you and doesn&apos;t promise returns.
           </p>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">

@@ -79,7 +79,7 @@ function PulseBody() {
               </li>
             ))}
           </ul>
-          {result.pulse.renormalized ? <p className="text-xs text-muted">Some data was missing, so the score uses what's available.</p> : null}
+          {result.pulse.renormalized ? <p className="text-xs text-muted">Some data was missing, so the score uses what&apos;s available.</p> : null}
           <p className="text-sm">{result.pulse.limitations}</p>
         </section>
       ) : null}
